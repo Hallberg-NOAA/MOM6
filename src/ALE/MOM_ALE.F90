@@ -10,7 +10,7 @@ module MOM_ALE
 
 ! This file is part of MOM6. See LICENSE.md for the license.
 
-use MOM_debugging,        only : check_column_integrals
+use MOM_debugging,        only : check_column_integrals,  hchksum, uvchksum
 use MOM_diag_mediator,    only : register_diag_field, post_data, diag_ctrl
 use MOM_diag_mediator,    only : time_type, diag_update_remap_grids
 use MOM_diag_vkernels,    only : interpolate_column, reintegrate_column
@@ -20,6 +20,8 @@ use MOM_domains,          only : create_group_pass, do_group_pass, group_pass_ty
 use MOM_error_handler,    only : MOM_error, FATAL, WARNING
 use MOM_error_handler,    only : callTree_showQuery
 use MOM_error_handler,    only : callTree_enter, callTree_leave, callTree_waypoint
+use MOM_hybgen_unmix,     only : hybgen_unmix, init_hybgen_unmix, end_hybgen_unmix, hybgen_unmix_CS
+use MOM_hybgen_remap,     only : hybgen_remap, init_hybgen_remap, hybgen_remap_CS
 use MOM_file_parser,      only : get_param, param_file_type, log_param
 use MOM_io,               only : vardesc, var_desc, fieldtype, SINGLE_FILE
 use MOM_io,               only : create_file, write_field, close_file, file_type
@@ -29,6 +31,7 @@ use MOM_open_boundary,    only : OBC_DIRECTION_N, OBC_DIRECTION_S
 use MOM_regridding,       only : initialize_regridding, regridding_main, end_regridding
 use MOM_regridding,       only : uniformResolution
 use MOM_regridding,       only : inflate_vanished_layers_old
+use MOM_regridding,       only : regridding_preadjust_reqs, convective_adjustment
 use MOM_regridding,       only : set_target_densities_from_GV, set_target_densities
 use MOM_regridding,       only : regriddingCoordinateModeDoc, DEFAULT_COORDINATE_MODE
 use MOM_regridding,       only : regriddingInterpSchemeDoc, regriddingDefaultInterpScheme
@@ -71,6 +74,13 @@ type, public :: ALE_CS ; private
   type(regridding_CS) :: regridCS !< Regridding parameters and work arrays
   type(remapping_CS)  :: remapCS  !< Remapping parameters and work arrays
 
+  type(hybgen_unmix_CS), pointer :: hybgen_unmixCS => NULL() !< Parameters for hybgen remapping
+  type(hybgen_remap_CS), pointer :: hybgen_remapCS => NULL() !< Parameters for hybgen remapping
+
+  logical :: use_hybgen_unmix   !< If true, use the hybgen unmixing code before regridding
+  logical :: do_conv_adj        !< If true, do convective adjustment before regridding
+  logical :: use_hybgen_remap   !< If true, use the hybgen code for remapping
+
   integer :: nk             !< Used only for queries, not directly by this module
 
   logical :: remap_after_initialization !< Indicates whether to regrid/remap after initializing the state.
@@ -79,6 +89,7 @@ type, public :: ALE_CS ; private
                             !! that recover the answers from the end of 2018.  Otherwise, use more
                             !! robust and accurate forms of mathematically equivalent expressions.
 
+  logical :: debug   !< If true, write verbose checksums for debugging purposes.
   logical :: show_call_tree !< For debugging
 
   ! for diagnostics
@@ -144,16 +155,16 @@ subroutine ALE_init( param_file, GV, US, max_depth, CS)
   type(ALE_CS),            pointer    :: CS         !< Module control structure
 
   ! Local variables
-  real, dimension(:), allocatable :: dz
-  character(len=40)               :: mdl = "MOM_ALE" ! This module's name.
-  character(len=80)               :: string ! Temporary strings
-  real                            :: filter_shallow_depth, filter_deep_depth
-  logical       :: default_2018_answers
-  logical                         :: check_reconstruction
-  logical                         :: check_remapping
-  logical                         :: force_bounds_in_subcell
-  logical                         :: local_logical
-  logical                         :: remap_boundary_extrap
+  real, allocatable :: dz(:)
+  character(len=40) :: mdl = "MOM_ALE" ! This module's name.
+  character(len=80) :: string ! Temporary strings
+  real              :: filter_shallow_depth, filter_deep_depth
+  logical           :: default_2018_answers
+  logical           :: check_reconstruction
+  logical           :: check_remapping
+  logical           :: force_bounds_in_subcell
+  logical           :: local_logical
+  logical           :: remap_boundary_extrap
 
   if (associated(CS)) then
     call MOM_error(WARNING, "ALE_init called with an associated "// &
@@ -173,7 +184,13 @@ subroutine ALE_init( param_file, GV, US, max_depth, CS)
 
   ! Initialize and configure regridding
   call ALE_initRegridding(GV, US, max_depth, param_file, mdl, CS%regridCS)
+  call regridding_preadjust_reqs(CS%regridCS, CS%do_conv_adj, CS%use_hybgen_unmix)
 
+  call get_param(param_file, mdl, "USE_HYBGEN_REMAP", CS%use_hybgen_remap, &
+              "If true, use hybgen code for remapping.", default=.false.)
+if (CS%use_hybgen_remap) then
+  call init_hybgen_remap(CS%hybgen_remapCS, GV, US, param_file)
+else
   ! Initialize and configure remapping
   call get_param(param_file, mdl, "REMAPPING_SCHEME", string, &
                  "This sets the reconstruction scheme used "//&
@@ -208,6 +225,7 @@ subroutine ALE_init( param_file, GV, US, max_depth, CS)
                              check_remapping=check_remapping, &
                              force_bounds_in_subcell=force_bounds_in_subcell, &
                              answers_2018=CS%answers_2018)
+endif
 
   call get_param(param_file, mdl, "REMAP_AFTER_INITIALIZATION", CS%remap_after_initialization, &
                  "If true, applies regridding and remapping immediately after "//&
@@ -238,6 +256,12 @@ subroutine ALE_init( param_file, GV, US, max_depth, CS)
                  "regridding integrates downward, consistant with the remapping "//&
                  "code.", default=.true., do_not_log=.true.)
   call set_regrid_params(CS%regridCS, integrate_downward_for_e=.not.local_logical)
+  if (CS%use_hybgen_unmix) &
+    call init_hybgen_unmix(CS%hybgen_unmixCS, GV, US, param_file)
+
+  call get_param(param_file, "MOM", "DEBUG", CS%debug, &
+                 "If true, write out verbose debugging data.", &
+                 default=.false., debuggingParam=.true.)
 
   ! Keep a record of values for subsequent queries
   CS%nk = GV%ke
@@ -307,6 +331,8 @@ subroutine ALE_end(CS)
 
   ! Deallocate memory used for the regridding
   call end_remapping( CS%remapCS )
+
+  if (CS%use_hybgen_unmix) call end_hybgen_unmix( CS%hybgen_unmixCS )
   call end_regridding( CS%regridCS )
 
   deallocate(CS)
@@ -335,12 +361,10 @@ subroutine ALE_main( G, GV, US, h, u, v, tv, Reg, CS, OBC, dt, frac_shelf_h)
   real, dimension(SZI_(G),SZJ_(G),SZK_(GV)+1) :: dzRegrid ! The change in grid interface positions
   real, dimension(SZI_(G),SZJ_(G),SZK_(GV)+1) :: eta_preale
   real, dimension(SZI_(G),SZJ_(G),SZK_(GV)) :: h_new ! New 3D grid obtained after last time step [H ~> m or kg m-2]
-  integer :: nk, i, j, k, isc, iec, jsc, jec
-  logical :: ice_shelf
+  logical :: PCM_cell(SZI_(G),SZJ_(G),SZK_(GV)) !< If true, PCM remapping should be used in a cell.
+  integer :: nk, i, j, k, isc, iec, jsc, jec, ntr
 
   nk = GV%ke; isc = G%isc; iec = G%iec; jsc = G%jsc; jec = G%jec
-
-  ice_shelf = present(frac_shelf_h)
 
   if (CS%show_call_tree) call callTree_enter("ALE_main(), MOM_ALE.F90")
 
@@ -360,13 +384,19 @@ subroutine ALE_main( G, GV, US, h, u, v, tv, Reg, CS, OBC, dt, frac_shelf_h)
   endif
   dzRegrid(:,:,:) = 0.0
 
+  ! If necessary, do some preparatory work to clean up the model state before regridding.
+
+  ! This determines what needs to be done, based on the verical coordinate.
+  !### if (CS%do_conv_adj) call convective_adjustment(G, GV, h, tv)
+  if (CS%use_hybgen_unmix) then
+    ntr = 0 ; if (associated(Reg)) ntr = Reg%ntr
+    call hybgen_unmix(G, GV, G%US, CS%hybgen_unmixCS, tv, Reg, ntr, h)
+  endif
+
   ! Build new grid. The new grid is stored in h_new. The old grid is h.
   ! Both are needed for the subsequent remapping of variables.
-  if (ice_shelf) then
-    call regridding_main( CS%remapCS, CS%regridCS, G, GV, h, tv, h_new, dzRegrid, frac_shelf_h)
-  else
-    call regridding_main( CS%remapCS, CS%regridCS, G, GV, h, tv, h_new, dzRegrid)
-  endif
+  call regridding_main( CS%remapCS, CS%regridCS, G, GV, h, tv, h_new, dzRegrid, &
+                        frac_shelf_h, PCM_cell=PCM_cell)
 
   call check_grid( G, GV, h, 0. )
 
@@ -377,23 +407,34 @@ subroutine ALE_main( G, GV, US, h, u, v, tv, Reg, CS, OBC, dt, frac_shelf_h)
   if (present(dt)) then
     call diag_update_remap_grids(CS%diag)
   endif
+
   ! Remap all variables from old grid h onto new grid h_new
-  call remap_all_state_vars( CS%remapCS, CS, G, GV, h, h_new, Reg, OBC, -dzRegrid, &
-                             u, v, CS%show_call_tree, dt )
+!###  if (CS%use_hybgen_remap) then
+!    call hybgen_remap(G, GV, CS%hybgen_remapCS, h, h_new, Reg, OBC, u, v, PCM_cell)
+!  else
+    call remap_all_state_vars( CS%remapCS, CS, G, GV, h, h_new, Reg, OBC, -dzRegrid, &
+                               u, v, CS%show_call_tree, dt, PCM_cell=PCM_cell)
+!  endif ! use_hybgen
 
   if (CS%show_call_tree) call callTree_waypoint("state remapped (ALE_main)")
 
   ! Override old grid with new one. The new grid 'h_new' is built in
   ! one of the 'build_...' routines above.
   !$OMP parallel do default(shared)
-  do k = 1,nk ; do j = jsc-1,jec+1 ; do i = isc-1,iec+1
+  do k=1,nk ; do j=jsc-1,jec+1 ; do i=isc-1,iec+1
     h(i,j,k) = h_new(i,j,k)
   enddo ; enddo ; enddo
 
-  if (CS%show_call_tree) call callTree_leave("ALE_main()")
+  if (CS%debug) then
+    call hchksum(h,    "Post-ALE_main h", G%HI, haloshift=0, scale=GV%H_to_m)
+    call hchksum(tv%T, "Post-ALE_main T", G%HI, haloshift=0)
+    call hchksum(tv%S, "Post-ALE_main S", G%HI, haloshift=0)
+    call uvchksum("Post-ALE_main [uv]", u, v, G%HI, haloshift=0, scale=US%L_T_to_m_s)
+  endif
 
   if (CS%id_dzRegrid>0 .and. present(dt)) call post_data(CS%id_dzRegrid, dzRegrid, CS%diag)
 
+  if (CS%show_call_tree) call callTree_leave("ALE_main()")
 
 end subroutine ALE_main
 
@@ -484,7 +525,7 @@ subroutine ALE_offline_inputs(CS, G, GV, h, tv, Reg, uhtr, vhtr, Kd, debug, OBC)
   ! Build new grid from the Zstar state onto the requested vertical coordinate. The new grid is stored
   ! in h_new. The old grid is h. Both are needed for the subsequent remapping of variables. Convective
   ! adjustment right now is not used because it is unclear what to do with vanished layers
-  call regridding_main( CS%remapCS, CS%regridCS, G, GV, h, tv, h_new, dzRegrid, conv_adjust = .false. )
+  call regridding_main( CS%remapCS, CS%regridCS, G, GV, h, tv, h_new, dzRegrid, conv_adjust=.false. )
   call check_grid( G, GV, h_new, 0. )
   if (CS%show_call_tree) call callTree_waypoint("new grid generated (ALE_offline_inputs)")
 
@@ -607,6 +648,7 @@ subroutine check_grid( G, GV, h, threshold )
 
 end subroutine check_grid
 
+!### This routine does not appear to be used.
 !> Generates new grid
 subroutine ALE_build_grid( G, GV, regridCS, remapCS, h, tv, debug, frac_shelf_h )
   type(ocean_grid_type),                   intent(in)    :: G        !< Ocean grid structure
@@ -622,20 +664,15 @@ subroutine ALE_build_grid( G, GV, regridCS, remapCS, h, tv, debug, frac_shelf_h 
   integer :: nk, i, j, k
   real, dimension(SZI_(G), SZJ_(G), SZK_(GV)+1) :: dzRegrid ! The change in grid interface positions
   real, dimension(SZI_(G), SZJ_(G), SZK_(GV)) :: h_new ! The new grid thicknesses
-  logical :: show_call_tree, use_ice_shelf
+  logical :: show_call_tree
 
   show_call_tree = .false.
   if (present(debug)) show_call_tree = debug
   if (show_call_tree) call callTree_enter("ALE_build_grid(), MOM_ALE.F90")
-  use_ice_shelf = present(frac_shelf_h)
 
   ! Build new grid. The new grid is stored in h_new. The old grid is h.
   ! Both are needed for the subsequent remapping of variables.
-  if (use_ice_shelf) then
-    call regridding_main( remapCS, regridCS, G, GV, h, tv, h_new, dzRegrid, frac_shelf_h )
-  else
-    call regridding_main( remapCS, regridCS, G, GV, h, tv, h_new, dzRegrid )
-  endif
+  call regridding_main( remapCS, regridCS, G, GV, h, tv, h_new, dzRegrid, frac_shelf_h )
 
   ! Override old grid with new one. The new grid 'h_new' is built in
   ! one of the 'build_...' routines above.
@@ -735,7 +772,7 @@ end subroutine ALE_regrid_accelerated
 !! remap initiali conditions to the model grid.  It is also called during a
 !! time step to update the state.
 subroutine remap_all_state_vars(CS_remapping, CS_ALE, G, GV, h_old, h_new, Reg, OBC, &
-                                dxInterface, u, v, debug, dt)
+                                dxInterface, u, v, debug, dt, PCM_cell)
   type(remapping_CS),                        intent(in)    :: CS_remapping !< Remapping control structure
   type(ALE_CS),                              intent(in)    :: CS_ALE       !< ALE control structure
   type(ocean_grid_type),                     intent(in)    :: G            !< Ocean grid structure
@@ -755,6 +792,8 @@ subroutine remap_all_state_vars(CS_remapping, CS_ALE, G, GV, h_old, h_new, Reg, 
                                    optional, intent(inout) :: v      !< Meridional velocity [L T-1 ~> m s-1]
   logical,                         optional, intent(in)    :: debug  !< If true, show the call tree
   real,                            optional, intent(in)    :: dt     !< time step for diagnostics [T ~> s]
+  logical, dimension(SZI_(G),SZJ_(G),SZK_(GV)), &
+                                   optional, intent(in)    :: PCM_cell !< Use PCM remapping in cells where true
   ! Local variables
   integer                                     :: i, j, k, m
   integer                                     :: nz, ntr
@@ -772,7 +811,15 @@ subroutine remap_all_state_vars(CS_remapping, CS_ALE, G, GV, h_old, h_new, Reg, 
 
   show_call_tree = .false.
   if (present(debug)) show_call_tree = debug
-  if (show_call_tree) call callTree_enter("remap_all_state_vars(), MOM_ALE.F90")
+
+  if (CS_ALE%use_hybgen_remap) then
+    ! Use the hybgen alternate version of this code.  Some diagnostics are still missing
+    ! with this version of the code.
+    if (show_call_tree) call callTree_enter("remap_all_state_vars() Hybgen, MOM_ALE.F90")
+    call hybgen_remap(G, GV, CS_ALE%hybgen_remapCS, h_old, h_new, Reg, OBC, u, v, PCM_cell)
+    if (show_call_tree) call callTree_leave("remap_all_state_vars() Hybgen")
+    return
+  endif
 
   ! If remap_uv_using_old_alg is .true. and u or v is requested, then we must have dxInterface. Otherwise,
   ! u and v can be remapped without dxInterface
@@ -788,6 +835,8 @@ subroutine remap_all_state_vars(CS_remapping, CS_ALE, G, GV, h_old, h_new, Reg, 
   else
     h_neglect = GV%kg_m2_to_H*1.0e-30 ; h_neglect_edge = GV%kg_m2_to_H*1.0e-10
   endif
+
+  if (show_call_tree) call callTree_enter("remap_all_state_vars(), MOM_ALE.F90")
 
   nz      = GV%ke
   ppt2mks = 0.001

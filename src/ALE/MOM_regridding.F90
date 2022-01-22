@@ -3,7 +3,7 @@ module MOM_regridding
 
 ! This file is part of MOM6. See LICENSE.md for the license.
 
-use MOM_error_handler, only : MOM_error, FATAL, WARNING
+use MOM_error_handler, only : MOM_error, MOM_mesg, FATAL, WARNING
 use MOM_file_parser,   only : param_file_type, get_param, log_param
 use MOM_io,            only : file_exists, field_exists, field_size, MOM_read_data
 use MOM_io,            only : verify_variable_units, slasher
@@ -19,7 +19,7 @@ use regrid_consts, only : coordinateMode, DEFAULT_COORDINATE_MODE
 use regrid_consts, only : REGRIDDING_LAYER, REGRIDDING_ZSTAR
 use regrid_consts, only : REGRIDDING_RHO, REGRIDDING_SIGMA
 use regrid_consts, only : REGRIDDING_ARBITRARY, REGRIDDING_SIGMA_SHELF_ZSTAR
-use regrid_consts, only : REGRIDDING_HYCOM1, REGRIDDING_SLIGHT, REGRIDDING_ADAPTIVE
+use regrid_consts, only : REGRIDDING_HYCOM1, REGRIDDING_HYBGEN, REGRIDDING_SLIGHT, REGRIDDING_ADAPTIVE
 use regrid_interp, only : interp_CS_type, set_interp_scheme, set_interp_extrap
 
 use coord_zlike,  only : init_coord_zlike, zlike_CS, set_zlike_params, build_zstar_column, end_coord_zlike
@@ -29,6 +29,7 @@ use coord_rho,    only : old_inflate_layers_1d
 use coord_hycom,  only : init_coord_hycom, hycom_CS, set_hycom_params, build_hycom1_column, end_coord_hycom
 use coord_slight, only : init_coord_slight, slight_CS, set_slight_params, build_slight_column, end_coord_slight
 use coord_adapt,  only : init_coord_adapt, adapt_CS, set_adapt_params, build_adapt_column, end_coord_adapt
+use MOM_hybgen_regrid, only : hybgen_regrid, hybgen_regrid_CS, init_hybgen_regrid, end_hybgen_regrid
 
 implicit none ; private
 
@@ -117,17 +118,21 @@ type, public :: regridding_CS ; private
   !! If false, use more robust forms of the same remapping expressions.
   logical :: remap_answers_2018 = .true.
 
+  logical :: use_hybgen_unmix = .false.  !< If true, use the hybgen unmixing code before remapping
+
   type(zlike_CS),  pointer :: zlike_CS  => null() !< Control structure for z-like coordinate generator
   type(sigma_CS),  pointer :: sigma_CS  => null() !< Control structure for sigma coordinate generator
   type(rho_CS),    pointer :: rho_CS    => null() !< Control structure for rho coordinate generator
   type(hycom_CS),  pointer :: hycom_CS  => null() !< Control structure for hybrid coordinate generator
   type(slight_CS), pointer :: slight_CS => null() !< Control structure for Slight-coordinate generator
   type(adapt_CS),  pointer :: adapt_CS  => null() !< Control structure for adaptive coordinate generator
+  type(hybgen_regrid_CS), pointer :: hybgen_CS => NULL() !< Control structure for hybgen regridding
 
 end type
 
 ! The following routines are visible to the outside world
 public initialize_regridding, end_regridding, regridding_main
+public regridding_preadjust_reqs, convective_adjustment
 public inflate_vanished_layers_old, check_remapping_grid, check_grid_column
 public set_regrid_params, get_regrid_size
 public uniformResolution, setCoordinateResolution
@@ -147,6 +152,7 @@ character(len=*), parameter, public :: regriddingCoordinateModeDoc = &
                  " SIGMA - terrain following coordinates\n"//&
                  " RHO   - continuous isopycnal\n"//&
                  " HYCOM1 - HyCOM-like hybrid coordinate\n"//&
+                 " HYBGEN - Hybrid coordinate from the Hycom hybgen code\n"//&
                  " SLIGHT - stretched coordinates above continuous isopycnal\n"//&
                  " ADAPTIVE - optimize for smooth neutral density surfaces"
 
@@ -457,6 +463,7 @@ subroutine initialize_regridding(CS, GV, US, max_depth, param_file, mdl, coord_m
     ! This is a work around to apparently needed to work with the from_Z initialization...  ???
     if (coordinateMode(coord_mode) == REGRIDDING_ZSTAR .or. &
         coordinateMode(coord_mode) == REGRIDDING_HYCOM1 .or. &
+        coordinateMode(coord_mode) == REGRIDDING_HYBGEN .or. &
         coordinateMode(coord_mode) == REGRIDDING_SLIGHT .or. &
         coordinateMode(coord_mode) == REGRIDDING_ADAPTIVE) then
       ! Adjust target grid to be consistent with maximum_depth
@@ -510,7 +517,7 @@ subroutine initialize_regridding(CS, GV, US, max_depth, param_file, mdl, coord_m
   endif
 
   ! initialise coordinate-specific control structure
-  call initCoord(CS, GV, US, coord_mode)
+  call initCoord(CS, GV, US, coord_mode, param_file)
 
   if (main_parameters .and. coord_is_state_dependent) then
     call get_param(param_file, mdl, "P_REF", P_Ref, &
@@ -533,6 +540,13 @@ subroutine initialize_regridding(CS, GV, US, max_depth, param_file, mdl, coord_m
     call set_regrid_params(CS, min_thickness=tmpReal)
   else
     call set_regrid_params(CS, min_thickness=0.)
+  endif
+
+  CS%use_hybgen_unmix = .false.
+  if (coordinateMode(coord_mode) == REGRIDDING_HYBGEN) then
+    call get_param(param_file, mdl, "USE_HYBGEN_UNMIX", CS%use_hybgen_unmix, &
+              "If true, use hybgen unmixing code before regridding.", &
+              default=.false.)
   endif
 
   if (coordinateMode(coord_mode) == REGRIDDING_SLIGHT) then
@@ -743,6 +757,7 @@ subroutine end_regridding(CS)
   if (associated(CS%hycom_CS))  call end_coord_hycom(CS%hycom_CS)
   if (associated(CS%slight_CS)) call end_coord_slight(CS%slight_CS)
   if (associated(CS%adapt_CS))  call end_coord_adapt(CS%adapt_CS)
+  if (associated(CS%hybgen_CS)) call end_hybgen_regrid(CS%hybgen_CS)
 
   deallocate( CS%coordinateResolution )
   if (allocated(CS%target_density)) deallocate( CS%target_density )
@@ -753,7 +768,8 @@ end subroutine end_regridding
 
 !------------------------------------------------------------------------------
 !> Dispatching regridding routine for orchestrating regridding & remapping
-subroutine regridding_main( remapCS, CS, G, GV, h, tv, h_new, dzInterface, frac_shelf_h, conv_adjust)
+subroutine regridding_main( remapCS, CS, G, GV, h, tv, h_new, dzInterface, frac_shelf_h, &
+                            conv_adjust, PCM_cell)
 !------------------------------------------------------------------------------
 ! This routine takes care of (1) building a new grid and (2) remapping between
 ! the old grid and the new grid. The creation of the new grid can be based
@@ -783,15 +799,15 @@ subroutine regridding_main( remapCS, CS, G, GV, h, tv, h_new, dzInterface, frac_
   real, dimension(SZI_(G),SZJ_(G), CS%nk+1),  intent(inout) :: dzInterface !< The change in position of each interface
   real, dimension(SZI_(G),SZJ_(G)), optional, intent(in   ) :: frac_shelf_h !< Fractional ice shelf coverage
   logical,                          optional, intent(in   ) :: conv_adjust !< If true, do convective adjustment
+  logical, dimension(SZI_(G),SZJ_(G),SZK_(GV)), &
+                                    optional, intent(out  ) :: PCM_cell !< Use PCM remapping in cells where true
   ! Local variables
   real :: trickGnuCompiler
-  logical :: use_ice_shelf
   logical :: do_convective_adjustment
 
   do_convective_adjustment = .true.
   if (present(conv_adjust)) do_convective_adjustment = conv_adjust
-
-  use_ice_shelf = present(frac_shelf_h)
+  if (present(PCM_cell)) PCM_cell(:,:,:) = .false.
 
   select case ( CS%regridding_scheme )
 
@@ -813,6 +829,9 @@ subroutine regridding_main( remapCS, CS, G, GV, h, tv, h_new, dzInterface, frac_
       call calc_h_new_by_dz(CS, G, GV, h, dzInterface, h_new)
     case ( REGRIDDING_HYCOM1 )
       call build_grid_HyCOM1( G, GV, G%US, h, tv, h_new, dzInterface, CS, frac_shelf_h )
+    case ( REGRIDDING_HYBGEN )
+      call hybgen_regrid(G, GV, G%US, CS%hybgen_CS, h, tv, h_new, dzInterface, PCM_cell)
+      !### call MOM_mesg('MOM_regridding, regridding_main: using Hybgen')
     case ( REGRIDDING_SLIGHT )
       call build_grid_SLight( G, GV, G%US, h, tv, dzInterface, CS )
       call calc_h_new_by_dz(CS, G, GV, h, dzInterface, h_new)
@@ -831,6 +850,34 @@ subroutine regridding_main( remapCS, CS, G, GV, h, tv, h_new, dzInterface, frac_
 #endif
 
 end subroutine regridding_main
+
+!------------------------------------------------------------------------------
+!> This routine returns flags indicating which pre-remapping state adjustments
+!! are needed depending on the coordinate mode in use.
+subroutine regridding_preadjust_reqs(CS, do_conv_adj, do_hybgen_unmix)
+
+  ! Arguments
+  type(regridding_CS), intent(in)  :: CS          !< Regridding control structure
+  logical,             intent(out) :: do_conv_adj !< Convective adjustment should be done
+  logical,             intent(out) :: do_hybgen_unmix !< Hybgen unmixing should be done
+
+  do_conv_adj = .false. ; do_hybgen_unmix = .false.
+  select case ( CS%regridding_scheme )
+
+    case ( REGRIDDING_ZSTAR, REGRIDDING_SIGMA_SHELF_ZSTAR, REGRIDDING_SIGMA, REGRIDDING_ARBITRARY, &
+           REGRIDDING_HYCOM1, REGRIDDING_SLIGHT, REGRIDDING_ADAPTIVE )
+      do_conv_adj = .false. ; do_hybgen_unmix = .false.
+    case ( REGRIDDING_RHO )
+      do_conv_adj = .true. ; do_hybgen_unmix = .false.
+    case ( REGRIDDING_HYBGEN )
+      do_conv_adj = .false. ; do_hybgen_unmix = CS%use_hybgen_unmix
+    case default
+      call MOM_error(FATAL,'MOM_regridding, regridding_preadjust_reqs: '//&
+                     'Unknown regridding scheme selected!')
+  end select ! type of grid
+
+end subroutine regridding_preadjust_reqs
+
 
 !> Calculates h_new from h + delta_k dzInterface
 subroutine calc_h_new_by_dz(CS, G, GV, h, dzInterface, h_new)
@@ -1911,8 +1958,8 @@ function uniformResolution(nk,coordMode,maxDepth,rhoLight,rhoHeavy)
   scheme = coordinateMode(coordMode)
   select case ( scheme )
 
-    case ( REGRIDDING_ZSTAR, REGRIDDING_HYCOM1, REGRIDDING_SLIGHT, REGRIDDING_SIGMA_SHELF_ZSTAR, &
-           REGRIDDING_ADAPTIVE )
+    case ( REGRIDDING_ZSTAR, REGRIDDING_HYCOM1, REGRIDDING_HYBGEN, REGRIDDING_SLIGHT, &
+           REGRIDDING_SIGMA_SHELF_ZSTAR, REGRIDDING_ADAPTIVE )
       uniformResolution(:) = maxDepth / real(nk)
 
     case ( REGRIDDING_RHO )
@@ -1931,13 +1978,14 @@ end function uniformResolution
 
 !> Initialize the coordinate resolutions by calling the appropriate initialization
 !! routine for the specified coordinate mode.
-subroutine initCoord(CS, GV, US, coord_mode)
+subroutine initCoord(CS, GV, US, coord_mode, param_file)
   type(regridding_CS),     intent(inout) :: CS !< Regridding control structure
   character(len=*),        intent(in)    :: coord_mode !< A string indicating the coordinate mode.
                                                !! See the documentation for regrid_consts
                                                !! for the recognized values.
   type(verticalGrid_type), intent(in)    :: GV !< Ocean vertical grid structure
   type(unit_scale_type),   intent(in)    :: US  !< A dimensional unit scaling type
+  type(param_file_type),   intent(in)    :: param_file !< Parameter file
 
   select case (coordinateMode(coord_mode))
   case (REGRIDDING_ZSTAR)
@@ -1951,6 +1999,8 @@ subroutine initCoord(CS, GV, US, coord_mode)
   case (REGRIDDING_HYCOM1)
     call init_coord_hycom(CS%hycom_CS, CS%nk, CS%coordinateResolution, CS%target_density, &
                           CS%interp_CS)
+  case (REGRIDDING_HYBGEN)
+    call init_hybgen_regrid(CS%hybgen_CS, GV, US, param_file)
   case (REGRIDDING_SLIGHT)
     call init_coord_slight(CS%slight_CS, CS%nk, CS%ref_pressure, CS%target_density, &
                            CS%interp_CS, GV%m_to_H)
@@ -2149,7 +2199,8 @@ function getCoordinateUnits( CS )
   character(len=20)               :: getCoordinateUnits
 
   select case ( CS%regridding_scheme )
-    case ( REGRIDDING_ZSTAR, REGRIDDING_HYCOM1, REGRIDDING_SLIGHT, REGRIDDING_ADAPTIVE )
+    case ( REGRIDDING_ZSTAR, REGRIDDING_HYCOM1, REGRIDDING_HYBGEN, REGRIDDING_SLIGHT, &
+           REGRIDDING_ADAPTIVE )
       getCoordinateUnits = 'meter'
     case ( REGRIDDING_SIGMA_SHELF_ZSTAR )
       getCoordinateUnits = 'meter/fraction'
@@ -2187,6 +2238,8 @@ function getCoordinateShortName( CS )
       getCoordinateShortName = 'coordinate'
     case ( REGRIDDING_HYCOM1 )
       getCoordinateShortName = 'z-rho'
+    case ( REGRIDDING_HYBGEN )
+      getCoordinateShortName = 'hybrid'
     case ( REGRIDDING_SLIGHT )
       getCoordinateShortName = 's-rho'
     case ( REGRIDDING_ADAPTIVE )
@@ -2281,6 +2334,8 @@ subroutine set_regrid_params( CS, boundary_extrapolation, min_thickness, old_gri
   case (REGRIDDING_HYCOM1)
     if (associated(CS%hycom_CS) .and. (present(interp_scheme) .or. present(boundary_extrapolation))) &
       call set_hycom_params(CS%hycom_CS, interp_CS=CS%interp_CS)
+  case (REGRIDDING_HYBGEN)
+    ! Do nothing for now.
   case (REGRIDDING_SLIGHT)
     if (present(min_thickness))       call set_slight_params(CS%slight_CS, min_thickness=min_thickness)
     if (present(dz_min_surface))      call set_slight_params(CS%slight_CS, dz_ml_min=dz_min_surface)
@@ -2349,7 +2404,8 @@ function getStaticThickness( CS, SSH, depth )
   real :: z, dz
 
   select case ( CS%regridding_scheme )
-    case ( REGRIDDING_ZSTAR, REGRIDDING_SIGMA_SHELF_ZSTAR, REGRIDDING_HYCOM1, REGRIDDING_SLIGHT, REGRIDDING_ADAPTIVE )
+    case ( REGRIDDING_ZSTAR, REGRIDDING_SIGMA_SHELF_ZSTAR, REGRIDDING_HYCOM1, REGRIDDING_HYBGEN, &
+           REGRIDDING_SLIGHT, REGRIDDING_ADAPTIVE )
       if (depth>0.) then
         z = ssh
         do k = 1, CS%nk
