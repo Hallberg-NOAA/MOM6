@@ -202,10 +202,6 @@ subroutine hybgenaij_remap(CS, kdm, pres, prsf, pcm_lay, dp_i_j, &
 ! --- -------------------------------------------------------------
 ! --- hybrid grid generator, single column(part A) - remap scalars.
 ! --- -------------------------------------------------------------
-  logical, parameter :: lconserve=.false. !explicitly conserve each column
-  integer, parameter :: ndebug_tracer=0   !tracer to debug, usually 0 (off)
-!
-  double precision :: asum(ntracr,3)
   real :: offset(ntracr)
 !
   real :: s1d(kdm,ntracr)    ! original scalar fields
@@ -236,13 +232,6 @@ subroutine hybgenaij_remap(CS, kdm, pres, prsf, pcm_lay, dp_i_j, &
 ! --- remap scalar field profiles from the 'old' vertical
 ! --- grid onto the 'new' vertical grid.
 !
-  if (lconserve) then  !usually .false.
-    do ktr=1,nums1d
-      asum(ktr,1) = 0.d0
-      asum(ktr,2) = 0.d0
-      asum(ktr,3) = 0.d0
-    enddo !ktr
-  endif
 
   if     (CS%hybmap == 0) then !PCM
     call hybgen_pcm_remap(s1d, pres, dprs, f1d, prsf, &
@@ -264,78 +253,7 @@ subroutine hybgenaij_remap(CS, kdm, pres, prsf, pcm_lay, dp_i_j, &
     do ktr= 1,ntracr
       trac_i_j(k,ktr) = f1d(k,ktr)
     enddo !ktr
-        if (ndebug_tracer > 0 .and. ndebug_tracer <= ntracr .and. &
-            test_col) then
-          ktr = ndebug_tracer
-          write(mesg,'(a,i3,2f9.4)') &
-            'hybgen,  old2new:', k, s1d(k,ktr), trac_i_j(k,ktr)
-          call MOM_mesg(mesg, all_print=.true.)
-        endif !debug_tracer
-
-    if (lconserve) then  !usually .false.
-      zthk = dp_i_j(k)
-      do ktr= 1,nums1d
-        asum(ktr,1) = asum(ktr,1) + s1d(k,ktr)*dprs(k)
-        asum(ktr,2) = asum(ktr,2) + f1d(k,ktr)*zthk
-      enddo !ktr
-    endif !lconserve
   enddo !k
-
-  if (lconserve) then  !usually .false.
-!
-! ---   enforce water column conservation
-!
-    do ktr=1,nums1d
-      q = asum(ktr,1)-asum(ktr,2)
-      if     (q == 0.0) then
-        offset(ktr) = 0.0
-      elseif (abs(asum(ktr,2)) < 2.0*abs(q)) then
-        offset(ktr) = sign(zp5, q*asum(ktr,2))  !        -0.5 or  +0.5
-      else
-        offset(ktr) =          q/asum(ktr,2)   !between -0.5 and +0.5
-      endif
-    enddo !ktr
-
-    do k=1,kdm
-      do ktr= 1,ntracr
-        trac_i_j(k,ktr) = trac_i_j(k,ktr) * (1.0+offset(ktr))
-      enddo !ktr
-!
-      if (.false.) then !debugging
-        zthk = dp_i_j(k)
-        do ktr= 1,ntracr
-          asum(ktr,3) = asum(ktr,3) + trac_i_j(k,ktr)*zthk
-        enddo !ktr
-      endif !debuging
-    enddo !k
-!
-    if (.false. .and.  & !debugging
-        test_col) then
-      do ktr= 1,nums1d
-        write(mesg,'(a,4(1p4e16.8),i3)') &
-          'hybgen,sum:', &
-          asum(ktr,1)/prsf(kdm+1), &
-          asum(ktr,2)/prsf(kdm+1), &
-          asum(ktr,3)/prsf(kdm+1), &
-          offset(ktr),ktr
-        call MOM_mesg(mesg, all_print=.true.)
-      enddo !ktr
-    endif !debugging .and. test_col
-    if (.false. .and.  & !debugging
-        test_col) then
-      ktr=1
-!         if     (abs(offset(ktr)) > 1.e-08) then
-      if     (abs(offset(ktr)) > 1.e-12) then
-        write(mesg,'(a,4(1p4e16.8))') &
-          'hybgen,sum:', &
-          asum(ktr,1)/prsf(kdm+1), &
-          asum(ktr,2)/prsf(kdm+1), &
-          asum(ktr,3)/prsf(kdm+1), &
-          offset(ktr)
-        call MOM_mesg(mesg, all_print=.true.)
-      endif !large offset
-    endif !debugging .and. test_col
-  endif !lconserve
 
 end subroutine hybgenaij_remap
 
@@ -418,25 +336,7 @@ subroutine hybgenbj_u(CS, G, GV, dpu, dpu_orig, u, j)
 !###
 !     u(I,j,k) = f1d(k)
     enddo !k
-!
-!diag if ((i == CS%itest + G%isd - G%isd_global) .and. &
-!diag     (j == CS%jtest + G%jsd - G%jsd_global)) then
-!diag   write (mesg,'(i9,2i5,a)') nstep, CS%itest, CS%jtest, &
-!diag       '   hybgen, do 412:  u       thkns     dpth'
-!diag   call MOM_mesg(mesg, all_print=.true.)
-!diag  if ((I==G%IscB+1).and.(j==G%jsc)) then
-!diag       call MOM_mesg( '   hybgen, do 412:  u       thkns     dpth', all_print=.true.)
-!diag    do k=1,kk
-!diag      write (mesg,'(33x,i3,2(1pe13.5),f9.3,f9.2,f9.3,f9.2,1pe13.5)') &
-!diag        k,s1d(k), u(i,j,k), &
-!diag          (pres(k+1)-pres(k))*GV%H_to_m, pres(k+1)*GV%H_to_m, &
-!diag          (prsf(k+1)-prsf(k))*GV%H_to_m, prsf(k+1)*GV%H_to_m, dpthin*GV%H_to_m
-!diag !       (pres(k+1)-pres(k))*GV%H_to_m, pres(k+1)*GV%H_to_m, &
-!diag !        dpu(i,j,k)*GV%H_to_m, pu(i,j,k+1)*GV%H_to_m
-!diag      call MOM_mesg(mesg, all_print=.true.)
-!diag    enddo
-!diag  endif !debug
-!
+
   endif ; enddo !iu
 !
 end subroutine hybgenbj_u
@@ -521,23 +421,7 @@ subroutine hybgenbj_v(CS, G, GV, dpv, dpv_orig, v, j)
 !###
 !     v(i,J,k) = f1d(k)
     enddo !k
-!
-!diag if ((i == CS%itest + G%isd - G%isd_global) .and. &
-!diag     (j == CS%jtest + G%jsd - G%jsd_global)) then
-!diag   write (mesg,'(i9,2i5,a)') nstep,CS%itest,CS%jtest, &
-!diag       '   hybgen, do 412:  v       thkns     dpth'
-!diag   call MOM_mesg(mesg, all_print=.true.)
-!diag  if ((i==G%isc).and.(j==G%JscB+1)) then
-!diag       call MOM_mesg( '   hybgen, do 412:  v       thkns     dpth', all_print=.true.)
-!diag    do k=1,kk
-!diag      write (mesg,'(33x,i3,2(1pe13.5),f9.3,f9.2,f9.3,f9.2,1pe13.5))') &
-!diag          k,s1d(k), v(i,j,k), &
-!diag          (pres(k+1)-pres(k))*GV%H_to_m, pres(k+1)*GV%H_to_m, &
-!diag          (prsf(k+1)-prsf(k))*GV%H_to_m, prsf(k+1)*GV%H_to_m, dpthin*GV%H_to_m
-!diag      call MOM_mesg(mesg, all_print=.true.)
-!diag    enddo
-!diag  endif !debug
-!
+
   endif ; enddo !iv
 !
 end subroutine hybgenbj_v

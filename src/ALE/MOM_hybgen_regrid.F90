@@ -50,13 +50,8 @@ type, public :: hybgen_regrid_CS ; private
   real :: dpns  !< depth to start terrain following [H ~> m or kg m-2]
   real :: dsns  !< depth to stop terrain following [H ~> m or kg m-2]
 
-  !> Global i-index of a point where detailed diagnostics of hybgen are desired
-  integer :: itest = -1
-  !> Global j-index of a point where detailed diagnostics of hybgen are desired
-  integer :: jtest = -1
-
   real :: thkbot !< Thickness of a bottom boundary layer, within which hybgen does
-                 !! something different. (m)
+                 !! something different. [H ~> m or kg m-2]
 
   !> Shallowest depth for isopycnal layers [H ~> m or kg m-2]
   real :: topiso_const
@@ -125,7 +120,7 @@ subroutine init_hybgen_regrid(CS, GV, US, param_file)
   call get_param(param_file, mdl, "HYBGEN_BBL_THICKNESS", CS%thkbot, &
                  "A bottom boundary layer thickness within which Hybgen is able to move "//&
                  "overlying layers upward to match a target density.", &
-                 units="m", default=0.0, scale=1.0)
+                 units="m", default=0.0, scale=GV%m_to_H)
   call get_param(param_file, mdl, "HYBGEN_REMAP_DENSITY_MATCH", CS%hybiso, &
                  "A tolerance between the layer densities and their target, within which "//&
                  "Hybgen determines that remapping uses PCM for a layer.", &
@@ -271,7 +266,6 @@ subroutine hybgen_regrid(G, GV, US, CS, dp, tv, h_new, dzInterface, PCM_cell)
   real :: depths_i_j        ! Bottom depth in thickness units [H ~> m or kg m-2]
   real :: dpthin            ! A very thin layer thickness, that is remapped differently [H ~> m or kg m-2]
   integer :: fixlay         ! Deepest fixed coordinate layer
-  logical :: test_col       ! If true, write verbose debugging for this column.
   integer, dimension(0:CS%nk) :: k_end ! The index of the deepest source layer that contributes to
                             ! each target layer, in the unusual case where the the input grid is
                             ! larger than the new grid.  This situation only occurs during certain
@@ -283,10 +277,7 @@ subroutine hybgen_regrid(G, GV, US, CS, dp, tv, h_new, dzInterface, PCM_cell)
   p_col(:) = CS%ref_pressure
   dpthin = 1.0e-6*CS%onem
 
-  test_col = .false.
   do j=G%jsc-1,G%jec+1 ; do i=G%isc-1,G%iec+1 ; if (G%mask2dT(i,j)>0.) then
-!diag   test_col = ((i == CS%itest + G%isd - G%isd_global) .and. &
-!diag               (j == CS%jtest + G%jsd - G%jsd_global))
 
     ! --- store one-dimensional arrays of -p- for the 'old'  vertical grid before regridding
     pres_in(1) = 0.0
@@ -359,7 +350,7 @@ subroutine hybgen_regrid(G, GV, US, CS, dp, tv, h_new, dzInterface, PCM_cell)
                            CS%dpns, CS%dsns, &
                            depths_i_j, dp_i_j, &
                            fixlay, qdep, qhrlx, dp0ij, dp0cum, &
-                           p_i_j, test_col)
+                           p_i_j)
 
     ! Determine whether to require the use of PCM remapping from each source layer.
     do k=1,GV%ke
@@ -376,7 +367,7 @@ subroutine hybgen_regrid(G, GV, US, CS, dp, tv, h_new, dzInterface, PCM_cell)
     call hybgenaij_regrid(CS, kdm, CS%nhybrid, CS%thbase, CS%thkbot, &
                           CS%onem, 1.0e-11*US%kg_m3_to_R, &
                           theta_i_j, fixlay, qhrlx, dp0ij, dp0cum, &
-                          th3d_i_j, p_i_j, pres_in, test_col)
+                          th3d_i_j, p_i_j)
 
 
     ! Store the output from hybgenaij_regrid in 3-d arrays.
@@ -405,39 +396,32 @@ subroutine hybgen_regrid(G, GV, US, CS, dp, tv, h_new, dzInterface, PCM_cell)
 
 end subroutine hybgen_regrid
 
-subroutine hybgenaij_init(kdm, nhybrd, nsigma, &
-                                dp0k, ds0k, dp00i,topiso_i_j, qhybrlx, &
-                                dpns, dsns, &
-                                depths_i_j, &
-                                dp_i_j, &
-                                fixlay, qdep, qhrlx, dp0ij, dp0cum, &
-                                p_i_j, test_col)
-!
-  integer, intent(in)    :: &
-            kdm, &          ! The number of layers
-            nhybrd, &       !number of hybrid layers (typically kdm)
-            nsigma          !number of sigma  levels (nhybrd-nsigma z-levels)
-  real,    intent(in)    :: &
-            dp0k(kdm),    & !layer deep    z-level spacing minimum thicknesses [H ~> m or kg m-2]
-            ds0k(nsigma), & !layer shallow z-level spacing minimum thicknesses [H ~> m or kg m-2]
-            dp00i, &        !deep isopycnal spacing minimum thickness [H ~> m or kg m-2]
-            topiso_i_j, &   !shallowest depth for isopycnal layers [H ~> m or kg m-2]
-            qhybrlx, &      !relaxation coefficient, 1/s
-            depths_i_j, &   ! Bottom depth om thickness units [H ~> m or kg m-2]
-            dp_i_j(kdm)     ! dp(i,j,:,n), layer thicknesses [H ~> m or kg m-2]
-  real,    intent(in)    :: dpns ! Vertical sum of dp0k [H ~> m or kg m-2]
-  real,    intent(in)    :: dsns ! Vertical sum of ds0k [H ~> m or kg m-2]
-  integer, intent(out)   :: fixlay           !deepest fixed coordinate layer
-  real,    intent(out)   :: qdep             !fraction dp0k (vs ds0k) [nondim]
-  real,    intent(out)   :: qhrlx( kdm+1)    !relaxation coefficient [timesteps-1?]
-  real,    intent(out)   :: dp0ij( kdm)      !minimum layer thickness [H ~> m or kg m-2]
-  real,    intent(out)   :: dp0cum(kdm+1)    !minimum interface depth [H ~> m or kg m-2]
-  real,    intent(out)   :: p_i_j(kdm+1)     !p(i,j,:), interface depths [H ~> m or kg m-2]
-  logical, intent(in)    :: test_col !< If true, write verbose debugging for this column.
+!> Initialize some of the variables that are used for regridding, including the previous
+!! interface heights and contraits on where the new interfaces can be.
+subroutine hybgenaij_init(kdm, nhybrd, nsigma, dp0k, ds0k, dp00i, topiso_i_j, &
+                          qhybrlx, dpns, dsns, depths_i_j, dp_i_j, &
+                          fixlay, qdep, qhrlx, dp0ij, dp0cum, p_i_j)
+  integer, intent(in)    :: kdm          !< The number of layers in the new grid
+  integer, intent(in)    :: nhybrd       !< The number of hybrid layers (typically kdm)
+  integer, intent(in)    :: nsigma       !< The number of sigma  levels (nhybrd-nsigma z-levels)
+  real,    intent(in)    :: dp0k(kdm)    !< Layer deep z-level spacing minimum thicknesses [H ~> m or kg m-2]
+  real,    intent(in)    :: ds0k(nsigma) !< Layer shallow z-level spacing minimum thicknesses [H ~> m or kg m-2]
+  real,    intent(in)    :: dp00i        !< Deep isopycnal spacing minimum thickness [H ~> m or kg m-2]
+  real,    intent(in)    :: topiso_i_j   !< Shallowest depth for isopycnal layers [H ~> m or kg m-2]
+  real,    intent(in)    :: qhybrlx      !< relaxation coefficient, 1/s?
+  real,    intent(in)    :: depths_i_j   !< Bottom depth in thickness units [H ~> m or kg m-2]
+  real,    intent(in)    :: dp_i_j(kdm)  !< Initial layer thicknesses [H ~> m or kg m-2]
+  real,    intent(in)    :: dpns         !< Vertical sum of dp0k [H ~> m or kg m-2]
+  real,    intent(in)    :: dsns         !< Vertical sum of ds0k [H ~> m or kg m-2]
+  integer, intent(out)   :: fixlay       !< Deepest fixed coordinate layer
+  real,    intent(out)   :: qdep         !< fraction dp0k (vs ds0k) [nondim]
+  real,    intent(out)   :: qhrlx( kdm+1) !< Relaxation coefficient [timesteps-1?]
+  real,    intent(out)   :: dp0ij( kdm)   !< minimum layer thickness [H ~> m or kg m-2]
+  real,    intent(out)   :: dp0cum(kdm+1) !< minimum interface depth [H ~> m or kg m-2]
+  real,    intent(out)   :: p_i_j(kdm+1)  !< p(i,j,:), interface depths [H ~> m or kg m-2]
 !
 ! --- --------------------------------------------------------------
 ! --- hybrid grid generator, single column(part A) - initialization.
-! --- depth_i_j is in m, everything else is in pressure units
 ! --- --------------------------------------------------------------
 !
   character(len=256) :: mesg  ! A string for output messages
@@ -459,24 +443,14 @@ subroutine hybgenaij_init(kdm, nhybrd, nsigma, &
   else
     qdep = max( 0.0, min( 1.0, (depths_i_j - dsns) / (dpns - dsns)) )
   endif
-!
+
   if (qdep < 1.0) then
 ! ---   terrain following, qhrlx=1 and ignore dp00
     p_i_j( 1) = 0.0
     dp0cum(1) = 0.0
     qhrlx( 1) = 1.0
     dp0ij( 1) = qdep*dp0k(1) + (1.0-qdep)*ds0k(1)
-!diag       if (test_col) then
-!diag         k=1
-!diag         write (mesg,*) 'qdep = ', qdep
-!diag         call MOM_mesg(mesg, all_print=.true.)
-!diag         write (mesg,'(a/i6,1x,4f9.3/a)') &
-!diag         '     k     dp0ij     ds0k     dp0k        p', &
-!diag         k, dp0ij(k)*GV%H_to_m, ds0k(1)*GV%H_to_m, dp0k(1)*GV%H_to_m, &
-!diag                                  p_i_j(k)*GV%H_to_m, &
-!diag         '     k     dp0ij    p-cum        p   dp0cum'
-!diag         call MOM_mesg(mesg, all_print=.true.)
-!diag       endif !debug
+
     dp0cum(2) = dp0cum(1)+dp0ij(1)
     qhrlx( 2) = 1.0
     p_i_j( 2) = p_i_j(1)+dp_i_j(1)
@@ -485,12 +459,6 @@ subroutine hybgenaij_init(kdm, nhybrd, nsigma, &
       dp0ij( k)   = qdep*dp0k(k) + (1.0-qdep)*ds0k(k)
       dp0cum(k+1) = dp0cum(k)+dp0ij(k)
       p_i_j( k+1) = p_i_j(k)+dp_i_j(k)
-!diag         if (test_col) then
-!diag           write (mesg,'(i6,1x,4f9.3)') &
-!diag           k, dp0ij(k)*GV%H_to_m, p_i_j(k)*GV%H_to_m-dp0cum(k)*GV%H_to_m, &
-!diag                            p_i_j(k)*GV%H_to_m, dp0cum(k)*GV%H_to_m
-!diag         call MOM_mesg(mesg, all_print=.true.)
-!diag         endif !debug
     enddo !k
   else
 ! ---   not terrain following
@@ -498,15 +466,7 @@ subroutine hybgenaij_init(kdm, nhybrd, nsigma, &
     dp0cum(1) = 0.0
     qhrlx( 1) = 1.0 !no relaxation in top layer
     dp0ij( 1) = dp0k(1)
-!diag       if (test_col) then
-!diag         k=1
-!diag         write (mesg,*) 'qdep = ', qdep
-!diag         call MOM_mesg(mesg, all_print=.true.)
-!diag         write (mesg,'(a/i6,1x,f9.3)') &
-!diag       '     k     dp0ij     dp0k        q    p-cum        p   dp0cum', &
-!diag             k, dp0ij(k)*GV%H_to_m
-!diag         call MOM_mesg(mesg, all_print=.true.)
-!diag       endif !debug
+
     dp0cum(2) = dp0cum(1)+dp0ij(1)
     qhrlx( 2) = 1.0 !no relaxation in top layer
     p_i_j( 2) = p_i_j(1)+dp_i_j(1)
@@ -525,16 +485,9 @@ subroutine hybgenaij_init(kdm, nhybrd, nsigma, &
       dp0ij( k)   = min( q, dp0k(k) )
       dp0cum(k+1) = dp0cum(k)+dp0ij(k)
       p_i_j( k+1) = p_i_j(k)+dp_i_j(k)
-!diag         if (test_col) then
-!diag           write (mesg,'(i6,1x,6f9.3)') &
-!diag             k, dp0ij(k)*GV%H_to_m, dp0k(k)*GV%H_to_m, q*GV%H_to_m, &
-!diag             p_i_j(k)*GV%H_to_m-dp0cum(k)*GV%H_to_m, &
-!diag             p_i_j(k)*GV%H_to_m, dp0cum(k)*GV%H_to_m
-!diag           call MOM_mesg(mesg, all_print=.true.)
-!diag         endif !debug
     enddo !k
   endif !qdep<1:else
-!
+
 ! --- identify the current fixed coordinate layers
   fixlay = 1  !layer 1 always fixed
   do k=2,nhybrd
@@ -545,19 +498,9 @@ subroutine hybgenaij_init(kdm, nhybrd, nsigma, &
     qhrlx(k+1) = 1.0  !no relaxation in fixed layers
     fixlay     = fixlay+1
   enddo !k
-!diag      if (test_col) then
-!diag        write(mesg,'(a,i3)') &
-!diag              'hybgen, always-fixed coordinate layers: 1 to ', fixlay
-!diag        call MOM_mesg(mesg, all_print=.true.)
-!diag      endif !debug
-!
+
   fixall = fixlay
   do k=fixall+1,nhybrd
-!diag        if (test_col) then
-!diag          write (mesg,'(i6,1x,2f9.3)') &
-!diag            k, p_i_j(k+1)*GV%H_to_m, dp0cum(k+1)*GV%H_to_m
-!diag          call MOM_mesg(mesg, all_print=.true.)
-!diag        endif !debug
     if (p_i_j(k+1) > dp0cum(k+1)+0.1*dp0ij(k)) then
       if ( (fixlay > fixall) .and. (p_i_j(k) > dp0cum(k)) ) then
         ! --- The previous layer should remain fixed.
@@ -569,33 +512,20 @@ subroutine hybgenaij_init(kdm, nhybrd, nsigma, &
     qhrlx(k) = 1.0  !no relaxation in fixed layers
     fixlay   = fixlay+1
   enddo !k
-!diag      if (test_col) then
-!diag        write(mesg, '(a,i3)') &
-!diag              'hybgen,        fixed coordinate layers: 1 to ', fixlay
-!diag        call MOM_mesg(mesg, all_print=.true.)
-
-!diag        call MOM_mesg('hybgen:   thkns  minthk     dpth  mindpth   hybrlx', all_print=.true.)
-!diag        do k=1,kdm
-!diag          write (mesg,'(i6,1x,2f8.3,2f9.3,f9.3)') &
-!diag              k, dp_i_j(k)*GV%H_to_m,   dp0ij(k)*GV%H_to_m, &
-!diag              p_i_j(k+1)*GV%H_to_m, dp0cum(k+1)*GV%H_to_m, 1.0/qhrlx(k+1)
-!diag          call MOM_mesg(mesg, all_print=.true.)
-!diag        enddo
-!diag      endif !debug
 
 end subroutine hybgenaij_init
 
-
+!> Create a new grid for a column of water using the Hybgen algorithm.
 subroutine hybgenaij_regrid(CS, kdm, nhybrd, thbase, thkbot, &
                             onem, epsil, theta_i_j, &
                             fixlay, qhrlx, dp0ij, dp0cum, &
-                            th3d_i_j, p_i_j, pres, test_col)
+                            th3d_i_j, p_i_j)
 !
   type(hybgen_regrid_CS), intent(in)    :: CS  !< hybgen regridding control structure
   integer, intent(in)    :: kdm            !< number of layers
   integer, intent(in)    :: nhybrd         !< number of hybrid layers (typically kdm)
   real,    intent(in)    :: thbase         !< reference density (sigma units)
-  real,    intent(in)    :: thkbot         !< thickness of bottom boundary layer (m)
+  real,    intent(in)    :: thkbot         !< thickness of bottom boundary layer [H ~> m or kg m-2]
   real,    intent(in)    :: onem           !< one m in pressure units [H ~> m or kg m-2]
   real,    intent(in)    :: epsil          !< small nonzero density to prevent division by zero
   real,    intent(in)    :: theta_i_j(kdm) !< theta(i,j,:) target density
@@ -605,14 +535,12 @@ subroutine hybgenaij_regrid(CS, kdm, nhybrd, thbase, thkbot, &
   real,    intent(in)    :: dp0cum(kdm+1)  !< minimum interface depth
   real,    intent(in)    :: th3d_i_j(kdm)  !< Coordinate potential density [R ~> kg m-3]
   real,    intent(inout) :: p_i_j(kdm+1)   !< layer interface positions [H ~> m or kg m-2]
-  real,    intent(in)    :: pres(kdm+1)    !< original layer interfaces [H ~> m or kg m-2]
-  logical, intent(in)    :: test_col !< If true, write verbose debugging for this column.
 
 ! --- ------------------------------------------------------
 ! --- hybrid grid generator, single column(part A) - regrid.
 ! --- ------------------------------------------------------
   real :: p_hat, p_hat0, p_hat2, p_hat3
-  real :: q, qtr, thkbop
+  real :: q, qtr
   real :: zthk, dpthin
   real :: tenm  ! ten m  in pressure units
   real :: onemm ! one mm in pressure units
@@ -640,7 +568,6 @@ subroutine hybgenaij_regrid(CS, kdm, nhybrd, thbase, thkbot, &
 
   tenm = 10.0*onem
   onemm = 0.001*onem
-  thkbop = thkbot*onem
 
 ! --- try to restore isopycnic conditions by moving layer interfaces
 ! --- qhrlx(k) are relaxation coefficients (inverse baroclinic time steps)
@@ -659,27 +586,6 @@ subroutine hybgenaij_regrid(CS, kdm, nhybrd, thbase, thkbot, &
   endif
 
   do k=2,nhybrd
-!diag   if (test_col) then
-!diag     write(cinfo,'(a9,i2.2,1x)') '  do 88 k=',k
-!diag     write(mesg,'(i9,2i5,a,a)') nstep, CS%itest, CS%jtest, &
-!diag       cinfo,':     othkns    odpth    nthkns    ndpth'
-!diag     call MOM_mesg(mesg, all_print=.true.)
-!diag     do ka=1,kdm
-!diag       if     (pres(ka+1) == p_i_j(ka+1) .and. &
-!diag               pres(ka  ) == p_i_j(ka  )      ) then
-!diag         write(mesg,'(i9,8x,a,a,i3,f10.3,f9.3)') &
-!diag              nstep,cinfo,':',ka, &
-!diag             (pres(ka+1) -pres(ka))*GV%H_to_m, pres(ka+1)*GV%H_to_m
-!diag         call MOM_mesg(mesg, all_print=.true.)
-!diag       else
-!diag         write(mesg,'(i9,8x,a,a,i3,f10.3,f9.3,f10.3,f9.3)') &
-!diag             nstep,cinfo,':',ka, &
-!diag             (pres(ka+1) - pres(ka))*GV%H_to_m, pres(ka+1)*GV%H_to_m, &
-!diag             (p_i_j(ka+1) - p_i_j(ka))*GV%H_to_m, p_i_j(ka+1)*GV%H_to_m
-!diag         call MOM_mesg(mesg, all_print=.true.)
-!diag       endif
-!diag     enddo !ka
-!diag   endif !debug
 
     if (k <= fixlay) then
 ! ---     maintain constant thickness, k <= fixlay
@@ -697,12 +603,6 @@ subroutine hybgenaij_regrid(CS, kdm, nhybrd, thbase, thkbot, &
         endif !k == fixlay
       endif !k < kdm
 
-!diag     if (test_col) then
-!diag       write(mesg,'(a,i3.2,f8.2)') 'hybgen, fixlay :', &
-!diag                                 k+1, p_i_j(k+1)*GV%H_to_m
-!diag       call MOM_mesg(mesg, all_print=.true.)
-!diag     endif !debug
-
     else
 ! ---     do not maintain constant thickness, k > fixlay
 
@@ -716,12 +616,6 @@ subroutine hybgenaij_regrid(CS, kdm, nhybrd, thbase, thkbot, &
             p_i_j(k+1)-p_i_j(k) <= p_i_j(k)-p_i_j(k-1)) then
 ! ---         if layer k-1 is too light, thicken the thinner of the two,
 ! ---         i.e. skip this layer if it is thicker.
-
-!diag         if (test_col) then
-!diag           write(mesg,'(a,3x,i2.2,1pe13.5)') &
-!diag                 'hybgen, too dense:',k,th3d_i_j(k)-theta_i_j(k)
-!diag           call MOM_mesg(mesg, all_print=.true.)
-!diag         endif !debug
 
           if     ((theta_i_j(k)-th3d_i_j(k-1)) <= epsil) then
 !               layer k-1 much too dense, take entire layer
@@ -747,7 +641,7 @@ subroutine hybgenaij_regrid(CS, kdm, nhybrd, thbase, thkbot, &
 ! ---           do nothing.
           else if (p_hat >= p_i_j(k) .and. &
                    p_i_j(k-1) > dp0cum(k-1)+tenm .and. &
-                  (p_i_j(kdm+1)-p_i_j(k-1) < thkbop .or. &
+                  (p_i_j(kdm+1)-p_i_j(k-1) < thkbot .or. &
                    p_i_j(k-1)  -p_i_j(k-2) > qqmx*dp0ij(k-2))) then ! k > 2
             if (k == fixlay+3) then
 ! ---             treat layer k-2 as fixed.
@@ -761,16 +655,11 @@ subroutine hybgenaij_regrid(CS, kdm, nhybrd, thbase, thkbot, &
             if (p_hat2 < p_i_j(k-1)-onemm) then
               p_i_j(k-1) = (1.0-qhrlx(k-1))*p_i_j(k-1) + &
                            qhrlx(k-1) * max(p_hat2, 2.0*p_i_j(k-1)-p_hat)
-!diag             if (test_col) then
-!diag               write(mesg,'(a,i3.2,f8.2)') 'hybgen,  1blocking :', &
-!diag                     k-1, p_i_j(k-1)*GV%H_to_m
-!diag               call MOM_mesg(mesg, all_print=.true.)
-!diag             endif !debug
               p_hat = p_i_j(k-1) + cushn(p_hat0-p_i_j(k-1), dp0ij(k-1))
             elseif (k <= fixlay+3) then
 ! ---             do nothing.
             elseif (p_i_j(k-2) > dp0cum(k-2)+tenm .and. &
-                   (p_i_j(kdm+1)-p_i_j(k-2) < thkbop .or. &
+                   (p_i_j(kdm+1)-p_i_j(k-2) < thkbot .or. &
                     p_i_j(k-2)  -p_i_j(k-3) > qqmx*dp0ij(k-3))) then
               if (k == fixlay+4) then
 ! ---               treat layer k-3 as fixed.
@@ -782,20 +671,10 @@ subroutine hybgenaij_regrid(CS, kdm, nhybrd, thbase, thkbot, &
               if (p_hat3 < p_i_j(k-2)-onemm) then
                 p_i_j(k-2) = (1.0-qhrlx(k-2))*p_i_j(k-2) + &
                              qhrlx(k-2)*max(p_hat3, 2.0*p_i_j(k-2)-p_i_j(k-1))
-!diag               if (test_col) then
-!diag                 write(mesg,'(a,i3.2,f8.2)') 'hybgen,  2blocking :', &
-!diag                       k-2, p_i_j(k-2)*GV%H_to_m
-!diag                 call MOM_mesg(mesg, all_print=.true.)
-!diag               endif !debug
                 p_hat2 = p_i_j(k-2) + cushn(p_i_j(k-1)-p_hat + p_hat0-p_i_j(k-2), dp0ij(k-2))
                 if (p_hat2 < p_i_j(k-1)-onemm) then
                   p_i_j(k-1) = (1.0-qhrlx(k-1)) * p_i_j(k-1) + &
                                qhrlx(k-1) * max(p_hat2, 2.0*p_i_j(k-1)-p_hat)
-!diag                 if (test_col) then
-!diag                   write(mesg,'(a,i3.2,f8.2)') 'hybgen,  3blocking :', &
-!diag                              k-1, p_i_j(k-1)*GV%H_to_m
-!diag                   call MOM_mesg(mesg, all_print=.true.)
-!diag                 endif !debug
                   p_hat = p_i_j(k-1) + cushn(p_hat0-p_i_j(k-1), dp0ij(k-1))
                 endif !p_hat2
               endif !p_hat3
@@ -806,13 +685,7 @@ subroutine hybgenaij_regrid(CS, kdm, nhybrd, thbase, thkbot, &
 ! ---           entrain layer k-1 water into layer k, move interface up.
             p_i_j(k) = (1.0-qhrlx(k)) * p_i_j(k) + qhrlx(k) * p_hat
           endif !entrain
-!
-!diag         if (test_col) then
-!diag           write(mesg,'(a,i3.2,f8.2)') 'hybgen, entrain(k) :', &
-!diag                                     k, p_i_j(k)*GV%H_to_m
-!diag           call MOM_mesg(mesg, all_print=.true.)
-!diag         endif !debug
-!
+
         endif  !too-dense adjustment
 !
       elseif (th3d_i_j(k) < theta_i_j(k)-epsil) then   ! layer too light
@@ -828,12 +701,6 @@ subroutine hybgenaij_regrid(CS, kdm, nhybrd, thbase, thkbot, &
 ! ---           if layer k+1 is too dense, thicken the thinner of the
 ! ---           two, i.e. skip this layer (never get here) if it is not
 ! ---           thinner than the other.
-
-!diag           if (test_col) then
-!diag             write(mesg,'(a,3x,i2.2,1pe13.5)') &
-!diag                  'hybgen, too light:', k, theta_i_j(k)-th3d_i_j(k)
-!diag             call MOM_mesg(mesg, all_print=.true.)
-!diag           endif !debug
 
             if     ((th3d_i_j(k+1)-theta_i_j(k)) <= epsil) then
 !                 layer k-1 too light, take entire layer
@@ -864,12 +731,6 @@ subroutine hybgenaij_regrid(CS, kdm, nhybrd, thbase, thkbot, &
               p_i_j(k+1) = (1.0-qhrlx(k+1)) * p_i_j(k+1) + qhrlx(k+1) * p_hat
             endif !entrain
 
-!diag           if (test_col) then
-!diag             write(mesg,'(a,i3.2,f8.2)') &
-!diag                  'hybgen, entrain(k+):',k, p_i_j(k+1)*GV%H_to_m
-!diag             call MOM_mesg(mesg, all_print=.true.)
-!diag           endif !debug
-
           endif !too-light adjustment
         endif !above bottom
       endif !too dense or too light
@@ -879,12 +740,6 @@ subroutine hybgenaij_regrid(CS, kdm, nhybrd, thbase, thkbot, &
       if (p_hat0 > p_i_j(k)) then
         p_hat = (1.0-qhrlx(k-1)) * p_i_j(k) + qhrlx(k-1) * p_hat0
         p_i_j(k) = min(p_hat, p_i_j(k+1))
-!
-!diag       if (test_col) then
-!diag         write(mesg,'(a,i3.2,f8.2)') &
-!diag              'hybgen, min. thknss (k+):',k-1, p_i_j(k)*GV%H_to_m
-!diag         call MOM_mesg(mesg, all_print=.true.)
-!diag       endif !debug
       endif
 
     endif !k <= fixlay:else
@@ -895,56 +750,5 @@ end subroutine hybgenaij_regrid
 
 end module MOM_hybgen_regrid
 
-!
-!> HYCOM hybgen Revision history:
-!>
-!> Feb. 2000 -- total rewrite to convert to 'newzp' approach
-!> Jul. 2000 -- added hybgenj for OpenMP parallelization
-!> Oct. 2000 -- added hybgenbj to simplify OpenMP logic
-!> Nov. 2000 -- fill massless layers on sea floor with salinity from above
-!> Nov. 2000 -- unmixing of deepest inflated layer uses th&T&S from above
-!> Nov. 2000 -- ignored isopycnic variance is now 0.002
-!> Nov. 2000 -- iterate to correct for cabbeling
-!> Nov. 2000 -- allow for "blocking" interior layers
-!> Nov. 2000 -- hybflg selects conserved fields (any two of T/S/th)
-!> Nov. 2002 -- replace PCM remapping with PLM when non-isopycnal
-!> Apr. 2003 -- added dp00i for thinner minimum layers away from the surface
-!> Dec. 2003 -- fixed tracer bug when deepest inflated layer is too light
-!> Dec. 2003 -- improved water column conservation
-!> Dec. 2003 -- compile time option for explicit water column conservation
-!> Dec. 2003 -- ignored isopycnic variance is now 0.0001
-!> Jan. 2004 -- shifted qqmn, qqmx range now used in cushion function
-!> Mar. 2004 -- minimum thickness no longer enforced in near-bottom layers
-!> Mar. 2004 -- ignored isopycnic variance is now epsil (i.e. very small)
-!> Mar. 2004 -- relaxation to isopycnic layers controled via hybrlx
-!> Mar. 2004 -- relaxation removes the need to correct for cabbeling
-!> Mar. 2004 -- modified unmixing selection criteria
-!> Mar. 2004 -- added isotop (topiso) for isopycnal layer minimum depths
-!> Jun. 2005 -- hybrlx (qhybrlx) now input via blkdat.input
-!> Jan. 2007 -- hybrlx now only active below "fixed coordinate" surface layers
-!> Aug. 2007 -- removed mxlkta logic
-!> Sep. 2007 -- added hybmap and hybiso for PCM,PLM,PPM remaper selection
-!> Jan. 2008 -- updated logic for two layers (one too dense, other too light)
-!> Jul. 2008 -- Added WENO-like, and bugfix to PPM for lcm==.true.
-!> Aug. 2008 -- Use WENO-like (vs PPM) for most velocity remapping
-!> Aug. 2008 -- Switch more thin near-isopycnal layers to PCM remapping
-!> May  2009 -- New action when deepest inflated layer is very light
-!> Oct  2010 -- updated test for deepest inflated layer too light
-!> Oct  2010 -- updated sanity check on deltm
-!> July 2010 -- Maintain vertical minval and maxval in remapping
-!> Aug  2011 -- Option to apply Robert-Asselin filter to hybgen's updated dp
-!> Mar  2012 -- Replaced dssk with dpns and dsns, see blkdat.F for info
-!> July 2012 -- Bugfix for tracer in too-light deepest inflated layer
-!> Sep  2012 -- Added ndebug_tracer for tracer debuging
-!> Sep  2012 -- Don't unmix in terrain-following regime
-!> Apr. 2013 -- Detect all fixed coordinate layers
-!> Apr. 2013 -- bugfix for constant thickness layer k = 1
-!> May  2014 - use land/sea masks (e.g. ip) to skip land
-!> Feb. 2015 - when too light, include layer k+2 in "near bottom" logic
-!> Apr. 2015 - fixed a k+3 for k=kk-1 (k+3=kk+2) bug
-!> Aug. 2015 - changed k-2 to k-N in lowest layer "runaway" unmixing test
-!> Aug. 2015 - overturn with the layer above if bottom layer is very light
-!> Aug. 2015 - entrain into too dense layer (only move upper interface up)
-!> Aug. 2015 - allow entrainment to increase fixlay by 1
-!> Nov. 2019 - avoid overflow in calculation of qdep
-!> May  2021 - removed unneeded dpmixl halo update
+! This code was translated in 2022 from the HYCOM hybgen code, which was primarily developed
+! between 2000 and 2015, with some minor subsequent changes.

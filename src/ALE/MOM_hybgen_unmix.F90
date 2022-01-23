@@ -210,7 +210,6 @@ subroutine hybgen_unmix(G, GV, US, CS, tv, Reg, ntracer, dp)
   real :: tracer_i_j(GV%ke,max(ntracer,1))  !  Columns of each tracer [Conc]
   real :: depths_i_j         ! Bottom depth in thickness units [H ~> m or kg m-2]
   real :: onemm ! one mm in thickness units [H ~> m or kg m-2]
-  logical :: test_col    ! If true, write verbose debugging for this column.
   integer :: trcflg(max(ntracer,1))  ! Hycom tracer type flag for each tracer
   integer :: i, j, k, kdm, m
 !
@@ -224,10 +223,7 @@ subroutine hybgen_unmix(G, GV, US, CS, tv, Reg, ntracer, dp)
 
   p_col(:) = CS%ref_pressure
 
-  test_col = .false.
   do j=G%jsc-1,G%jec+1 ; do i=G%isc-1,G%iec+1 ; if (G%mask2dT(i,j)>0.) then
-!diag   test_col = ((i == CS%itest + G%isd - G%isd_global) .and. &
-!diag               (j == CS%jtest + G%jsd - G%jsd_global))
 
     !### p_i_j(1) = 0.0
     do k=1,kdm
@@ -252,12 +248,11 @@ subroutine hybgen_unmix(G, GV, US, CS, tv, Reg, ntracer, dp)
                            CS%dp0k, CS%ds0k, CS%dp00i, CS%topiso_const, CS%qhybrlx, &
                            CS%dpns, CS%dsns, &
                            depths_i_j, dp_i_j, &
-                           fixlay, qdep, qhrlx, dp0ij, dp0cum, &
-                           p_i_j, test_col)
+                           fixlay, qdep, qhrlx, dp0ij, dp0cum, p_i_j)
     call hybgenaij_unmix(  CS, kdm, theta_i_j, &
                            temp_i_j, saln_i_j, th3d_i_j, tv%eqn_of_state, &
                            ntracer, tracer_i_j, trcflg, fixlay, qdep, qhrlx, &
-                           dp_i_j, onemm, 1.0e-11*US%kg_m3_to_R, test_col)
+                           dp_i_j, onemm, 1.0e-11*US%kg_m3_to_R)
 
     ! Store the output from hybgen_unmix
     do k=1,kdm
@@ -271,39 +266,32 @@ subroutine hybgen_unmix(G, GV, US, CS, tv, Reg, ntracer, dp)
 end subroutine hybgen_unmix
 
 
-subroutine hybgenaij_init(kdm, nhybrd, nsigma, &
-                                dp0k, ds0k, dp00i,topiso_i_j, qhybrlx, &
-                                dpns, dsns, &
-                                depths_i_j, &
-                                dp_i_j, &
-                                fixlay, qdep, qhrlx, dp0ij, dp0cum, &
-                                p_i_j, test_col)
-!
-  integer, intent(in)    :: &
-            kdm, &          ! The number of layers
-            nhybrd, &       !number of hybrid layers (typically kdm)
-            nsigma          !number of sigma  levels (nhybrd-nsigma z-levels)
-  real,    intent(in)    :: &
-            dp0k(kdm),    & !layer deep    z-level spacing minimum thicknesses [H ~> m or kg m-2]
-            ds0k(nsigma), & !layer shallow z-level spacing minimum thicknesses [H ~> m or kg m-2]
-            dp00i, &        !deep isopycnal spacing minimum thickness [H ~> m or kg m-2]
-            topiso_i_j, &   !shallowest depth for isopycnal layers [H ~> m or kg m-2]
-            qhybrlx, &      !relaxation coefficient, 1/s
-            depths_i_j, &   ! Bottom depth om thickness units [H ~> m or kg m-2]
-            dp_i_j(kdm)     ! dp(i,j,:,n), layer thicknesses [H ~> m or kg m-2]
-  real,    intent(in)    :: dpns ! Vertical sum of dp0k [H ~> m or kg m-2]
-  real,    intent(in)    :: dsns ! Vertical sum of ds0k [H ~> m or kg m-2]
-  integer, intent(out)   :: fixlay           !deepest fixed coordinate layer
-  real,    intent(out)   :: qdep             !fraction dp0k (vs ds0k) [nondim]
-  real,    intent(out)   :: qhrlx( kdm+1)    !relaxation coefficient [timesteps-1?]
-  real,    intent(out)   :: dp0ij( kdm)      !minimum layer thickness [H ~> m or kg m-2]
-  real,    intent(out)   :: dp0cum(kdm+1)    !minimum interface depth [H ~> m or kg m-2]
-  real,    intent(out)   :: p_i_j(kdm+1)     !p(i,j,:), interface depths [H ~> m or kg m-2]
-  logical, intent(in)    :: test_col !< If true, write verbose debugging for this column.
+!> Initialize some of the variables that are used for regridding or unmixing, including the
+!! previous interface heights and contraits on where the new interfaces can be.
+subroutine hybgenaij_init(kdm, nhybrd, nsigma, dp0k, ds0k, dp00i, topiso_i_j, &
+                          qhybrlx, dpns, dsns, depths_i_j, dp_i_j, &
+                          fixlay, qdep, qhrlx, dp0ij, dp0cum, p_i_j)
+  integer, intent(in)    :: kdm          !< The number of layers in the new grid
+  integer, intent(in)    :: nhybrd       !< The number of hybrid layers (typically kdm)
+  integer, intent(in)    :: nsigma       !< The number of sigma  levels (nhybrd-nsigma z-levels)
+  real,    intent(in)    :: dp0k(kdm)    !< Layer deep z-level spacing minimum thicknesses [H ~> m or kg m-2]
+  real,    intent(in)    :: ds0k(nsigma) !< Layer shallow z-level spacing minimum thicknesses [H ~> m or kg m-2]
+  real,    intent(in)    :: dp00i        !< Deep isopycnal spacing minimum thickness [H ~> m or kg m-2]
+  real,    intent(in)    :: topiso_i_j   !< Shallowest depth for isopycnal layers [H ~> m or kg m-2]
+  real,    intent(in)    :: qhybrlx      !< relaxation coefficient, 1/s?
+  real,    intent(in)    :: depths_i_j   !< Bottom depth in thickness units [H ~> m or kg m-2]
+  real,    intent(in)    :: dp_i_j(kdm)  !< Initial layer thicknesses [H ~> m or kg m-2]
+  real,    intent(in)    :: dpns         !< Vertical sum of dp0k [H ~> m or kg m-2]
+  real,    intent(in)    :: dsns         !< Vertical sum of ds0k [H ~> m or kg m-2]
+  integer, intent(out)   :: fixlay       !< Deepest fixed coordinate layer
+  real,    intent(out)   :: qdep         !< fraction dp0k (vs ds0k) [nondim]
+  real,    intent(out)   :: qhrlx( kdm+1) !< Relaxation coefficient [timesteps-1?]
+  real,    intent(out)   :: dp0ij( kdm)   !< minimum layer thickness [H ~> m or kg m-2]
+  real,    intent(out)   :: dp0cum(kdm+1) !< minimum interface depth [H ~> m or kg m-2]
+  real,    intent(out)   :: p_i_j(kdm+1)  !< p(i,j,:), interface depths [H ~> m or kg m-2]
 !
 ! --- --------------------------------------------------------------
 ! --- hybrid grid generator, single column(part A) - initialization.
-! --- depth_i_j is in m, everything else is in pressure units
 ! --- --------------------------------------------------------------
 !
   character(len=256) :: mesg  ! A string for output messages
@@ -332,17 +320,7 @@ subroutine hybgenaij_init(kdm, nhybrd, nsigma, &
     dp0cum(1) = 0.0
     qhrlx( 1) = 1.0
     dp0ij( 1) = qdep*dp0k(1) + (1.0-qdep)*ds0k(1)
-!diag       if (test_col) then
-!diag         k=1
-!diag         write (mesg,*) 'qdep = ', qdep
-!diag         call MOM_mesg(mesg, all_print=.true.)
-!diag         write (mesg,'(a/i6,1x,4f9.3/a)') &
-!diag         '     k     dp0ij     ds0k     dp0k        p', &
-!diag         k, dp0ij(k)*GV%H_to_m, ds0k(1)*GV%H_to_m, dp0k(1)*GV%H_to_m, &
-!diag                                  p_i_j(k)*GV%H_to_m, &
-!diag         '     k     dp0ij    p-cum        p   dp0cum'
-!diag         call MOM_mesg(mesg, all_print=.true.)
-!diag       endif !debug
+
     dp0cum(2) = dp0cum(1)+dp0ij(1)
     qhrlx( 2) = 1.0
     p_i_j( 2) = p_i_j(1)+dp_i_j(1)
@@ -351,12 +329,6 @@ subroutine hybgenaij_init(kdm, nhybrd, nsigma, &
       dp0ij( k)   = qdep*dp0k(k) + (1.0-qdep)*ds0k(k)
       dp0cum(k+1) = dp0cum(k)+dp0ij(k)
       p_i_j( k+1) = p_i_j(k)+dp_i_j(k)
-!diag         if (test_col) then
-!diag           write (mesg,'(i6,1x,4f9.3)') &
-!diag           k, dp0ij(k)*GV%H_to_m, p_i_j(k)*GV%H_to_m-dp0cum(k)*GV%H_to_m, &
-!diag                            p_i_j(k)*GV%H_to_m, dp0cum(k)*GV%H_to_m
-!diag         call MOM_mesg(mesg, all_print=.true.)
-!diag         endif !debug
     enddo !k
   else
 ! ---   not terrain following
@@ -364,15 +336,7 @@ subroutine hybgenaij_init(kdm, nhybrd, nsigma, &
     dp0cum(1) = 0.0
     qhrlx( 1) = 1.0 !no relaxation in top layer
     dp0ij( 1) = dp0k(1)
-!diag       if (test_col) then
-!diag         k=1
-!diag         write (mesg,*) 'qdep = ', qdep
-!diag         call MOM_mesg(mesg, all_print=.true.)
-!diag         write (mesg,'(a/i6,1x,f9.3)') &
-!diag       '     k     dp0ij     dp0k        q    p-cum        p   dp0cum', &
-!diag             k, dp0ij(k)*GV%H_to_m
-!diag         call MOM_mesg(mesg, all_print=.true.)
-!diag       endif !debug
+
     dp0cum(2) = dp0cum(1)+dp0ij(1)
     qhrlx( 2) = 1.0 !no relaxation in top layer
     p_i_j( 2) = p_i_j(1)+dp_i_j(1)
@@ -391,13 +355,6 @@ subroutine hybgenaij_init(kdm, nhybrd, nsigma, &
       dp0ij( k)   = min( q, dp0k(k) )
       dp0cum(k+1) = dp0cum(k)+dp0ij(k)
       p_i_j( k+1) = p_i_j(k)+dp_i_j(k)
-!diag         if (test_col) then
-!diag           write (mesg,'(i6,1x,6f9.3)') &
-!diag             k, dp0ij(k)*GV%H_to_m, dp0k(k)*GV%H_to_m, q*GV%H_to_m, &
-!diag             p_i_j(k)*GV%H_to_m-dp0cum(k)*GV%H_to_m, &
-!diag             p_i_j(k)*GV%H_to_m, dp0cum(k)*GV%H_to_m
-!diag           call MOM_mesg(mesg, all_print=.true.)
-!diag         endif !debug
     enddo !k
   endif !qdep<1:else
 !
@@ -411,19 +368,8 @@ subroutine hybgenaij_init(kdm, nhybrd, nsigma, &
     qhrlx(k+1) = 1.0  !no relaxation in fixed layers
     fixlay     = fixlay+1
   enddo !k
-!diag      if (test_col) then
-!diag        write(mesg,'(a,i3)') &
-!diag              'hybgen, always-fixed coordinate layers: 1 to ', fixlay
-!diag        call MOM_mesg(mesg, all_print=.true.)
-!diag      endif !debug
-!
   fixall = fixlay
   do k=fixall+1,nhybrd
-!diag        if (test_col) then
-!diag          write (mesg,'(i6,1x,2f9.3)') &
-!diag            k, p_i_j(k+1)*GV%H_to_m, dp0cum(k+1)*GV%H_to_m
-!diag          call MOM_mesg(mesg, all_print=.true.)
-!diag        endif !debug
     if (p_i_j(k+1) > dp0cum(k+1)+0.1*dp0ij(k)) then
       if ( (fixlay > fixall) .and. (p_i_j(k) > dp0cum(k)) ) then
         ! --- The previous layer should remain fixed.
@@ -435,26 +381,13 @@ subroutine hybgenaij_init(kdm, nhybrd, nsigma, &
     qhrlx(k) = 1.0  !no relaxation in fixed layers
     fixlay   = fixlay+1
   enddo !k
-!diag      if (test_col) then
-!diag        write(mesg, '(a,i3)') &
-!diag              'hybgen,        fixed coordinate layers: 1 to ', fixlay
-!diag        call MOM_mesg(mesg, all_print=.true.)
-
-!diag        call MOM_mesg('hybgen:   thkns  minthk     dpth  mindpth   hybrlx', all_print=.true.)
-!diag        do k=1,kdm
-!diag          write (mesg,'(i6,1x,2f8.3,2f9.3,f9.3)') &
-!diag              k, dp_i_j(k)*GV%H_to_m,   dp0ij(k)*GV%H_to_m, &
-!diag              p_i_j(k+1)*GV%H_to_m, dp0cum(k+1)*GV%H_to_m, 1.0/qhrlx(k+1)
-!diag          call MOM_mesg(mesg, all_print=.true.)
-!diag        enddo
-!diag      endif !debug
 
 end subroutine hybgenaij_init
 
 !> Unmix the properties in the lowest layer if it is too light.
 subroutine hybgenaij_unmix(CS, kdm, theta_i_j, temp_i_j, saln_i_j, th3d_i_j, eqn_of_state, &
                            ntracr, trac_i_j, trcflg, fixlay, qdep, qhrlx, &
-                           dp_i_j, onemm, epsil, test_col)
+                           dp_i_j, onemm, epsil)
   type(hybgen_unmix_CS), intent(in) :: CS  !< hybgen unmixing control structure
   integer,        intent(in)    :: kdm           !< The number of layers
   integer,        intent(in)    :: fixlay        !< deepest fixed coordinate layer
@@ -472,14 +405,12 @@ subroutine hybgenaij_unmix(CS, kdm, theta_i_j, temp_i_j, saln_i_j, th3d_i_j, eqn
   real,           intent(in)    :: onemm         !< one mm in pressure units
   real,           intent(in)    :: epsil         !< small nonzero density difference to prevent
                                                  !! division by zero [R ~> kg m-3]
-  logical,        intent(in)    :: test_col      !< If true, write verbose debugging for this column.
 !
 ! --- ------------------------------------------------------------------
 ! --- hybrid grid generator, single column(part A) - ummix lowest layer.
 ! --- ------------------------------------------------------------------
 !
       logical, parameter :: lunmix=.true.     !unmix a too light deepest layer
-      integer, parameter :: ndebug_tracer=0   !tracer to debug, usually 0 (off)
 !
   integer :: k, ka, kk, kp, ktr, fixall
   character(len=256) :: mesg  ! A string for output messages
@@ -498,12 +429,6 @@ subroutine hybgenaij_unmix(CS, kdm, theta_i_j, temp_i_j, saln_i_j, th3d_i_j, eqn
       exit
     endif
   enddo !k
-
-!diag      if (test_col) then
-!diag        write(mesg,'(a,i3)') &
-!diag              'hybgen, deepest inflated layer:',kp
-!diag        call MOM_mesg(mesg, all_print=.true.)
-!diag      endif !debug
 
   k  = kp  !at least 2
   ka = max(k-2,1)  !k might be 2
@@ -527,62 +452,22 @@ subroutine hybgenaij_unmix(CS, kdm, theta_i_j, temp_i_j, saln_i_j, th3d_i_j, eqn
     call calculate_density(temp_i_j(k-1), saln_i_j(k-1), CS%ref_pressure, &
                            th3d_i_j(k-1), eqn_of_state, CS%thbase)
 
-          if (ndebug_tracer > 0 .and. ndebug_tracer <= ntracr .and. test_col) then
-            ktr = ndebug_tracer
-            write(mesg,'(a,i3,f6.3,f9.4)') &
-              'hybgen, 11(+):', k-1, 0.0, trac_i_j(k-1,ktr)
-            call MOM_mesg(mesg, all_print=.true.)
-          endif !debug_tracer
     do ktr= 1,ntracr
       trac_i_j(k-1,ktr) = trac_i_j(k-1,ktr) - &
                           q*(trac_i_j(k-1,ktr) - trac_i_j(k,ktr) )
     enddo !ktr
-          if (ndebug_tracer > 0 .and. ndebug_tracer <= ntracr .and. test_col) then
-            ktr = ndebug_tracer
-            write(mesg,'(a,i3,f6.3,f9.4)') &
-              'hybgen, 11(+):', k-1, q, trac_i_j(k-1,ktr)
-            call MOM_mesg(mesg, all_print=.true.)
-            write(mesg,'(a,i3,f6.3,f9.4)') &
-              'hybgen, 11(+):', k, q, trac_i_j(k,ktr)
-            call MOM_mesg(mesg, all_print=.true.)
-            write(mesg,'(a,i3)') &
-                  'hybgen, deepest inflated layer:', kp
-            call MOM_mesg(mesg, all_print=.true.)
-          endif !debug_tracer
 ! ---   entrained the entire layer into the one above, so now kp=kp-1
     dp_i_j(k-1) = dp_i_j(k-1) + dp_i_j(k)
     dp_i_j(k) = 0.0
     kp = k-1
-!diag        if (test_col) then
-!diag          write(mesg,'(a,i3,f6.3,5f8.3)') &
-!diag              'hybgen, 11(+):', k-1, q, temp_i_j(k-1),saln_i_j(k-1), &
-!diag              th3d_i_j(k-1)+CS%thbase,theta_i_j(k-1)+CS%thbase
-!diag          call MOM_mesg(mesg, all_print=.true.)
-!diag          write(mesg,'(a,i3)') &
-!diag                'hybgen, deepest inflated layer:',kp
-!diag          call MOM_mesg(mesg, all_print=.true.)
-!diag        endif !debug
   elseif ( ((k > fixlay+1) .and. (qdep == 1.0)) .and. & ! layer not fixed depth
            (dp_i_j(k-1) >= dpthin)              .and. & ! layer above not too thin
            (theta_i_j(k)-epsil > th3d_i_j(k))   .and. & ! layer is lighter than its target
            (th3d_i_j(k-1) > th3d_i_j(k)) ) then
-!
 ! ---   water in the deepest inflated layer with significant thickness
 ! ---   (kp) is too light, and it is lighter than the layer above, but not the layer two above.
 ! ---
 ! ---   swap the entire layer with the one above.
-!diag        if (test_col) then
-!diag          write(mesg,'(a,i3,f8.5,5f10.5)') &
-!diag            'hybgen, original:', &
-!diag            k-1,0.0,temp_i_j(k-1),saln_i_j(k-1), &
-!diag                th3d_i_j(k-1)+CS%thbase,theta_i_j(k-1)+CS%thbase
-!diag          call MOM_mesg(mesg, all_print=.true.)
-!diag          write(mesg,'(a,i3,f8.5,5f10.5)') &
-!diag            'hybgen, original:', &
-!diag            k,0.0,temp_i_j(k),saln_i_j(k), &
-!diag                th3d_i_j(k)+CS%thbase,theta_i_j(k  )+CS%thbase
-!diag          call MOM_mesg(mesg, all_print=.true.)
-!diag        endif !debug
     if (dp_i_j(k) <= dp_i_j(k-1)) then
 ! ---     bottom layer is thinner, take entire bottom layer
 !---      note the double negative in T=T-q*(T-T'), equiv. to T=T+q*(T'-T)
@@ -629,16 +514,6 @@ subroutine hybgenaij_unmix(CS, kdm, theta_i_j, temp_i_j, saln_i_j, th3d_i_j, eqn
         trac_i_j(k-1,ktr) = s1d(k,2+ktr)
       enddo !ktr
     endif !bottom too light
-!diag        if (test_col) then
-!diag          write(mesg,'(a,i3,f8.5,5f10.5)') &
-!diag            'hybgen, overturn:', k-1, q,temp_i_j(k-1),saln_i_j(k-1), &
-!diag                th3d_i_j(k-1)+CS%thbase,theta_i_j(k-1)+CS%thbase
-!diag          call MOM_mesg(mesg, all_print=.true.)
-!diag          write(mesg,'(a,i3,f8.5,5f10.5)') &
-!diag            'hybgen, overturn:', k,  q,temp_i_j(k),saln_i_j(k), &
-!diag                th3d_i_j(k)+CS%thbase,theta_i_j(k  )+CS%thbase
-!diag          call MOM_mesg(mesg, all_print=.true.)
-!diag        endif !debug
   endif
 !
   k  = kp  !at least 2
@@ -662,13 +537,7 @@ subroutine hybgenaij_unmix(CS, kdm, theta_i_j, temp_i_j, saln_i_j, th3d_i_j, eqn
 ! ---     abs(S.k - S.k-1) <= abs(S.k-N - S.k-1) where
 ! ---     th3d.k-1 - th3d.k-N is at least theta(k-1) - theta(k-2)
 ! ---   It is also limited to a 50% change in layer thickness.
-!
-!diag   if (test_col) then
-!diag     write(mesg,'(a,i3)') &
-!diag       'hybgen, deepest inflated layer too light   (stable):',k
-!diag     call MOM_mesg(mesg, all_print=.true.)
-!diag   endif !debug
-!
+
     ka = 1
     do ktr=k-2,2,-1
       if ( th3d_i_j(k-1) - th3d_i_j(ktr) >= theta_i_j(k-1) - theta_i_j(k-2) ) then
@@ -711,13 +580,6 @@ subroutine hybgenaij_unmix(CS, kdm, theta_i_j, temp_i_j, saln_i_j, th3d_i_j, eqn
                            th3d_i_j(k), eqn_of_state, CS%thbase)
 
     if ((ntracr > 0) .and. (p_hat /= 0.0)) then
-            if (ndebug_tracer > 0 .and. ndebug_tracer <= ntracr .and. &
-                test_col) then
-              ktr = ndebug_tracer
-              write(mesg,'(a,i3,f6.3,f9.4)') &
-                'hybgen, 10(+):', k-1, 0.0, trac_i_j(k-1,ktr)
-              call MOM_mesg(mesg, all_print=.true.)
-            endif !debug_tracer
 ! ---     fraction of new upper layer from old lower layer
       qtr = p_hat / max(p_hat, dp_i_j(k))  !between 0 and 1
       do ktr= 1,ntracr
@@ -727,39 +589,9 @@ subroutine hybgenaij_unmix(CS, kdm, theta_i_j, temp_i_j, saln_i_j, th3d_i_j, eqn
         else !standard tracer - not split into two sub-layers
           trac_i_j(k-1,ktr) = trac_i_j(k-1,ktr) + &
                               qtr * (trac_i_j(k,ktr) - trac_i_j(k-1,ktr))
-!diag              if (test_col) then
-!diag                write(mesg,'(a,i4,i3,5e12.3)') &
-!diag                    'hybgen, 10(+):', k,ktr, p_hat, &
-!diag                    p_i_j(k), p_i_j(k-1), qtr, trac_i_j(k-1,ktr)
-!diag                call MOM_mesg(mesg, all_print=.true.)
-!diag              endif !debug
         endif !trcflg
       enddo !ktr
-            if (ndebug_tracer > 0 .and. ndebug_tracer <= ntracr .and. test_col) then
-              ktr = ndebug_tracer
-              write(mesg,'(a,i3,f6.3,f9.4)') &
-                'hybgen, 10(+):', k-1, qtr, trac_i_j(k-1,ktr)
-              call MOM_mesg(mesg, all_print=.true.)
-              write(mesg,'(a,i3,f6.3,f9.4)') &
-                'hybgen, 10(+):', k, qtr, trac_i_j(k,ktr)
-              call MOM_mesg(mesg, all_print=.true.)
-              write(mesg,'(a,i3)') &
-                    'hybgen, deepest inflated layer:', kp
-              call MOM_mesg(mesg, all_print=.true.)
-            endif !debug_tracer
     endif !tracers
-!diag        if (test_col) then
-!diag          write(mesg,'(a,i3,f6.3,5f8.3)') &
-!diag              'hybgen, 10(+):', k, q, temp_i_j(k), saln_i_j(k), &
-!diag                th3d_i_j(k)+CS%thbase, theta_i_j(k)+CS%thbase
-!diag          call MOM_mesg(mesg, all_print=.true.)
-!diag        endif !debug
-!diag        if (test_col) then
-!diag          write(mesg,'(a,i3,f6.3,5f8.3)') &
-!diag              'hybgen, 10(-):', k, 0.0, temp_i_j(k), saln_i_j(k), &
-!diag              th3d_i_j(k)+CS%thbase, theta_i_j(k)+CS%thbase
-!diag          call MOM_mesg(mesg, all_print=.true.)
-!diag        endif !debug
   endif !too light
 !
 ! --- massless or near-massless (thickness < dpthin) layers
@@ -787,11 +619,6 @@ subroutine hybgenaij_unmix(CS, kdm, theta_i_j, temp_i_j, saln_i_j, th3d_i_j, eqn
     do ktr= 1,ntracr
       trac_i_j(k,ktr) = trac_i_j(k-1,ktr)
     enddo !ktr
-    if (ndebug_tracer > 0 .and. ndebug_tracer <= ntracr .and. test_col) then
-      ktr = ndebug_tracer
-      write(mesg,'(a,i3,f9.4)') 'hybgen, massless:', k, trac_i_j(k,ktr)
-      call MOM_mesg(mesg, all_print=.true.)
-    endif !debug_tracer
   enddo !k
 
 end subroutine hybgenaij_unmix
@@ -800,12 +627,12 @@ end subroutine hybgenaij_unmix
 !> Determine the potential temperature that is consistent with a given density anomaly,
 !! salinity and reference pressure, using Newton's method.
 function Tofsig(sigma, T_input, salin, ref_pres, eqn_of_state, sigma_ref)
-  real, intent(in) :: sigma     ! The density anomaly [R ~> kg m-3]
-  real, intent(in) :: T_input   ! An input first guess at the temperature [degC]
-  real, intent(in) :: salin     ! Salinity [ppt]
-  real, intent(in) :: ref_pres  ! The reference pressure for sigma [R L2 T-2 ~> Pa]
+  real, intent(in) :: sigma     !< The density anomaly [R ~> kg m-3]
+  real, intent(in) :: T_input   !< An input first guess at the temperature [degC]
+  real, intent(in) :: salin     !< Salinity [ppt]
+  real, intent(in) :: ref_pres  !< The reference pressure for sigma [R L2 T-2 ~> Pa]
   type(EOS_type), intent(in) :: eqn_of_state !< Equation of state structure
-  real, intent(in) :: sigma_ref  ! The difference between sigma and density [R ~> kg m-3]
+  real, intent(in) :: sigma_ref  !< The difference between sigma and density [R ~> kg m-3]
   real :: tofsig !< The potential temperature that is consistent with sigma and salin [degC]
 
   real :: T_guess   ! A guess at the potential temperature [degC]
@@ -830,12 +657,12 @@ end function Tofsig
 !> Determine the salinity that is consistent with a given density anomaly,
 !! potential temperature and reference pressure, using Newton's method.
 function Sofsig(sigma, Temp, S_input, ref_pres, eqn_of_state, sigma_ref)
-  real, intent(in) :: sigma     ! The density anomaly [R ~> kg m-3]
-  real, intent(in) :: Temp      ! Potential temperature [degC]
-  real, intent(in) :: S_input   ! An input first guess at the salinity [ppt]
-  real, intent(in) :: ref_pres  ! The reference pressure for sigma [R L2 T-2 ~> Pa]
+  real, intent(in) :: sigma     !< The density anomaly [R ~> kg m-3]
+  real, intent(in) :: Temp      !< Potential temperature [degC]
+  real, intent(in) :: S_input   !< An input first guess at the salinity [ppt]
+  real, intent(in) :: ref_pres  !< The reference pressure for sigma [R L2 T-2 ~> Pa]
   type(EOS_type), intent(in) :: eqn_of_state !< Equation of state structure
-  real, intent(in) :: sigma_ref  ! The difference between sigma and density [R ~> kg m-3]
+  real, intent(in) :: sigma_ref  !< The difference between sigma and density [R ~> kg m-3]
   real :: Sofsig !< The salinity that is consistent with sigma and temp [ppt]
 
   real :: S_guess   ! A guess at the salinity [ppt]
