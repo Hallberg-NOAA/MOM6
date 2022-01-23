@@ -409,12 +409,8 @@ subroutine ALE_main( G, GV, US, h, u, v, tv, Reg, CS, OBC, dt, frac_shelf_h)
   endif
 
   ! Remap all variables from old grid h onto new grid h_new
-!###  if (CS%use_hybgen_remap) then
-!    call hybgen_remap(G, GV, CS%hybgen_remapCS, h, h_new, Reg, OBC, u, v, PCM_cell)
-!  else
-    call remap_all_state_vars( CS%remapCS, CS, G, GV, h, h_new, Reg, OBC, -dzRegrid, &
-                               u, v, CS%show_call_tree, dt, PCM_cell=PCM_cell)
-!  endif ! use_hybgen
+  call remap_all_state_vars( CS%remapCS, CS, G, GV, h, h_new, Reg, OBC, -dzRegrid, &
+                             u, v, CS%show_call_tree, dt, PCM_cell=PCM_cell )
 
   if (CS%show_call_tree) call callTree_waypoint("state remapped (ALE_main)")
 
