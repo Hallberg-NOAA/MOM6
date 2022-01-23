@@ -830,7 +830,7 @@ subroutine regridding_main( remapCS, CS, G, GV, h, tv, h_new, dzInterface, frac_
     case ( REGRIDDING_HYCOM1 )
       call build_grid_HyCOM1( G, GV, G%US, h, tv, h_new, dzInterface, CS, frac_shelf_h )
     case ( REGRIDDING_HYBGEN )
-      call hybgen_regrid(G, GV, G%US, CS%hybgen_CS, h, tv, h_new, dzInterface, PCM_cell)
+      call hybgen_regrid(G, GV, G%US, h, tv, CS%hybgen_CS, dzInterface, PCM_cell)
       call calc_h_new_by_dz(CS, G, GV, h, dzInterface, h_new)
     case ( REGRIDDING_SLIGHT )
       call build_grid_SLight( G, GV, G%US, h, tv, dzInterface, CS )
