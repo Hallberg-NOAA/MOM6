@@ -7,6 +7,7 @@ module MOM_hybgen_unmix
 use MOM_EOS,             only : EOS_type, calculate_density, calculate_density_derivs
 use MOM_error_handler,   only : MOM_mesg, MOM_error, FATAL, WARNING
 use MOM_file_parser,     only : get_param, param_file_type, log_param
+use MOM_hybgen_regrid,   only : hybgen_column_init
 use MOM_tracer_registry, only : tracer_registry_type, tracer_type, MOM_tracer_chkinv
 use MOM_unit_scaling,    only : unit_scale_type
 use MOM_variables,       only : ocean_grid_type, thermo_var_ptrs
@@ -219,8 +220,6 @@ subroutine hybgen_unmix(G, GV, US, CS, tv, Reg, ntracer, dp)
   ! Set all tracers to be passive.  Setting this to 2 treats a tracer like temperature.
   trcflg(:) = 3
 
-          ! theta_i_j(k) = theta(i,j,k)
-
   p_col(:) = CS%ref_pressure
 
   do j=G%jsc-1,G%jec+1 ; do i=G%isc-1,G%iec+1 ; if (G%mask2dT(i,j)>0.) then
@@ -244,15 +243,12 @@ subroutine hybgen_unmix(G, GV, US, CS, tv, Reg, ntracer, dp)
       tracer_i_j(k,m) = Reg%Tr(m)%t(i,j,k)
     enddo ; enddo
 
-    call hybgenaij_init(   kdm, CS%nhybrid, CS%nsigma, &
-                           CS%dp0k, CS%ds0k, CS%dp00i, CS%topiso_const, CS%qhybrlx, &
-                           CS%dpns, CS%dsns, &
-                           depths_i_j, dp_i_j, &
-                           fixlay, qdep, qhrlx, dp0ij, dp0cum, p_i_j)
-    call hybgenaij_unmix(  CS, kdm, theta_i_j, &
-                           temp_i_j, saln_i_j, th3d_i_j, tv%eqn_of_state, &
-                           ntracer, tracer_i_j, trcflg, fixlay, qdep, qhrlx, &
-                           dp_i_j, onemm, 1.0e-11*US%kg_m3_to_R)
+    call hybgen_column_init(kdm, CS%nhybrid, CS%nsigma, CS%dp0k, CS%ds0k, CS%dp00i, &
+                            CS%topiso_const, CS%qhybrlx, CS%dpns, CS%dsns, depths_i_j, &
+                            dp_i_j, fixlay, qdep, qhrlx, dp0ij, dp0cum, p_i_j)
+    call hybgenaij_unmix(CS, kdm, theta_i_j, temp_i_j, saln_i_j, th3d_i_j, tv%eqn_of_state, &
+                         ntracer, tracer_i_j, trcflg, fixlay, qdep, qhrlx, &
+                         dp_i_j, onemm, 1.0e-11*US%kg_m3_to_R)
 
     ! Store the output from hybgen_unmix
     do k=1,kdm
@@ -263,126 +259,9 @@ subroutine hybgen_unmix(G, GV, US, CS, tv, Reg, ntracer, dp)
       Reg%Tr(m)%t(i,j,k) = tracer_i_j(k,m)
     enddo ; enddo
   endif ; enddo ; enddo !i & j.
+
 end subroutine hybgen_unmix
 
-
-!> Initialize some of the variables that are used for regridding or unmixing, including the
-!! previous interface heights and contraits on where the new interfaces can be.
-subroutine hybgenaij_init(kdm, nhybrd, nsigma, dp0k, ds0k, dp00i, topiso_i_j, &
-                          qhybrlx, dpns, dsns, depths_i_j, dp_i_j, &
-                          fixlay, qdep, qhrlx, dp0ij, dp0cum, p_i_j)
-  integer, intent(in)    :: kdm          !< The number of layers in the new grid
-  integer, intent(in)    :: nhybrd       !< The number of hybrid layers (typically kdm)
-  integer, intent(in)    :: nsigma       !< The number of sigma  levels (nhybrd-nsigma z-levels)
-  real,    intent(in)    :: dp0k(kdm)    !< Layer deep z-level spacing minimum thicknesses [H ~> m or kg m-2]
-  real,    intent(in)    :: ds0k(nsigma) !< Layer shallow z-level spacing minimum thicknesses [H ~> m or kg m-2]
-  real,    intent(in)    :: dp00i        !< Deep isopycnal spacing minimum thickness [H ~> m or kg m-2]
-  real,    intent(in)    :: topiso_i_j   !< Shallowest depth for isopycnal layers [H ~> m or kg m-2]
-  real,    intent(in)    :: qhybrlx      !< relaxation coefficient, 1/s?
-  real,    intent(in)    :: depths_i_j   !< Bottom depth in thickness units [H ~> m or kg m-2]
-  real,    intent(in)    :: dp_i_j(kdm)  !< Initial layer thicknesses [H ~> m or kg m-2]
-  real,    intent(in)    :: dpns         !< Vertical sum of dp0k [H ~> m or kg m-2]
-  real,    intent(in)    :: dsns         !< Vertical sum of ds0k [H ~> m or kg m-2]
-  integer, intent(out)   :: fixlay       !< Deepest fixed coordinate layer
-  real,    intent(out)   :: qdep         !< fraction dp0k (vs ds0k) [nondim]
-  real,    intent(out)   :: qhrlx( kdm+1) !< Relaxation coefficient [timesteps-1?]
-  real,    intent(out)   :: dp0ij( kdm)   !< minimum layer thickness [H ~> m or kg m-2]
-  real,    intent(out)   :: dp0cum(kdm+1) !< minimum interface depth [H ~> m or kg m-2]
-  real,    intent(out)   :: p_i_j(kdm+1)  !< p(i,j,:), interface depths [H ~> m or kg m-2]
-!
-! --- --------------------------------------------------------------
-! --- hybrid grid generator, single column(part A) - initialization.
-! --- --------------------------------------------------------------
-!
-  character(len=256) :: mesg  ! A string for output messages
-  real :: hybrlx  ! The relaxation rate in the hybrid region [timestep-1]?
-  real :: q       ! A portion of the thickness that contributes to the new cell [H ~> m or kg m-2]
-  real :: qts  !### A temporary variable that should be refactored out for accuracy.
-  integer :: k, fixall
-!
-  hybrlx = 1.0 / qhybrlx
-!
-! --- dpns = sum(dp0k(k),k=1,nsigma)
-! --- dsns = sum(ds0k(k),k=1,nsigma)
-! --- terrain following starts (on the deep side) at depth dpns and ends (on the
-! --- shallow side) at depth dsns and the depth of the k-th layer interface varies
-! --- linearly with total depth between these two reference depths.
-!
-  if ((dpns <= dsns) .or. (depths_i_j >= dpns)) then
-    qdep = 1.0  !not terrain following
-  else
-    qdep = max( 0.0, min( 1.0, (depths_i_j - dsns) / (dpns - dsns)) )
-  endif
-!
-  if (qdep < 1.0) then
-! ---   terrain following, qhrlx=1 and ignore dp00
-    p_i_j( 1) = 0.0
-    dp0cum(1) = 0.0
-    qhrlx( 1) = 1.0
-    dp0ij( 1) = qdep*dp0k(1) + (1.0-qdep)*ds0k(1)
-
-    dp0cum(2) = dp0cum(1)+dp0ij(1)
-    qhrlx( 2) = 1.0
-    p_i_j( 2) = p_i_j(1)+dp_i_j(1)
-    do k=2,kdm
-      qhrlx( k+1) = 1.0
-      dp0ij( k)   = qdep*dp0k(k) + (1.0-qdep)*ds0k(k)
-      dp0cum(k+1) = dp0cum(k)+dp0ij(k)
-      p_i_j( k+1) = p_i_j(k)+dp_i_j(k)
-    enddo !k
-  else
-! ---   not terrain following
-    p_i_j( 1) = 0.0
-    dp0cum(1) = 0.0
-    qhrlx( 1) = 1.0 !no relaxation in top layer
-    dp0ij( 1) = dp0k(1)
-
-    dp0cum(2) = dp0cum(1)+dp0ij(1)
-    qhrlx( 2) = 1.0 !no relaxation in top layer
-    p_i_j( 2) = p_i_j(1)+dp_i_j(1)
-    do k=2,kdm
-! ---     q is dp0k(k) when in surface fixed coordinates
-! ---     q is dp00i   when much deeper than surface fixed coordinates
-      if     (dp0k(k) <= dp00i) then
-        q  = dp0k(k)
-        qts = 0.0     !0 at dp0k
-      else
-        q  = max( dp00i, dp0k(k) * dp0k(k)/ &
-                         max( dp0k( k), p_i_j(k)-dp0cum(k) ) )
-        qts = 1.0 - (q-dp00i) / (dp0k(k)-dp00i)  !0 at dp0k, 1 at dp00i
-      endif
-      qhrlx( k+1) = 1.0 / (1.0 + qts*(hybrlx-1.0))  !1 at  dp0k, qhybrlx at dp00i
-      dp0ij( k)   = min( q, dp0k(k) )
-      dp0cum(k+1) = dp0cum(k)+dp0ij(k)
-      p_i_j( k+1) = p_i_j(k)+dp_i_j(k)
-    enddo !k
-  endif !qdep<1:else
-!
-! --- identify the current fixed coordinate layers
-  fixlay = 1  !layer 1 always fixed
-  do k=2,nhybrd
-    if (dp0cum(k) >= topiso_i_j) then
-      exit  !layers k to nhybrd might be isopycnal
-    endif
-! ---   top of layer is above topiso, i.e. always fixed coordinate layer
-    qhrlx(k+1) = 1.0  !no relaxation in fixed layers
-    fixlay     = fixlay+1
-  enddo !k
-  fixall = fixlay
-  do k=fixall+1,nhybrd
-    if (p_i_j(k+1) > dp0cum(k+1)+0.1*dp0ij(k)) then
-      if ( (fixlay > fixall) .and. (p_i_j(k) > dp0cum(k)) ) then
-        ! --- The previous layer should remain fixed.
-        fixlay = fixlay-1
-      endif
-      exit  !layers k to nhybrd might be isopycnal
-    endif
-! ---   sometimes fixed coordinate layer
-    qhrlx(k) = 1.0  !no relaxation in fixed layers
-    fixlay   = fixlay+1
-  enddo !k
-
-end subroutine hybgenaij_init
 
 !> Unmix the properties in the lowest layer if it is too light.
 subroutine hybgenaij_unmix(CS, kdm, theta_i_j, temp_i_j, saln_i_j, th3d_i_j, eqn_of_state, &

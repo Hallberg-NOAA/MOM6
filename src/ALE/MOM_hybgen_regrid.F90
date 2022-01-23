@@ -67,7 +67,7 @@ type, public :: hybgen_regrid_CS ; private
 end type hybgen_regrid_CS
 
 public hybgen_regrid, init_hybgen_regrid, end_hybgen_regrid
-public set_hybgen_regrid_params
+public hybgen_column_init, set_hybgen_regrid_params
 
 contains
 
@@ -345,12 +345,9 @@ subroutine hybgen_regrid(G, GV, US, CS, dp, tv, h_new, dzInterface, PCM_cell)
     depths_i_j = GV%Z_to_H * G%bathyT(i,j)
     !### depths_i_j = pres_in(GV%ke+1)
 
-    call hybgenaij_init(   kdm, CS%nhybrid, CS%nsigma, &
-                           CS%dp0k, CS%ds0k, CS%dp00i, CS%topiso_const, CS%qhybrlx, &
-                           CS%dpns, CS%dsns, &
-                           depths_i_j, dp_i_j, &
-                           fixlay, qdep, qhrlx, dp0ij, dp0cum, &
-                           p_i_j)
+    call hybgen_column_init(kdm, CS%nhybrid, CS%nsigma, CS%dp0k, CS%ds0k, CS%dp00i, &
+                            CS%topiso_const, CS%qhybrlx, CS%dpns, CS%dsns, depths_i_j, &
+                            dp_i_j, fixlay, qdep, qhrlx, dp0ij, dp0cum, p_i_j)
 
     ! Determine whether to require the use of PCM remapping from each source layer.
     do k=1,GV%ke
@@ -396,9 +393,9 @@ subroutine hybgen_regrid(G, GV, US, CS, dp, tv, h_new, dzInterface, PCM_cell)
 
 end subroutine hybgen_regrid
 
-!> Initialize some of the variables that are used for regridding, including the previous
-!! interface heights and contraits on where the new interfaces can be.
-subroutine hybgenaij_init(kdm, nhybrd, nsigma, dp0k, ds0k, dp00i, topiso_i_j, &
+!> Initialize some of the variables that are used for regridding or unmixing, including the
+!! previous interface heights and contraits on where the new interfaces can be.
+subroutine hybgen_column_init(kdm, nhybrd, nsigma, dp0k, ds0k, dp00i, topiso_i_j, &
                           qhybrlx, dpns, dsns, depths_i_j, dp_i_j, &
                           fixlay, qdep, qhrlx, dp0ij, dp0cum, p_i_j)
   integer, intent(in)    :: kdm          !< The number of layers in the new grid
@@ -513,7 +510,7 @@ subroutine hybgenaij_init(kdm, nhybrd, nsigma, dp0k, ds0k, dp00i, topiso_i_j, &
     fixlay   = fixlay+1
   enddo !k
 
-end subroutine hybgenaij_init
+end subroutine hybgen_column_init
 
 !> Create a new grid for a column of water using the Hybgen algorithm.
 subroutine hybgenaij_regrid(CS, kdm, nhybrd, thbase, thkbot, &
