@@ -263,7 +263,7 @@ subroutine hybgen_regrid(G, GV, US, CS, dp, tv, h_new, dzInterface, PCM_cell)
   real :: dp0ij( CS%nk)     ! minimum layer thickness [H ~> m or kg m-2]
   real :: dp0cum(CS%nk+1)   ! minimum interface depth [H ~> m or kg m-2]
 
-  real :: depths_i_j        ! Bottom depth in thickness units [H ~> m or kg m-2]
+  real :: h_tot             ! Total thickness of the water column [H ~> m or kg m-2]
   real :: dpthin            ! A very thin layer thickness, that is remapped differently [H ~> m or kg m-2]
   integer :: fixlay         ! Deepest fixed coordinate layer
   integer, dimension(0:CS%nk) :: k_end ! The index of the deepest source layer that contributes to
@@ -342,11 +342,10 @@ subroutine hybgen_regrid(G, GV, US, CS, dp, tv, h_new, dzInterface, PCM_cell)
       theta_i_j(k) = CS%target_density(k)  ! MOM6 does not yet support 3-d target densities.
     enddo
 
-    depths_i_j = GV%Z_to_H * G%bathyT(i,j)
-    !### depths_i_j = pres_in(GV%ke+1)
+    h_tot = pres_in(GV%ke+1)
 
     call hybgen_column_init(kdm, CS%nhybrid, CS%nsigma, CS%dp0k, CS%ds0k, CS%dp00i, &
-                            CS%topiso_const, CS%qhybrlx, CS%dpns, CS%dsns, depths_i_j, &
+                            CS%topiso_const, CS%qhybrlx, CS%dpns, CS%dsns, h_tot, &
                             dp_i_j, fixlay, qdep, qhrlx, dp0ij, dp0cum, p_i_j)
 
     ! Determine whether to require the use of PCM remapping from each source layer.
@@ -396,7 +395,7 @@ end subroutine hybgen_regrid
 !> Initialize some of the variables that are used for regridding or unmixing, including the
 !! previous interface heights and contraits on where the new interfaces can be.
 subroutine hybgen_column_init(kdm, nhybrd, nsigma, dp0k, ds0k, dp00i, topiso_i_j, &
-                          qhybrlx, dpns, dsns, depths_i_j, dp_i_j, &
+                          qhybrlx, dpns, dsns, h_tot, dp_i_j, &
                           fixlay, qdep, qhrlx, dp0ij, dp0cum, p_i_j)
   integer, intent(in)    :: kdm          !< The number of layers in the new grid
   integer, intent(in)    :: nhybrd       !< The number of hybrid layers (typically kdm)
@@ -406,7 +405,7 @@ subroutine hybgen_column_init(kdm, nhybrd, nsigma, dp0k, ds0k, dp00i, topiso_i_j
   real,    intent(in)    :: dp00i        !< Deep isopycnal spacing minimum thickness [H ~> m or kg m-2]
   real,    intent(in)    :: topiso_i_j   !< Shallowest depth for isopycnal layers [H ~> m or kg m-2]
   real,    intent(in)    :: qhybrlx      !< relaxation coefficient, 1/s?
-  real,    intent(in)    :: depths_i_j   !< Bottom depth in thickness units [H ~> m or kg m-2]
+  real,    intent(in)    :: h_tot        !< Total thickness of the water column [H ~> m or kg m-2]
   real,    intent(in)    :: dp_i_j(kdm)  !< Initial layer thicknesses [H ~> m or kg m-2]
   real,    intent(in)    :: dpns         !< Vertical sum of dp0k [H ~> m or kg m-2]
   real,    intent(in)    :: dsns         !< Vertical sum of ds0k [H ~> m or kg m-2]
@@ -435,10 +434,10 @@ subroutine hybgen_column_init(kdm, nhybrd, nsigma, dp0k, ds0k, dp00i, topiso_i_j
 ! --- shallow side) at depth dsns and the depth of the k-th layer interface varies
 ! --- linearly with total depth between these two reference depths.
 !
-  if ((dpns <= dsns) .or. (depths_i_j >= dpns)) then
+  if ((dpns <= dsns) .or. (h_tot >= dpns)) then
     qdep = 1.0  !not terrain following
   else
-    qdep = max( 0.0, min( 1.0, (depths_i_j - dsns) / (dpns - dsns)) )
+    qdep = max( 0.0, min( 1.0, (h_tot - dsns) / (dpns - dsns)) )
   endif
 
   if (qdep < 1.0) then

@@ -146,17 +146,13 @@ subroutine hybgen_remap_tracers(G, GV, CS, Reg, ntracer, dp_new, dp_orig, PCM_ce
   logical :: pcm_lay(GV%ke) ! If true for a layer, use PCM remapping for that layer
   real :: dpthin            ! A negligible layer thickness, used to avoid roundoff issues
                             ! or division by 0 [H ~> m or kg m-2]
-  logical :: test_col       ! If true, write verbose debugging for this column.
   integer :: i, j, k, kdm, m
 
   kdm = GV%ke
   dpthin = 1.0e-6*GV%m_to_H
 
-  test_col = .false.
   do k=1,kdm ; pcm_lay(k) = .false. ; enddo
   do j=G%jsc-1,G%jec+1 ; do i=G%isc-1,G%iec+1 ; if (G%mask2dT(i,j)>0.) then
-!diag   test_col = ((i == CS%itest + G%isd - G%isd_global) .and. &
-!diag               (j == CS%jtest + G%jsd - G%jsd_global))
     do k=1,kdm
       dp_i_j(k) = dp_new(i,j,k)
     enddo
@@ -174,8 +170,7 @@ subroutine hybgen_remap_tracers(G, GV, CS, Reg, ntracer, dp_new, dp_orig, PCM_ce
       p_i_j(K+1) = p_i_j(K) + dp_i_j(k)
     enddo !k
 
-    call hybgenaij_remap(CS, kdm, pres, p_i_j, pcm_lay, dp_i_j, &
-                         ntracer, tracer_i_j, test_col)
+    call hybgenaij_remap(CS, kdm, pres, p_i_j, pcm_lay, dp_i_j, ntracer, tracer_i_j)
 
     ! Note that temperature and salinity are among the tracers remapped here.
     do m=1,ntracer ; do k=1,kdm
@@ -186,8 +181,7 @@ subroutine hybgen_remap_tracers(G, GV, CS, Reg, ntracer, dp_new, dp_orig, PCM_ce
 end subroutine hybgen_remap_tracers
 
 !> Vertically remap a column of scalars to the new grid
-subroutine hybgenaij_remap(CS, kdm, pres, prsf, pcm_lay, dp_i_j, &
-                           ntracr, trac_i_j, test_col)
+subroutine hybgenaij_remap(CS, kdm, pres, prsf, pcm_lay, dp_i_j, ntracr, trac_i_j)
   type(hybgen_remap_CS), intent(in) :: CS         !< hybgen control structure
   integer,         intent(in)    :: kdm           !< Number of layers in this column
   real,            intent(in)    :: pres(kdm+1)   !< original layer interfaces [H ~> m or kg m-2]
@@ -197,18 +191,17 @@ subroutine hybgenaij_remap(CS, kdm, pres, prsf, pcm_lay, dp_i_j, &
   integer,         intent(in)    :: ntracr        !< The number of registered tracers (including temperature
                                                   !! and salinity)
   real,            intent(inout) :: trac_i_j(kdm, max(ntracr,1)) !< Columns of the tracers [Conc] or [degC] or [ppt]
-  logical,         intent(in)    :: test_col      !< If true, write verbose debugging for this column.
 
 ! --- -------------------------------------------------------------
 ! --- hybrid grid generator, single column(part A) - remap scalars.
 ! --- -------------------------------------------------------------
   real :: offset(ntracr)
 !
-  real :: s1d(kdm,ntracr)    ! original scalar fields
-  real :: f1d(kdm,ntracr)    ! final    scalar fields
+  real :: s1d(kdm,ntracr)    ! original scalar fields [Conc] or [degC] or [ppt]
+  real :: f1d(kdm,ntracr)    ! final    scalar fields [Conc] or [degC] or [ppt]
   real :: c1d(kdm,ntracr,3)  ! interpolation coefficients
-  real :: dpi( kdm)            ! original layer thicknesses, >= dpthin
-  real :: dprs(kdm)            ! original layer thicknesses
+  real :: dpi( kdm)            ! original layer thicknesses, >= dpthin [H ~> m or kg m-2]
+  real :: dprs(kdm)            ! original layer thicknesses [H ~> m or kg m-2]
   real :: zthk, dpthin, q
   integer :: k, ktr, nums1d
   character(len=256) :: mesg  ! A string for output messages
@@ -1298,29 +1291,31 @@ subroutine dpudpv(dpu, dpv, dp, G, GV, OBC)
   type(ocean_OBC_type),                         pointer     :: OBC !< Open boundary structure
 
   ! Local variables
-  real :: p(SZI_(G),SZJ_(G),SZK_(GV)+1)      ! Interface positions relative to the surface [H ~> m or kg m-2]
-  real :: depthuv  ! The minimum depth at a velocity point, converted to thickness units [H ~> m or kg m-2]
-  integer :: i, j, k
+  real :: p(SZI_(G),SZJ_(G),SZK_(GV)+1) ! Interface positions relative to the surface [H ~> m or kg m-2]
+  real :: dp_tot_uv                     ! The minimum total thickness at a velocity point [H ~> m or kg m-2]
+  integer :: i, j, k, nk
+
+  nk = GV%ke
 
   ! Calculate the interface positions from the layer thicknesses
   ! --- p and dp have a valid 1-point halo
   do j=G%jsc-1,G%jec+1 ; do i=G%isc-1,G%iec+1
     p(i,j,1) = 0.0
   enddo ; enddo
-  do k=1,GV%ke ; do j=G%jsc-1,G%jec+1 ; do i=G%isc-1,G%iec+1
+  do k=1,nk ; do j=G%jsc-1,G%jec+1 ; do i=G%isc-1,G%iec+1
     p(i,j,K+1) = p(i,j,K) + dp(i,j,k)
   enddo ; enddo ; enddo
 
   dpu(:,:,:) = 0.0
 
   do j=G%jsc,G%jec
-    do k=1,GV%ke
+    do k=1,nk
       do I=G%IscB,G%IecB
         if (G%mask2dCu(I,j) > 0.) then
-          depthuv = GV%Z_to_H*min(G%bathyT(i,j), G%bathyT(i+1,j))
+          dp_tot_uv = min(p(i,j,nk+1), p(i+1,j,nk+1))
           dpu(I,j,k) = max(0., &
-               min(depthuv, .5*(p(i,j,k+1)+p(i+1,j,k+1)))- &
-               min(depthuv, .5*(p(i,j,k  )+p(i+1,j,k  ))))
+               min(dp_tot_uv, .5*(p(i,j,k+1)+p(i+1,j,k+1)))- &
+               min(dp_tot_uv, .5*(p(i,j,k  )+p(i+1,j,k  ))))
           ! This variant does not restrict thicknesses using topography.
           ! dpu(I,j,k) = 0.5*(p(i,j,k+1)+p(i+1,j,k+1)) - &
           !              0.5*(p(i,j,k  )+p(i+1,j,k  ))
@@ -1338,13 +1333,13 @@ subroutine dpudpv(dpu, dpv, dp, G, GV, OBC)
 
   dpv(:,:,:) = 0.0
   do J=G%JscB,G%JecB
-    do k=1,GV%ke
+    do k=1,nk
       do i=G%isc,G%iec
         if (G%mask2dCv(i,J) > 0.) then
-          depthuv = GV%Z_to_H*min(G%bathyT(i,j), G%bathyT(i,j+1))
+          dp_tot_uv = min(p(i,j,nk+1), p(i,j+1,nk+1))
           dpv(i,J,k) = max(0., &
-               min(depthuv, .5*(p(i,j,k+1)+p(i,j+1,k+1)))- &
-               min(depthuv, .5*(p(i,j,k  )+p(i,j+1,k  ))))
+               min(dp_tot_uv, .5*(p(i,j,k+1)+p(i,j+1,k+1)))- &
+               min(dp_tot_uv, .5*(p(i,j,k  )+p(i,j+1,k  ))))
           ! This variant does not restrict thicknesses using topography.
           ! dpv(i,J,k) = 0.5*(p(i,j,k+1)+p(i,j+1,k+1)) - &
           !              0.5*(p(i,j,k  )+p(i,j+1,k  ))

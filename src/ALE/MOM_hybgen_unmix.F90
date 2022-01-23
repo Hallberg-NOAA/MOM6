@@ -209,7 +209,7 @@ subroutine hybgen_unmix(G, GV, US, CS, tv, Reg, ntracer, dp)
   real ::     p_i_j(GV%ke+1) !     p(i,j,:)   interface depths
   real :: p_col(GV%ke)       ! A column of reference pressures [R L2 T-2 ~> Pa]
   real :: tracer_i_j(GV%ke,max(ntracer,1))  !  Columns of each tracer [Conc]
-  real :: depths_i_j         ! Bottom depth in thickness units [H ~> m or kg m-2]
+  real :: h_tot             ! Total thickness of the water column [H ~> m or kg m-2]
   real :: onemm ! one mm in thickness units [H ~> m or kg m-2]
   integer :: trcflg(max(ntracer,1))  ! Hycom tracer type flag for each tracer
   integer :: i, j, k, kdm, m
@@ -224,17 +224,15 @@ subroutine hybgen_unmix(G, GV, US, CS, tv, Reg, ntracer, dp)
 
   do j=G%jsc-1,G%jec+1 ; do i=G%isc-1,G%iec+1 ; if (G%mask2dT(i,j)>0.) then
 
-    !### p_i_j(1) = 0.0
+    h_tot = 0.0
     do k=1,kdm
       ! theta_i_j(k) = theta(i,j,k)  ! If a 3-d target density were set up in theta, use that here.
       theta_i_j(k) = CS%target_density(k)  ! MOM6 does not yet support 3-d target densities.
       dp_i_j(k) = dp(i,j,k)
-      !### p_i_j(K+1) = p_i_j(K) + dp_i_j(k)
+      h_tot = h_tot + dp_i_j(k)
       temp_i_j(k) = tv%T(i,j,k)
       saln_i_j(k) = tv%S(i,j,k)
     enddo
-    depths_i_j = GV%Z_to_H * G%bathyT(i,j)
-    !### depths_i_j = p_i_j(kdm+1)
 
     ! This sets the potential density from T and S.
     call calculate_density(temp_i_j, saln_i_j, p_col, th3d_i_j, tv%eqn_of_state)
@@ -244,7 +242,7 @@ subroutine hybgen_unmix(G, GV, US, CS, tv, Reg, ntracer, dp)
     enddo ; enddo
 
     call hybgen_column_init(kdm, CS%nhybrid, CS%nsigma, CS%dp0k, CS%ds0k, CS%dp00i, &
-                            CS%topiso_const, CS%qhybrlx, CS%dpns, CS%dsns, depths_i_j, &
+                            CS%topiso_const, CS%qhybrlx, CS%dpns, CS%dsns, h_tot, &
                             dp_i_j, fixlay, qdep, qhrlx, dp0ij, dp0cum, p_i_j)
     call hybgenaij_unmix(CS, kdm, theta_i_j, temp_i_j, saln_i_j, th3d_i_j, tv%eqn_of_state, &
                          ntracer, tracer_i_j, trcflg, fixlay, qdep, qhrlx, &
