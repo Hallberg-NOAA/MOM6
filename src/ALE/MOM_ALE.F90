@@ -798,7 +798,8 @@ subroutine remap_all_state_vars(CS_remapping, CS_ALE, G, GV, h_old, h_new, Reg, 
   real, dimension(SZI_(G), SZJ_(G), SZK_(GV)) :: work_conc
   real, dimension(SZI_(G), SZJ_(G), SZK_(GV)) :: work_cont
   real, dimension(SZI_(G), SZJ_(G))           :: work_2d
-  real                                        :: Idt ! The inverse of the timestep [T-1 ~> s-1]
+  logical, dimension(GV%ke)                   :: PCM     ! If true, do PCM remapping from a cell.
+  real                                        :: Idt     ! The inverse of the timestep [T-1 ~> s-1]
   real                                        :: ppt2mks
   real, dimension(GV%ke)                      :: h2
   real :: h_neglect, h_neglect_edge
@@ -855,8 +856,14 @@ subroutine remap_all_state_vars(CS_remapping, CS_ALE, G, GV, h_old, h_new, Reg, 
         ! Build the start and final grids
         h1(:) = h_old(i,j,:)
         h2(:) = h_new(i,j,:)
-        call remapping_core_h(CS_remapping, nz, h1, Tr%t(i,j,:), nz, h2, &
-                              u_column, h_neglect, h_neglect_edge)
+        if (present(PCM_cell)) then
+          PCM(:) = PCM_cell(i,j,:)
+          call remapping_core_h(CS_remapping, nz, h1, Tr%t(i,j,:), nz, h2, &
+                                u_column, h_neglect, h_neglect_edge, PCM_cell=PCM)
+        else
+          call remapping_core_h(CS_remapping, nz, h1, Tr%t(i,j,:), nz, h2, &
+                                u_column, h_neglect, h_neglect_edge)
+        endif
 
         ! Intermediate steps for tendency of tracer concentration and tracer content.
         if (present(dt)) then

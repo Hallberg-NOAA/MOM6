@@ -185,34 +185,42 @@ function isPosSumErrSignificant(n1, sum1, n2, sum2)
 end function isPosSumErrSignificant
 
 !> Remaps column of values u0 on grid h0 to grid h1 assuming the top edge is aligned.
-subroutine remapping_core_h(CS, n0, h0, u0, n1, h1, u1, h_neglect, h_neglect_edge)
+subroutine remapping_core_h(CS, n0, h0, u0, n1, h1, u1, h_neglect, h_neglect_edge, PCM_cell)
   type(remapping_CS),  intent(in)  :: CS !< Remapping control structure
   integer,             intent(in)  :: n0 !< Number of cells on source grid
-  real, dimension(n0), intent(in)  :: h0 !< Cell widths on source grid
-  real, dimension(n0), intent(in)  :: u0 !< Cell averages on source grid
+  real, dimension(n0), intent(in)  :: h0 !< Cell widths on source grid [H]
+  real, dimension(n0), intent(in)  :: u0 !< Cell averages on source grid [A]
   integer,             intent(in)  :: n1 !< Number of cells on target grid
-  real, dimension(n1), intent(in)  :: h1 !< Cell widths on target grid
-  real, dimension(n1), intent(out) :: u1 !< Cell averages on target grid
+  real, dimension(n1), intent(in)  :: h1 !< Cell widths on target grid [H]
+  real, dimension(n1), intent(out) :: u1 !< Cell averages on target grid [A]
   real, optional,      intent(in)  :: h_neglect !< A negligibly small width for the
                                          !! purpose of cell reconstructions
-                                         !! in the same units as h0.
+                                         !! in the same units as h0 [H].
   real, optional,      intent(in)  :: h_neglect_edge !< A negligibly small width
                                          !! for the purpose of edge value
-                                         !! calculations in the same units as h0.
+                                         !! calculations in the same units as h0 [H].
+  logical, dimension(n0), optional, intent(in) :: PCM_cell !< If present, use PCM remapping for
+                                         !! cells in the source grid where this is true.
+
   ! Local variables
   integer :: iMethod
-  real, dimension(n0,2)           :: ppoly_r_E            !Edge value of polynomial
-  real, dimension(n0,2)           :: ppoly_r_S            !Edge slope of polynomial
-  real, dimension(n0,CS%degree+1) :: ppoly_r_coefs !Coefficients of polynomial
+  real, dimension(n0,2)           :: ppoly_r_E     ! Edge value of polynomial
+  real, dimension(n0,2)           :: ppoly_r_S     ! Edge slope of polynomial
+  real, dimension(n0,CS%degree+1) :: ppoly_r_coefs ! Coefficients of polynomial
+  real :: h0tot, h0err ! Sum of source cell widths and round-off error in this sum [H]
+  real :: h1tot, h1err ! Sum of target cell widths and round-off error in this sum [H]
+  real :: u0tot, u0err ! Integrated values on the source grid and round-off error in this sum [H A]
+  real :: u1tot, u1err ! Integrated values on the target grid and round-off error in this sum [H A]
+  real :: u0min, u0max, u1min, u1max ! Extrema of values on the two grids [A]
+  real :: uh_err       ! Difference in the total amounts on the two grids [H A]
+  real :: hNeglect, hNeglect_edge ! Negligibly small cell widths in the same units as h0 [H]
   integer :: k
-  real :: eps, h0tot, h0err, h1tot, h1err, u0tot, u0err, u0min, u0max, u1tot, u1err, u1min, u1max, uh_err
-  real :: hNeglect, hNeglect_edge
 
   hNeglect = 1.0e-30 ; if (present(h_neglect)) hNeglect = h_neglect
   hNeglect_edge = 1.0e-10 ; if (present(h_neglect_edge)) hNeglect_edge = h_neglect_edge
 
   call build_reconstructions_1d( CS, n0, h0, u0, ppoly_r_coefs, ppoly_r_E, ppoly_r_S, iMethod, &
-                                 hNeglect, hNeglect_edge )
+                                 hNeglect, hNeglect_edge, PCM_cell )
 
   if (CS%check_reconstruction) call check_reconstructions_1d(n0, h0, u0, CS%degree, &
                                    CS%boundary_extrapolation, ppoly_r_coefs, ppoly_r_E, ppoly_r_S)
@@ -353,7 +361,7 @@ end subroutine remapping_core_w
 !> Creates polynomial reconstructions of u0 on the source grid h0.
 subroutine build_reconstructions_1d( CS, n0, h0, u0, ppoly_r_coefs, &
                                      ppoly_r_E, ppoly_r_S, iMethod, h_neglect, &
-                                     h_neglect_edge )
+                                     h_neglect_edge, PCM_cell )
   type(remapping_CS),    intent(in)  :: CS !< Remapping control structure
   integer,               intent(in)  :: n0 !< Number of cells on source grid
   real, dimension(n0),   intent(in)  :: h0 !< Cell widths on source grid
@@ -369,10 +377,14 @@ subroutine build_reconstructions_1d( CS, n0, h0, u0, ppoly_r_coefs, &
   real, optional,        intent(in)  :: h_neglect_edge !< A negligibly small width
                                          !! for the purpose of edge value
                                          !! calculations in the same units as h0.
+  logical, optional,     intent(in)  :: PCM_cell(n0) !< If present, use PCM remapping for
+                                         !! cells from the source grid where this is true.
+
   ! Local variables
   integer :: local_remapping_scheme
   integer :: remapping_scheme !< Remapping scheme
   logical :: boundary_extrapolation !< Extrapolate at boundaries if true
+  integer :: k, n
 
   ! Reset polynomial
   ppoly_r_E(:,:) = 0.0
@@ -436,6 +448,16 @@ subroutine build_reconstructions_1d( CS, n0, h0, u0, ppoly_r_coefs, &
       call MOM_error( FATAL, 'MOM_remapping, build_reconstructions_1d: '//&
            'The selected remapping method is invalid' )
   end select
+
+  if (present(PCM_cell)) then
+    ! Change the coefficients to those for the piecewise constant method in indicated cells.
+    do k=1,n0 ; if (PCM_cell(k)) then
+      ppoly_r_coefs(k,1) = u0(k)
+      ppoly_r_E(k,1:2) = u0(k)
+      ppoly_r_S(k,1:2) = 0.0
+      do n=2,CS%degree+1 ; ppoly_r_coefs(k,n) = 0.0 ; enddo
+    endif ; enddo
+  endif
 
 end subroutine build_reconstructions_1d
 
