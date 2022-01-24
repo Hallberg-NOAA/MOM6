@@ -66,6 +66,7 @@ type, public :: hybgen_regrid_CS ; private
 
 end type hybgen_regrid_CS
 
+
 public hybgen_regrid, init_hybgen_regrid, end_hybgen_regrid
 public hybgen_column_init, set_hybgen_regrid_params
 
@@ -319,6 +320,7 @@ subroutine hybgen_regrid(G, GV, US, dp, tv, CS, dzInterface, PCM_cell)
       ! The input column has more data than the output.  For now, combine layers to
       ! make them the same size, but there may be better approaches that should be taken.
       ! This case only occurs during initialization or perhaps when writing diagnostics.
+      ! This case was not handled by the original Hycom code in hybgen.F90.
       do k=0,CS%nk ; k_end(k) = (k * nk_in) / CS%nk ; enddo
       do k=1,CS%nk
         dp_i_j(k) = 0.0 ; th3d_integral = 0.0
@@ -362,7 +364,7 @@ subroutine hybgen_regrid(G, GV, US, dp, tv, CS, dzInterface, PCM_cell)
     call hybgenaij_regrid(CS, kdm, CS%nhybrid, CS%thbase, CS%thkbot, &
                           CS%onem, 1.0e-11*US%kg_m3_to_R, &
                           theta_i_j, fixlay, qhrlx, dp0ij, dp0cum, &
-                          th3d_i_j, p_i_j, dz_int)
+                          th3d_i_j, dp_i_j, p_i_j, dz_int)
 
 
     ! Store the output from hybgenaij_regrid in 3-d arrays.
@@ -519,11 +521,34 @@ subroutine hybgen_column_init(kdm, nhybrd, nsigma, dp0k, ds0k, dp00i, topiso_i_j
 
 end subroutine hybgen_column_init
 
+!> The cushion function from Bleck & Benjamin, 1992, which returns a smoothly varying
+!! but limited value that goes between dp0 and delp
+real function cushn(delp, dp0)
+  real, intent(in) :: delp  ! A thickness change
+  real, intent(in) :: dp0   ! A thickness change
+
+  real :: qq  ! A limited ratio of delp/dp0 [nondim]
+
+  ! These are the nondimensional parameters that define the cushion function.
+  real, parameter :: qqmn=-4.0, qqmx=2.0  ! shifted range for cushn [nondim]
+! real, parameter :: qqmn=-2.0, qqmx=4.0  ! traditional range for cushn [nondim]
+! real, parameter :: qqmn=-4.0, qqmx=6.0  ! somewhat wider range for cushn [nondim]
+  real, parameter :: cusha = qqmn**2*(qqmx-1.0)/(qqmx-qqmn)**2
+  real, parameter :: cushb=1.0/qqmn
+
+  ! --- if delp >= qqmx*dp0 >>  dp0, cushn returns delp.
+  ! --- if delp <= qqmn*dp0 << -dp0, cushn returns dp0.
+
+  qq = max(qqmn, min(qqmx, delp/dp0))
+  cushn = dp0 * (1.0 + cusha * (1.0-cushb*qq)**2) * max(1.0, delp/(dp0*qqmx))
+
+end function cushn
+
 !> Create a new grid for a column of water using the Hybgen algorithm.
 subroutine hybgenaij_regrid(CS, kdm, nhybrd, thbase, thkbot, &
                             onem, epsil, theta_i_j, &
                             fixlay, qhrlx, dp0ij, dp0cum, &
-                            th3d_i_j, p_i_j, dp_int)
+                            th3d_i_j, h_in, p_i_j, dp_int)
 !
   type(hybgen_regrid_CS), intent(in)    :: CS  !< hybgen regridding control structure
   integer, intent(in)    :: kdm            !< number of layers
@@ -538,61 +563,76 @@ subroutine hybgenaij_regrid(CS, kdm, nhybrd, thbase, thkbot, &
   real,    intent(in)    :: dp0ij( kdm)    !< minimum layer thickness [H ~> m or kg m-2]
   real,    intent(in)    :: dp0cum(kdm+1)  !< minimum interface depth [H ~> m or kg m-2]
   real,    intent(in)    :: th3d_i_j(kdm)  !< Coordinate potential density [R ~> kg m-3]
+  real,    intent(in)    :: h_in(kdm)      !< Layer thicknesses [H ~> m or kg m-2]
   real,    intent(inout) :: p_i_j(kdm+1)   !< layer interface positions [H ~> m or kg m-2]
   real,    intent(out)   :: dp_int(kdm+1)  !< The change in interface positions [H ~> m or kg m-2]
 
 ! --- ------------------------------------------------------
 ! --- hybrid grid generator, single column(part A) - regrid.
 ! --- ------------------------------------------------------
-  real :: p_hat, p_hat0, p_hat2, p_hat3
   real :: p_new  ! A new interface position [H ~> m or kg m-2]
-  real :: q, qtr
-  real :: zthk, dpthin
-  real :: tenm  ! ten m  in pressure units
-  real :: onemm ! one mm in pressure units
+!  real :: p_i_j(kdm+1) ! layer interface positions [H ~> m or kg m-2]
+  real :: h_i_j(kdm)    ! layer thicknesses [H ~> m or kg m-2]
+  real :: dp_rem        ! Remaining water to move [H ~> m or kg m-2]
+  real :: q_frac ! A fraction of a layer to entrain [nondim]
+  real :: h_hat3 ! Thickness movement upward across the interface between layers k-2 and k-3 [H ~> m or kg m-2]
+  real :: h_hat2 ! Thickness movement upward across the interface between layers k-1 and k-2 [H ~> m or kg m-2]
+  real :: h_hat  ! Thickness movement upward across the interface between layers k and k-1 [H ~> m or kg m-2]
+  real :: h_hat0 ! A first guess at thickness movement upward across the interface
+                 ! between layers k and k-1 [H ~> m or kg m-2]
+  real :: dh_cor ! Thickness changes [H ~> m or kg m-2]
+  real :: h1_tgt ! A target thickness for the top layer [H ~> m or kg m-2]
+  real :: tenm   ! ten m  in pressure units [H ~> m or kg m-2]
+  real :: onemm  ! one mm in pressure units [H ~> m or kg m-2]
   integer k, ka, ktr
   character(len=256) :: mesg  ! A string for output messages
-!diag character*12 cinfo
 
-  double precision, parameter ::   zp5=0.5    !for sign function
-! --- c u s h i o n   function (from Bleck & Benjamin, 1992):
-! --- if delp >= qqmx*dp0 >>  dp0, -cushn- returns -delp-
-! --- if delp <= qqmn*dp0 << -dp0, -cushn- returns  -dp0-
-  real :: qqmn, qqmx, cusha, cushb
-  parameter (qqmn=-4.0, qqmx=2.0)  ! shifted range
-!     parameter (qqmn=-2.0, qqmx=4.0)  ! traditional range
-!     parameter (qqmn=-4.0, qqmx=6.0)  ! somewhat wider range
-  parameter (cusha=qqmn**2*(qqmx-1.0)/(qqmx-qqmn)**2)
-  parameter (cushb=1.0/qqmn)
-
-  real :: qq, cushn, delp, dp0
-
-  qq(   delp, dp0) = max(qqmn, min(qqmx, delp/dp0))
-  cushn(delp, dp0) = dp0* &
-                  (1.0+cusha*(1.0-cushb*qq(delp, dp0))**2)* &
-                  max(1.0, delp/(dp0*qqmx))
+  ! This line needs to be consistent with the parameters set in cushn().
+  real, parameter :: qqmn=-4.0, qqmx=2.0  ! shifted range for cushn
+! real, parameter :: qqmn=-2.0, qqmx=4.0  ! traditional range for cushn
+! real, parameter :: qqmn=-4.0, qqmx=6.0  ! somewhat wider range for cushn
 
   tenm = 10.0*onem
   onemm = 0.001*onem
 
   do K=1,kdm+1 ; dp_int(K) = 0.0 ; enddo
 
+  p_i_j(1) = 0.0
+  do k=1,kdm
+    h_i_j(k) = h_in(k)
+    p_i_j(K+1) = p_i_j(K) + h_i_j(k)
+  enddo
+
 ! --- try to restore isopycnic conditions by moving layer interfaces
 ! --- qhrlx(k) are relaxation coefficients (inverse baroclinic time steps)
 
   if (fixlay >= 1) then
-! ---   maintain constant thickness, layer k = 1
+! ---   maintain constant thickness in layer k = 1, entraining from layers below as necessary.
     k = 1
-    p_hat = p_i_j(k)+dp0ij(k)
-    dp_int(K+1) = dp_int(K+1) + (p_hat - p_i_j(K+1))
-    p_i_j(k+1) = p_hat
-    do k=2,kdm
-      if (p_i_j(k+1) >= p_hat) then
-        exit  ! usually get here quickly
-      endif
-      dp_int(K+1) = dp_int(K+1) + (p_hat - p_i_j(K+1))
-      p_i_j(k+1) = p_hat
-    enddo !k
+    h1_tgt = min(dp0ij(k), p_i_j(kdm+1))
+    dp_rem = h1_tgt - h_i_j(1)
+    h_i_j(1) = h1_tgt
+    p_i_j(2) = h1_tgt
+    dp_int(2) = dp_rem
+    if (dp_rem <= h_i_j(2)) then
+      h_i_j(2) = h_i_j(2) - dp_rem
+      dp_rem = 0.0
+    else
+      h_i_j(2) = 0.0
+      dp_rem = dp_rem - h_i_j(2)
+      do K=2,kdm
+        dp_int(K+1) = dp_int(K+1) + (h1_tgt - p_i_j(K+1))
+        p_i_j(K+1) = h1_tgt
+        if (dp_rem <= h_i_j(k+1)) then
+          h_i_j(k+1) = h_i_j(k+1) - dp_rem
+          dp_rem = 0.0
+          exit  ! usually get here quickly
+        else
+          dp_rem = dp_rem - h_i_j(k+1)
+          h_i_j(k+1) = 0.0
+        endif
+      enddo
+    endif
   endif
 
   do k=2,nhybrd
@@ -601,6 +641,8 @@ subroutine hybgenaij_regrid(CS, kdm, nhybrd, thbase, thkbot, &
 ! ---     maintain constant thickness, k <= fixlay
       if (k < kdm) then  !p.kdm+1 not changed
         p_new = min(dp0cum(k+1), p_i_j(kdm+1))
+        h_i_j(k)   = h_i_j(k)   + (p_new - p_i_j(K+1))
+        h_i_j(k+1) = h_i_j(k+1) - (p_new - p_i_j(K+1))
         dp_int(K+1) = dp_int(K+1) + (p_new - p_i_j(K+1))
         p_i_j(k+1) = p_new
         if (k == fixlay) then
@@ -609,6 +651,8 @@ subroutine hybgenaij_regrid(CS, kdm, nhybrd, thbase, thkbot, &
             if (p_i_j(Ka) >= p_i_j(K+1)) then
               exit  ! usually get here quickly
             else
+              h_i_j(ka-1) = h_i_j(ka-1) + (p_i_j(K+1) - p_i_j(Ka))
+              h_i_j(ka)   = h_i_j(ka)   - (p_i_j(K+1) - p_i_j(Ka))
               dp_int(Ka) = dp_int(Ka) + (p_i_j(K+1) - p_i_j(Ka))
               p_i_j(Ka) = p_i_j(K+1)
             endif
@@ -626,84 +670,91 @@ subroutine hybgenaij_regrid(CS, kdm, nhybrd, thbase, thkbot, &
 
         if (th3d_i_j(k-1) >= theta_i_j(k-1) .or. &
             p_i_j(k) <= dp0cum(k)+onem .or. &
-            p_i_j(k+1)-p_i_j(k) <= p_i_j(k)-p_i_j(k-1)) then
+            h_i_j(k) <= h_i_j(k-1)) then
 ! ---         if layer k-1 is too light, thicken the thinner of the two,
 ! ---         i.e. skip this layer if it is thicker.
 
           if     ((theta_i_j(k)-th3d_i_j(k-1)) <= epsil) then
 !               layer k-1 much too dense, take entire layer
-            p_hat = p_i_j(k-1)+dp0ij(k-1)
+            h_hat0 = 0.0  ! This line was not in the Hycom version of hybgen.F90.
+            h_hat = dp0ij(k-1) - h_i_j(k-1)
           else
-            q = (theta_i_j(k)-th3d_i_j(k)) / &
-                (theta_i_j(k)-th3d_i_j(k-1))         ! -1 <= q < 0
-            p_hat0 = p_i_j(k) + q*(p_i_j(k+1)-p_i_j(k))  ! <p_i_j(k)
-            if     (k == fixlay+2) then
+            q_frac = (theta_i_j(k)-th3d_i_j(k)) / &
+                     (theta_i_j(k)-th3d_i_j(k-1))    ! -1 <= q_frac < 0
+            h_hat0 = q_frac*h_i_j(k)  ! -h_i_j(k-1) <= h_hat0 < 0
+            if (k == fixlay+2) then
 ! ---             treat layer k-1 as fixed.
-              p_hat = p_i_j(k-1) +  max(p_hat0-p_i_j(k-1), dp0ij(k-1))
+              h_hat = max(h_hat0, dp0ij(k-1) - h_i_j(k-1))
             else
 ! ---             maintain minimum thickess of layer k-1.
-              p_hat = p_i_j(k-1) + cushn(p_hat0-p_i_j(k-1), dp0ij(k-1))
+              h_hat = cushn(h_hat0 + h_i_j(k-1), dp0ij(k-1)) - h_i_j(k-1)
             endif !fixlay+2:else
           end if
-          p_hat = min(p_hat, p_i_j(kdm+1))
+          ! h_hat is negative, so this check is unnecessary.
+          h_hat = min(h_hat, p_i_j(kdm+1) - p_i_j(k))
 
 ! ---         if isopycnic conditions cannot be achieved because of a blocking
 ! ---         layer in the interior ocean, move interface k-1 (and k-2 if
 ! ---         necessary) upward
           if (k <= fixlay+2) then
 ! ---           do nothing.
-          else if (p_hat >= p_i_j(k) .and. &
+          else if ((h_hat >= 0.0) .and. &
                    p_i_j(k-1) > dp0cum(k-1)+tenm .and. &
                   (p_i_j(kdm+1)-p_i_j(k-1) < thkbot .or. &
-                   p_i_j(k-1)  -p_i_j(k-2) > qqmx*dp0ij(k-2))) then ! k > 2
+                   h_i_j(k-2) > qqmx*dp0ij(k-2))) then ! k > 2
             if (k == fixlay+3) then
 ! ---             treat layer k-2 as fixed.
-              p_hat2 = p_i_j(k-2) + &
-                       max(p_i_j(k-1)-p_hat+p_hat0-p_i_j(k-2), dp0ij(k-2))
+              h_hat2 = max(h_hat0 - h_hat, dp0ij(k-2) - h_i_j(k-2))
             else
 ! ---             maintain minimum thickness of layer k-2.
-              p_hat2 = p_i_j(k-2) + &
-                       cushn(p_i_j(k-1)-p_hat+p_hat0-p_i_j(k-2), dp0ij(k-2))
+              h_hat2 = cushn(h_i_j(k-2) + (h_hat0 - h_hat), dp0ij(k-2)) - h_i_j(k-2)
             endif !fixlay+3:else
-            if (p_hat2 < p_i_j(k-1)-onemm) then
-              dp_int(k-1) = dp_int(k-1) + &
-                            qhrlx(k-1) * (max(p_hat2 - p_i_j(k-1), p_i_j(k-1)-p_hat) )
-              p_i_j(k-1) = (1.0-qhrlx(k-1))*p_i_j(k-1) + &
-                           qhrlx(k-1) * max(p_hat2, 2.0*p_i_j(k-1)-p_hat)
-              p_hat = p_i_j(k-1) + cushn(p_hat0-p_i_j(k-1), dp0ij(k-1))
+            if (h_hat2 < -onemm) then
+              dh_cor = qhrlx(k-1) * max(h_hat2, -h_hat - h_i_j(k-1))
+              h_i_j(k-2)  = h_i_j(k-2) + dh_cor
+              h_i_j(k-1)  = h_i_j(k-1) - dh_cor
+              dp_int(k-1) = dp_int(k-1) + dh_cor
+              p_i_j(k-1)  = p_i_j(k-1) + dh_cor
+              h_hat = cushn(h_hat0 + h_i_j(k-1), dp0ij(k-1)) - h_i_j(k-1)
             elseif (k <= fixlay+3) then
 ! ---             do nothing.
             elseif (p_i_j(k-2) > dp0cum(k-2)+tenm .and. &
                    (p_i_j(kdm+1)-p_i_j(k-2) < thkbot .or. &
-                    p_i_j(k-2)  -p_i_j(k-3) > qqmx*dp0ij(k-3))) then
+                    h_i_j(k-3) > qqmx*dp0ij(k-3))) then
               if (k == fixlay+4) then
 ! ---               treat layer k-3 as fixed.
-                p_hat3 = p_i_j(k-3) + max(p_i_j(k-2)-p_hat + p_hat0-p_i_j(k-3), dp0ij(k-3))
+                h_hat3 = max(h_hat0 - h_hat, dp0ij(k-3) - h_i_j(k-3))
               else
 ! ---               maintain minimum thickess of layer k-3.
-                p_hat3 = p_i_j(k-3) + cushn(p_i_j(k-2)-p_hat+ p_hat0-p_i_j(k-3), dp0ij(k-3))
+                h_hat3 = cushn(h_i_j(k-3) + (h_hat0 - h_hat), dp0ij(k-3)) - h_i_j(k-3)
               endif !fixlay+4:else
-              if (p_hat3 < p_i_j(k-2)-onemm) then
-                dp_int(k-2) = dp_int(k-2) + &
-                              qhrlx(k-2) * max(p_hat3 - p_i_j(k-2), p_i_j(k-2)-p_i_j(k-1))
-                p_i_j(k-2) = (1.0-qhrlx(k-2))*p_i_j(k-2) + &
-                             qhrlx(k-2)*max(p_hat3, 2.0*p_i_j(k-2)-p_i_j(k-1))
-                p_hat2 = p_i_j(k-2) + cushn(p_i_j(k-1)-p_hat + p_hat0-p_i_j(k-2), dp0ij(k-2))
-                if (p_hat2 < p_i_j(k-1)-onemm) then
-                  dp_int(k-1) = dp_int(k-1) + &
-                                qhrlx(k-1) * (max(p_hat2 - p_i_j(k-1), p_i_j(k-1)-p_hat) )
-                  p_i_j(k-1) = (1.0-qhrlx(k-1)) * p_i_j(k-1) + &
-                               qhrlx(k-1) * max(p_hat2, 2.0*p_i_j(k-1)-p_hat)
-                  p_hat = p_i_j(k-1) + cushn(p_hat0-p_i_j(k-1), dp0ij(k-1))
-                endif !p_hat2
-              endif !p_hat3
-            endif !p_hat2:blocking
+              if (h_hat3 < -onemm) then
+                dh_cor = qhrlx(k-2) * max(h_hat3, -h_i_j(k-2))
+                h_i_j(k-3) = h_i_j(k-3) + dh_cor
+                h_i_j(k-2) = h_i_j(k-2) - dh_cor
+                dp_int(k-2) = dp_int(k-2) + dh_cor
+                p_i_j(k-2) = p_i_j(k-2) + dh_cor
+
+                h_hat2 = cushn(h_i_j(k-2) + (h_hat0 - h_hat), dp0ij(k-2)) - h_i_j(k-2)
+                if (h_hat2 < -onemm) then
+                  dh_cor = qhrlx(k-1) * (max(h_hat2, -h_hat - h_i_j(k-1)) )
+                  h_i_j(k-2) = h_i_j(k-2) + dh_cor
+                  h_i_j(k-1) = h_i_j(k-1) - dh_cor
+                  dp_int(k-1) = dp_int(k-1) + dh_cor
+                  p_i_j(k-1) = p_i_j(k-1) + dh_cor
+                  h_hat = cushn(h_hat0 + h_i_j(k-1), dp0ij(k-1)) - h_i_j(k-1)
+                endif !h_hat2
+              endif !h_hat3
+            endif !h_hat2:blocking
           endif !blocking
 !
-          if (p_hat < p_i_j(k)) then
+          if (h_hat < 0.0) then
 ! ---           entrain layer k-1 water into layer k, move interface up.
-            dp_int(k) = dp_int(k) + qhrlx(k) * (p_hat - p_i_j(k))
-            p_i_j(k) = (1.0-qhrlx(k)) * p_i_j(k) + qhrlx(k) * p_hat
+            dh_cor = qhrlx(k) * h_hat
+            h_i_j(k-1) = h_i_j(k-1) + dh_cor
+            h_i_j(k)   = h_i_j(k)   - dh_cor
+            dp_int(k) = dp_int(k) + dh_cor
+            p_i_j(k) = p_i_j(k) + dh_cor
           endif !entrain
 
         endif  !too-dense adjustment
@@ -717,39 +768,40 @@ subroutine hybgenaij_regrid(CS, kdm, nhybrd, thbase, thkbot, &
         if (p_i_j(k+1) < p_i_j(kdm+1)) then  ! k<kdm
           if (th3d_i_j(k+1) <= theta_i_j(k+1) .or. &
               p_i_j(k+1) <= dp0cum(k+1)+onem  .or. &
-              p_i_j(k+1)-p_i_j(k) < p_i_j(k+2)-p_i_j(k+1)) then
+              h_i_j(k) < h_i_j(k+1)) then
 ! ---           if layer k+1 is too dense, thicken the thinner of the
 ! ---           two, i.e. skip this layer (never get here) if it is not
 ! ---           thinner than the other.
 
             if     ((th3d_i_j(k+1)-theta_i_j(k)) <= epsil) then
 !                 layer k-1 too light, take entire layer
-              p_hat = p_i_j(k+2)
+              h_hat = h_i_j(k+1)
             else
-              q = (th3d_i_j(k)  -theta_i_j(k)) / &
-                  (th3d_i_j(k+1)-theta_i_j(k))          !-1 <= q < 0
-              p_hat = p_i_j(k+1) + q*(p_i_j(k)-p_i_j(k+1))  !>p_i_j(k+1)
+              q_frac = (theta_i_j(k) - th3d_i_j(k)) / (th3d_i_j(k+1)-theta_i_j(k)) ! 0 < q_frac <= 1
+              h_hat = q_frac*h_i_j(k)
             endif
 !
 ! ---           if layer k+1, or layer k+2, does not touch the bottom
 ! ---           then maintain minimum thicknesses of layers k and k+1 as
 ! ---           much as possible. otherwise, permit layers to collapse
 ! ---           to zero thickness at the bottom.
-!
             if (p_i_j(min(k+3,kdm+1)) < p_i_j(kdm+1)) then
               if (p_i_j(kdm+1)-p_i_j(k) >  dp0ij(k)+dp0ij(k+1)) then
-                p_hat = p_i_j(k+2) - cushn(p_i_j(k+2)-p_hat, dp0ij(k+1))
+                h_hat = h_i_j(k+1) - cushn(h_i_j(k+1)-h_hat, dp0ij(k+1))
               endif
-              p_hat = p_i_j(k) + max(p_hat-p_i_j(k), dp0ij(k))
-              p_hat = min(p_hat, max(0.5*(p_i_j(k+1)+p_i_j(k+2)), &
-                                     p_i_j(k+2)-dp0ij(k+1)) )
+              h_hat = max(h_hat, dp0ij(k) - h_i_j(k))
+              h_hat = min(h_hat, max(0.5*h_i_j(k+1), h_i_j(k+1)-dp0ij(k+1)) )
             else
-              p_hat = min(p_i_j(k+2), p_hat)
+              h_hat = min(h_i_j(k+1), h_hat)
             endif !p.k+2<p.kdm+1
-            if (p_hat > p_i_j(k+1)) then
+
+            if (h_hat > 0.0) then
 ! ---             entrain layer k+1 water into layer k.
-              dp_int(k+1) = dp_int(k+1) + qhrlx(k+1) * (p_hat - p_i_j(k+1))
-              p_i_j(k+1) = (1.0-qhrlx(k+1)) * p_i_j(k+1) + qhrlx(k+1) * p_hat
+              dh_cor = qhrlx(k+1) * h_hat
+              h_i_j(k)   = h_i_j(k)   + dh_cor
+              h_i_j(k+1) = h_i_j(k+1) - dh_cor
+              dp_int(k+1) = dp_int(k+1) + dh_cor
+              p_i_j(k+1) = p_i_j(k+1) + dh_cor
             endif !entrain
 
           endif !too-light adjustment
@@ -757,11 +809,12 @@ subroutine hybgenaij_regrid(CS, kdm, nhybrd, thbase, thkbot, &
       endif !too dense or too light
 !
 ! ---     if layer above is still too thin, move interface down.
-      p_hat0 = min(p_i_j(k-1)+dp0ij(k-1), p_i_j(kdm+1))
-      if (p_hat0 > p_i_j(k)) then
-        dp_int(k) = dp_int(k) + min(qhrlx(k-1) * (p_hat0 - p_i_j(k)), p_i_j(k+1) - p_i_j(k))
-        p_hat = (1.0-qhrlx(k-1)) * p_i_j(k) + qhrlx(k-1) * p_hat0
-        p_i_j(k) = min(p_hat, p_i_j(k+1))
+      dh_cor = min(qhrlx(k-1) * min(dp0ij(k-1) - h_i_j(k-1), p_i_j(kdm+1) - p_i_j(k)), h_i_j(k))
+      if (dh_cor > 0.0) then
+        h_i_j(k-1) = h_i_j(k-1) + dh_cor
+        h_i_j(k)   = h_i_j(k)   - dh_cor
+        dp_int(k) = dp_int(k) + dh_cor
+        p_i_j(k) = p_i_j(k) + dh_cor
       endif
 
     endif !k <= fixlay:else
