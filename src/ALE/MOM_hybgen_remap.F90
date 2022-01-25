@@ -203,10 +203,10 @@ subroutine hybgen_remap_tracers(G, GV, CS, Reg, ntracer, dp_new, dp_orig, PCM_ce
 end subroutine hybgen_remap_tracers
 
 !> Vertically remap a column of scalars to the new grid
-subroutine hybgen_remap_column(remap_scheme, nk, h_src_in, h_tgt, ntracr, trac_i_j, dpthin, PCM_lay)
+subroutine hybgen_remap_column(remap_scheme, nk, h_src, h_tgt, ntracr, trac_i_j, dpthin, PCM_lay)
   integer,         intent(in)    :: remap_scheme !< A coded integer indicating the remapping scheme to use
   integer,         intent(in)    :: nk           !< Number of layers in this column
-  real,            intent(in)    :: h_src_in(nk)    !< Source grid layer thicknesses [H ~> m or kg m-2]
+  real,            intent(in)    :: h_src(nk)    !< Source grid layer thicknesses [H ~> m or kg m-2]
   real,            intent(in)    :: h_tgt(nk)    !< Target grid layer thicknesses [H ~> m or kg m-2]
   integer,         intent(in)    :: ntracr       !< The number of registered tracers (including temperature
                                                  !! and salinity)
@@ -221,7 +221,6 @@ subroutine hybgen_remap_column(remap_scheme, nk, h_src_in, h_tgt, ntracr, trac_i
   real :: s1d(nk,ntracr)    ! original scalar fields [Conc] or [degC] or [ppt]
   real :: f1d(nk,ntracr)    ! final    scalar fields [Conc] or [degC] or [ppt]
   real :: c1d(nk,ntracr,3)  ! interpolation coefficients
-  real :: h_src(nk)         ! original layer thicknesses [H ~> m or kg m-2]
   real :: dpi( nk)          ! original layer thicknesses, >= dpthin [H ~> m or kg m-2]
   real :: pres(nk+1)        ! Source grid interface depths [H ~> m or kg m-2]
   real :: prsf(nk+1)        ! Target grid interface depths [H ~> m or kg m-2]
@@ -234,9 +233,6 @@ subroutine hybgen_remap_column(remap_scheme, nk, h_src_in, h_tgt, ntracr, trac_i
 
 ! --- Store the 'old' vertical grid fields and the 'new' vertical grid spacings
   pres(1) = 0.0 ; prsf(1) = 0.0
-!### Remove these two lines later
-  do k=1,nk ; pres(K+1) = pres(K) + h_src_in(k) ; enddo
-  do k=1,nk ; h_src(k) = pres(K+1) - pres(K) ; enddo
 
   do k=1,nk
     do ktr=1,ntracr
@@ -244,7 +240,7 @@ subroutine hybgen_remap_column(remap_scheme, nk, h_src_in, h_tgt, ntracr, trac_i
     enddo !ktr
 
     dpi(k) = max(h_src(k), dpthin)
-!### Uncomment this line later   pres(K+1) = pres(K) + h_src(k)
+    pres(K+1) = pres(K) + h_src(k)
     prsf(K+1) = prsf(K) + h_tgt(k)
   enddo !k
 
