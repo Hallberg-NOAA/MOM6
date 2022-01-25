@@ -11,6 +11,7 @@ use MOM_error_handler,   only : MOM_mesg, MOM_error, FATAL, WARNING
 use MOM_file_parser,     only : get_param, param_file_type, log_param
 use MOM_open_boundary,   only : ocean_OBC_type, OBC_DIRECTION_E, OBC_DIRECTION_W
 use MOM_open_boundary,   only : OBC_DIRECTION_N, OBC_DIRECTION_S
+use MOM_string_functions, only : uppercase
 use MOM_tracer_registry, only : tracer_registry_type, tracer_type, MOM_tracer_chkinv
 use MOM_unit_scaling,    only : unit_scale_type
 use MOM_variables,       only : ocean_grid_type, thermo_var_ptrs
@@ -29,10 +30,20 @@ type, public :: hybgen_remap_CS ; private
   !> Hybgen velocity remapper flag (0=PCM,1=PLM,3=WENO-like), usually 3
   integer :: hybmap_vel
 
-  real :: onem       !< Nominally one m in thickness units [H ~> m or kg m-2]
-  logical :: debug   !< If true, write verbose checksums for debugging purposes.
-
 end type hybgen_remap_CS
+
+!> Documentation for external callers
+character(len=256), public :: remappingSchemesDoc = &
+                 "PCM         (1st-order accurate)\n"//&
+                 "PLM         (2nd-order accurate)\n"//&
+                 "PPM_H4      (3rd-order accurate)\n"//&
+                 "WENO        (Weighted Essentially Non-Oscillatory)\n"
+
+! The following are private parameter constants
+integer, parameter  :: REMAPPING_PCM        = 0 !< O(h^1) remapping scheme
+integer, parameter  :: REMAPPING_PLM        = 1 !< O(h^2) remapping scheme
+integer, parameter  :: REMAPPING_PPM_H4     = 2 !< O(h^3) remapping scheme
+integer, parameter  :: REMAPPING_WENO       = 15 !< O(h^5) remapping scheme
 
 public hybgen_remap, init_hybgen_remap
 
@@ -45,27 +56,44 @@ subroutine init_hybgen_remap(CS, GV, US, param_file)
   type(unit_scale_type),   intent(in) :: US  !< A dimensional unit scaling type
   type(param_file_type),   intent(in) :: param_file !< Parameter file
 
-  character(len=40)               :: mdl = "MOM_hybgen" ! This module's name.
-  integer :: k
+  character(len=40) :: mdl = "MOM_hybgen" ! This module's name.
+  character(len=80) :: scheme_name, vel_scheme_name
 
   if (associated(CS)) call MOM_error(FATAL, "init_hybgen_remap: CS already associated!")
   allocate(CS)
 
-  call get_param(param_file, mdl, "HYBGEN_REMAP_SCHEME", CS%hybmap, &
+  call get_param(param_file, mdl, "HYBGEN_REMAPPING_SCHEME", scheme_name, &
                  "An integer indicating the remapping scheme to be used by Hygen. "//&
-                 " Valid values are: 0 - PCM; 1 - PLM; 2 - PPM; 3 - WENO-like", default=3)
-  call get_param(param_file, mdl, "HYBGEN_REMAP_VEL_SCHEME", CS%hybmap_vel, &
-                 "An integer indicating the velocity remapping scheme to be used by Hygen. "//&
-                 " Valid values are: 0 - PCM; 1 - PLM; 2 or 3 - WENO-like", default=CS%hybmap)
-  call get_param(param_file, "MOM", "DEBUG", CS%debug, &
-                 "If true, write out verbose debugging data.", &
-                 default=.false., debuggingParam=.true.)
+                 "Valid values are: \n"//trim(remappingSchemesDoc), default="WENO")
+  CS%hybmap = hybgen_remap_scheme_from_name(scheme_name, "HYBGEN_REMAPPING_SCHEME")
 
-  CS%onem = 1.0 * GV%m_to_H
+  call get_param(param_file, mdl, "HYBGEN_REMAPPING_VEL_SCHEME", vel_scheme_name, &
+                 "An integer indicating the velocity remapping scheme to be used by Hygen. "//&
+                 "Valid values are: \n"//trim(remappingSchemesDoc), default=trim(scheme_name))
+  CS%hybmap_vel = hybgen_remap_scheme_from_name(vel_scheme_name, "HYBGEN_REMAPPING_VEL_SCHEME")
+
+  if (CS%hybmap_vel == REMAPPING_PPM_H4) then
+    call MOM_error(WARNING, "Replacing PPM_H4 scheme for HYBGEN_REMAPPING_VEL_SCHEME with WENO.")
+    CS%hybmap_vel = REMAPPING_WENO
+  endif
 
 end subroutine init_hybgen_remap
 
+!> This function returns an integer that indicates which remapping scheme to use
+integer function hybgen_remap_scheme_from_name(string, param_name)
+  character(len=*),   intent(in)    :: string !< String to parse for the remapping scheme
+  character(len=*),   intent(in)    :: param_name !< Name of the parameter being interpreted.
 
+  select case ( uppercase(trim(string)) )
+    case ("PCM") ; hybgen_remap_scheme_from_name = REMAPPING_PCM
+    case ("PLM") ; hybgen_remap_scheme_from_name = REMAPPING_PLM
+    case ("PPM_H4") ; hybgen_remap_scheme_from_name = REMAPPING_PPM_H4
+    case ("WENO") ; hybgen_remap_scheme_from_name = REMAPPING_WENO
+    case default
+      call MOM_error(FATAL, "hybgen_remap_scheme: Unrecognized choice for "//&
+                            trim(param_name)//" ("//trim(string)//").")
+  end select
+end function hybgen_remap_scheme_from_name
 
 !> Hybgen_remap remaps the state variables, velocities and any tracers to a new
 !! vertical grid using the algorithms imported from the HYCOM ocean model.
@@ -139,41 +167,35 @@ subroutine hybgen_remap_tracers(G, GV, CS, Reg, ntracer, dp_new, dp_orig, PCM_ce
                  optional, intent(in)    :: PCM_cell !< If true, PCM remapping should be used in cell.
 
   ! Local variables
-  real :: pres(GV%ke+1)     ! Original layer interfaces [H ~> m or kg m-2]
-  real :: dp_i_j(GV%ke)     ! layer thicknesses [H ~> m or kg m-2]
-  real :: p_i_j(GV%ke+1)    ! interface depths [H ~> m or kg m-2]
+  real :: h_src(GV%ke)      ! A column of target grid layer thicknesses [H ~> m or kg m-2]
+  real :: h_tgt(GV%ke)      ! A column of source grid layer thicknesses [H ~> m or kg m-2]
   real :: tracer_i_j(GV%ke,max(ntracer,1))  !  Columns of each tracer [Conc]
-  logical :: pcm_lay(GV%ke) ! If true for a layer, use PCM remapping for that layer
+  logical :: PCM_lay(GV%ke) ! If true for a layer, use PCM remapping for that layer
   real :: dpthin            ! A negligible layer thickness, used to avoid roundoff issues
                             ! or division by 0 [H ~> m or kg m-2]
-  integer :: i, j, k, kdm, m
+  integer :: i, j, k, nk, m
 
-  kdm = GV%ke
+  nk = GV%ke
   dpthin = 1.0e-6*GV%m_to_H
 
-  do k=1,kdm ; pcm_lay(k) = .false. ; enddo
+  do k=1,nk ; PCM_lay(k) = .false. ; enddo
   do j=G%jsc-1,G%jec+1 ; do i=G%isc-1,G%iec+1 ; if (G%mask2dT(i,j)>0.) then
-    do k=1,kdm
-      dp_i_j(k) = dp_new(i,j,k)
+    do k=1,nk
+      h_src(k) = dp_orig(i,j,k)
+      h_tgt(k) = dp_new(i,j,k)
     enddo
-    if (present(PCM_cell)) then ; do k=1,kdm
-      pcm_lay(k) = PCM_cell(i,j,k)
+    if (present(PCM_cell)) then ; do k=1,nk
+      PCM_lay(k) = PCM_cell(i,j,k)
     enddo ; endif
     ! Note that temperature and salinity are among the tracers remapped here.
-    do m=1,ntracer ; do k=1,kdm
+    do m=1,ntracer ; do k=1,nk
       tracer_i_j(k,m) = Reg%Tr(m)%t(i,j,k)
     enddo ; enddo
 
-    pres(1) = 0.0 ; p_i_j(1) = 0.0
-    do k=1,kdm
-      pres(K+1) = pres(K) + dp_orig(i,j,K)
-      p_i_j(K+1) = p_i_j(K) + dp_i_j(k)
-    enddo !k
-
-    call hybgenaij_remap(CS, kdm, pres, p_i_j, pcm_lay, dp_i_j, ntracer, tracer_i_j)
+    call hybgen_remap_column(CS%hybmap, nk, h_src, h_tgt, ntracer, tracer_i_j, dpthin, PCM_lay)
 
     ! Note that temperature and salinity are among the tracers remapped here.
-    do m=1,ntracer ; do k=1,kdm
+    do m=1,ntracer ; do k=1,nk
       Reg%Tr(m)%t(i,j,k) = tracer_i_j(k,m)
     enddo ; enddo
   endif ; enddo ; enddo !i & j
@@ -181,74 +203,74 @@ subroutine hybgen_remap_tracers(G, GV, CS, Reg, ntracer, dp_new, dp_orig, PCM_ce
 end subroutine hybgen_remap_tracers
 
 !> Vertically remap a column of scalars to the new grid
-subroutine hybgenaij_remap(CS, kdm, pres, prsf, pcm_lay, dp_i_j, ntracr, trac_i_j)
-  type(hybgen_remap_CS), intent(in) :: CS         !< hybgen control structure
-  integer,         intent(in)    :: kdm           !< Number of layers in this column
-  real,            intent(in)    :: pres(kdm+1)   !< original layer interfaces [H ~> m or kg m-2]
-  real,            intent(in)    :: prsf(kdm+1)   !< new layer interfaces [H ~> m or kg m-2]
-  logical,         intent(in)    :: pcm_lay(kdm)  !< If true for a layer, use PCM remapping for that layer
-  real,            intent(in)    :: dp_i_j(kdm)   !< new layer thicknesses [H ~> m or kg m-2]
-  integer,         intent(in)    :: ntracr        !< The number of registered tracers (including temperature
-                                                  !! and salinity)
-  real,            intent(inout) :: trac_i_j(kdm, max(ntracr,1)) !< Columns of the tracers [Conc] or [degC] or [ppt]
+subroutine hybgen_remap_column(remap_scheme, nk, h_src_in, h_tgt, ntracr, trac_i_j, dpthin, PCM_lay)
+  integer,         intent(in)    :: remap_scheme !< A coded integer indicating the remapping scheme to use
+  integer,         intent(in)    :: nk           !< Number of layers in this column
+  real,            intent(in)    :: h_src_in(nk)    !< Source grid layer thicknesses [H ~> m or kg m-2]
+  real,            intent(in)    :: h_tgt(nk)    !< Target grid layer thicknesses [H ~> m or kg m-2]
+  integer,         intent(in)    :: ntracr       !< The number of registered tracers (including temperature
+                                                 !! and salinity)
+  real,            intent(inout) :: trac_i_j(nk, max(ntracr,1)) !< Columns of the tracers [Conc] or [degC] or [ppt]
+  real,            intent(in)    :: dpthin       !< A negligibly small thickness for the purpose of cell
+                                                 !! reconstructions [H ~> m or kg m-2].
+  logical,         intent(in)    :: PCM_lay(nk)  !< If true for a layer, use PCM remapping for that layer
 
 ! --- -------------------------------------------------------------
 ! --- hybrid grid generator, single column(part A) - remap scalars.
 ! --- -------------------------------------------------------------
-  real :: offset(ntracr)
-!
-  real :: s1d(kdm,ntracr)    ! original scalar fields [Conc] or [degC] or [ppt]
-  real :: f1d(kdm,ntracr)    ! final    scalar fields [Conc] or [degC] or [ppt]
-  real :: c1d(kdm,ntracr,3)  ! interpolation coefficients
-  real :: dpi( kdm)            ! original layer thicknesses, >= dpthin [H ~> m or kg m-2]
-  real :: dprs(kdm)            ! original layer thicknesses [H ~> m or kg m-2]
-  real :: zthk, dpthin, q
+  real :: s1d(nk,ntracr)    ! original scalar fields [Conc] or [degC] or [ppt]
+  real :: f1d(nk,ntracr)    ! final    scalar fields [Conc] or [degC] or [ppt]
+  real :: c1d(nk,ntracr,3)  ! interpolation coefficients
+  real :: h_src(nk)         ! original layer thicknesses [H ~> m or kg m-2]
+  real :: dpi( nk)          ! original layer thicknesses, >= dpthin [H ~> m or kg m-2]
+  real :: pres(nk+1)        ! Source grid interface depths [H ~> m or kg m-2]
+  real :: prsf(nk+1)        ! Target grid interface depths [H ~> m or kg m-2]
   integer :: k, ktr, nums1d
   character(len=256) :: mesg  ! A string for output messages
 
   double precision, parameter :: zp5=0.5 ! for sign function
 
-  dpthin = 1.e-6*CS%onem
   nums1d = ntracr
 
-! --- 'old' vertical grid fields.
-  do k=1,kdm
+! --- Store the 'old' vertical grid fields and the 'new' vertical grid spacings
+  pres(1) = 0.0 ; prsf(1) = 0.0
+!### Remove these two lines later
+  do k=1,nk ; pres(K+1) = pres(K) + h_src_in(k) ; enddo
+  do k=1,nk ; h_src(k) = pres(K+1) - pres(K) ; enddo
+
+  do k=1,nk
     do ktr=1,ntracr
       s1d(k,ktr) = trac_i_j(k,ktr)
     enddo !ktr
 
-    dprs(k) = pres(k+1)-pres(k)
-    dpi( k) = max(dprs(k), dpthin)
+    dpi(k) = max(h_src(k), dpthin)
+!### Uncomment this line later   pres(K+1) = pres(K) + h_src(k)
+    prsf(K+1) = prsf(K) + h_tgt(k)
   enddo !k
 
 !
 ! --- remap scalar field profiles from the 'old' vertical
 ! --- grid onto the 'new' vertical grid.
 !
-
-  if     (CS%hybmap == 0) then !PCM
-    call hybgen_pcm_remap(s1d, pres, dprs, f1d, prsf, &
-                          kdm, kdm, nums1d, dpthin)
-  elseif (CS%hybmap == 1) then !PLM (as in 2.1.08)
-    call hybgen_plm_coefs(s1d, dprs, pcm_lay, c1d, kdm, nums1d, dpthin)
-    call hybgen_plm_remap(s1d, pres, dprs, c1d, f1d, prsf, &
-                          kdm, kdm, nums1d, dpthin)
-  elseif (CS%hybmap == 2) then !PPM
-    call hybgen_ppm_coefs(s1d, dpi, pcm_lay, c1d, kdm, nums1d, dpthin)
-    call hybgen_ppm_remap(s1d, pres, dprs, c1d, f1d, prsf, &
-                          kdm, kdm, nums1d, dpthin)
-  elseif (CS%hybmap == 3) then !WENO-like
-    call hybgen_weno_coefs(s1d, dpi, pcm_lay, c1d, kdm, nums1d, dpthin)
-    call hybgen_weno_remap(s1d, pres, dprs, c1d, f1d, prsf, &
-                           kdm, kdm, nums1d, dpthin)
+  if     (remap_scheme == REMAPPING_PCM) then !PCM
+    call hybgen_pcm_remap(s1d, pres, h_src, f1d, prsf, nk, nk, nums1d, dpthin)
+  elseif (remap_scheme == REMAPPING_PLM) then !PLM (as in 2.1.08)
+    call hybgen_plm_coefs(s1d, h_src, PCM_lay, c1d, nk, nums1d, dpthin)
+    call hybgen_plm_remap(s1d, pres, h_src, c1d, f1d, prsf, nk, nk, nums1d, dpthin)
+  elseif (remap_scheme == REMAPPING_PPM_H4) then !PPM
+    call hybgen_ppm_coefs(s1d, dpi, PCM_lay, c1d, nk, nums1d, dpthin)
+    call hybgen_ppm_remap(s1d, pres, h_src, c1d, f1d, prsf, nk, nk, nums1d, dpthin)
+  elseif (remap_scheme == REMAPPING_WENO) then !WENO-like
+    call hybgen_weno_coefs(s1d, dpi, PCM_lay, c1d, nk, nums1d, dpthin)
+    call hybgen_weno_remap(s1d, pres, h_src, c1d, f1d, prsf, nk, nk, nums1d, dpthin)
   endif
-  do k=1,kdm
-    do ktr= 1,ntracr
+  do k=1,nk
+    do ktr=1,ntracr
       trac_i_j(k,ktr) = f1d(k,ktr)
     enddo !ktr
   enddo !k
 
-end subroutine hybgenaij_remap
+end subroutine hybgen_remap_column
 
 !> Remap a vertical slice of u-velocities
 subroutine hybgenbj_u(CS, G, GV, dpu, dpu_orig, u, j)
@@ -310,9 +332,9 @@ subroutine hybgenbj_u(CS, G, GV, dpu, dpu_orig, u, j)
 ! ---     remap -u- profiles from the 'old' vertical grid onto the
 ! ---     'new' vertical grid.
 !
-    if     (CS%hybmap_vel == 0) then !PCM
+    if     (CS%hybmap_vel == REMAPPING_PCM) then !PCM
       call hybgen_pcm_remap(s1d, pres, dprs, f1d, prsf, kk, kk, 1, dpthin)
-    elseif (CS%hybmap_vel == 1) then !PLM (as in 2.1.08)
+    elseif (CS%hybmap_vel == REMAPPING_PLM) then !PLM (as in 2.1.08)
       call hybgen_plm_coefs(s1d, dprs, lcm, c1d, kk, 1, dpthin)
       call hybgen_plm_remap(s1d, pres, dprs, c1d, f1d, prsf, kk, kk, 1, dpthin)
     else !WENO-like (even if scalar fields are PLM or PPM)
@@ -395,9 +417,9 @@ subroutine hybgenbj_v(CS, G, GV, dpv, dpv_orig, v, j)
 ! ---     remap -v- profiles from the 'old' vertical grid onto the
 ! ---     'new' vertical grid.
 !
-    if     (CS%hybmap_vel == 0) then !PCM
+    if     (CS%hybmap_vel == REMAPPING_PCM) then !PCM
       call hybgen_pcm_remap(s1d, pres, dprs, f1d, prsf, kk, kk, 1, dpthin)
-    elseif (CS%hybmap_vel == 1) then !PLM (as in 2.1.08)
+    elseif (CS%hybmap_vel == REMAPPING_PLM) then !PLM (as in 2.1.08)
       call hybgen_plm_coefs(s1d, dprs, lcm, c1d, kk, 1, dpthin)
       call hybgen_plm_remap(s1d, pres, dprs, c1d, f1d, prsf, kk, kk, 1, dpthin)
     else !WENO-like (even if scalar fields are PLM or PPM)
