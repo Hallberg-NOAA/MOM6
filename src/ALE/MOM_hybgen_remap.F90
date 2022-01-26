@@ -280,9 +280,9 @@ subroutine hybgenbj_u(CS, G, GV, dpu, dpu_orig, u, j)
   real :: c1d(GV%ke,3)    ! Interpolation coefficients
   real :: h_src(GV%ke)    ! A column of source grid layer thicknesses [H ~> m or kg m-2]
   real :: h_tgt(GV%ke)    ! A column of target grid layer thicknesses [H ~> m or kg m-2]
-  real :: prsf(GV%ke+1)   ! Target grid interface positions [H ~> m or kg m-2]
   real :: dpthin ! A negligible layer thickness, used to avoid roundoff issues
                  ! or division by 0 [H ~> m or kg m-2]
+  real :: h_from_bot  ! The distance between the top of a layer and the seafloor [H ~> m or kg m-2]
   real :: onemm  ! one mm in pressure units [H ~> m or kg m-2]
   character(len=256) :: mesg  ! A string for output messages
   integer :: i, k, kk
@@ -317,14 +317,16 @@ subroutine hybgenbj_u(CS, G, GV, dpu, dpu_orig, u, j)
       call hybgen_weno_remap(s1d, h_src, c1d, f1d, h_tgt, kk, kk, 1, dpthin)
     endif !hybmap_vel
 
-    prsf(1) = 0.0
-    do k=1,kk
-      prsf(K+1) = prsf(K) + h_tgt(k)      ! new vertical grid interfaces
-    enddo !k
     do k=1,kk
       u(I,j,k) = f1d(k)
-      if ((h_src(k) <= dpthin) .and. (prsf(k) > prsf(kk+1)-onemm)) then
-      ! --- thin near-bottom layer, zero total current
+    enddo !k
+
+    h_from_bot = 0.0
+    do k=kk,1,-1
+      h_from_bot = h_from_bot + h_tgt(k)
+      if (h_from_bot > onemm) exit
+      ! Set the velocity to zero in thin, near-bottom layers.
+      if ((h_src(k) <= dpthin) .and. (h_from_bot <= onemm)) then
         u(I,j,k) = 0.0
       endif
     enddo !k
@@ -355,9 +357,9 @@ subroutine hybgenbj_v(CS, G, GV, dpv, dpv_orig, v, j)
   real :: c1d(GV%ke,3)    ! Interpolation coefficients
   real :: h_src(GV%ke)    ! A column of source grid layer thicknesses [H ~> m or kg m-2]
   real :: h_tgt(GV%ke)    ! A column of target grid layer thicknesses [H ~> m or kg m-2]
-  real :: prsf(GV%ke+1)   ! Target grid interface positions [H ~> m or kg m-2]
   real :: dpthin ! A negligible layer thickness, used to avoid roundoff issues
                  ! or division by 0 [H ~> m or kg m-2]
+  real :: h_from_bot  ! The distance between the top of a layer and the seafloor [H ~> m or kg m-2]
   real :: onemm  ! one mm in pressure units [H ~> m or kg m-2]
   character(len=256) :: mesg  ! A string for output messages
   integer :: i, k, kk
@@ -393,14 +395,16 @@ subroutine hybgenbj_v(CS, G, GV, dpv, dpv_orig, v, j)
       call hybgen_weno_remap(s1d, h_src, c1d, f1d, h_tgt, kk, kk, 1, dpthin)
     endif !hybmap_vel
 
-    prsf(1) = 0.0
-    do k=1,kk
-      prsf(K+1) = prsf(K) + h_tgt(k)      ! new vertical grid interfaces
-    enddo !k
     do k=1,kk
       v(i,J,k) = f1d(k)
-      if ((h_src(k) <= dpthin) .and. (prsf(k) > prsf(kk+1)-onemm)) then
-        ! --- thin near-bottom layer, zero total current
+    enddo !k
+
+    h_from_bot = 0.0
+    do k=kk,1,-1
+      h_from_bot = h_from_bot + h_tgt(k)
+      if (h_from_bot > onemm) exit
+      ! Set the velocity to zero in thin, near-bottom layers.
+      if ((h_src(k) <= dpthin) .and. (h_from_bot <= onemm)) then
         v(i,J,k) = 0.0
       endif
     enddo !k
