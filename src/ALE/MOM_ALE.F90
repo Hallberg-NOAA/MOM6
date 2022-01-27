@@ -22,6 +22,7 @@ use MOM_error_handler,    only : callTree_showQuery
 use MOM_error_handler,    only : callTree_enter, callTree_leave, callTree_waypoint
 use MOM_hybgen_unmix,     only : hybgen_unmix, init_hybgen_unmix, end_hybgen_unmix, hybgen_unmix_CS
 use MOM_hybgen_remap,     only : hybgen_remap, init_hybgen_remap, hybgen_remap_CS
+use MOM_hybgen_regrid,    only : hybgen_regrid_CS
 use MOM_file_parser,      only : get_param, param_file_type, log_param
 use MOM_io,               only : vardesc, var_desc, fieldtype, SINGLE_FILE
 use MOM_io,               only : create_file, write_field, close_file, file_type
@@ -165,6 +166,8 @@ subroutine ALE_init( param_file, GV, US, max_depth, CS)
   logical           :: force_bounds_in_subcell
   logical           :: local_logical
   logical           :: remap_boundary_extrap
+  type(hybgen_regrid_CS), pointer :: hybgen_regridCS => NULL() ! Control structure for hybgen regridding
+                                                         ! for sharing parameters.
 
   if (associated(CS)) then
     call MOM_error(WARNING, "ALE_init called with an associated "// &
@@ -184,7 +187,7 @@ subroutine ALE_init( param_file, GV, US, max_depth, CS)
 
   ! Initialize and configure regridding
   call ALE_initRegridding(GV, US, max_depth, param_file, mdl, CS%regridCS)
-  call regridding_preadjust_reqs(CS%regridCS, CS%do_conv_adj, CS%use_hybgen_unmix)
+  call regridding_preadjust_reqs(CS%regridCS, CS%do_conv_adj, CS%use_hybgen_unmix, hybgen_CS=hybgen_regridCS)
 
   call get_param(param_file, mdl, "USE_HYBGEN_REMAP", CS%use_hybgen_remap, &
               "If true, use hybgen code for remapping.", default=.false.)
@@ -257,7 +260,7 @@ endif
                  "code.", default=.true., do_not_log=.true.)
   call set_regrid_params(CS%regridCS, integrate_downward_for_e=.not.local_logical)
   if (CS%use_hybgen_unmix) &
-    call init_hybgen_unmix(CS%hybgen_unmixCS, GV, US, param_file)
+    call init_hybgen_unmix(CS%hybgen_unmixCS, GV, US, param_file, hybgen_regridCS)
 
   call get_param(param_file, "MOM", "DEBUG", CS%debug, &
                  "If true, write out verbose debugging data.", &

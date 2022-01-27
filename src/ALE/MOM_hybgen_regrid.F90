@@ -70,7 +70,7 @@ end type hybgen_regrid_CS
 
 
 public hybgen_regrid, init_hybgen_regrid, end_hybgen_regrid
-public hybgen_column_init, set_hybgen_regrid_params
+public hybgen_column_init, get_hybgen_regrid_params
 
 contains
 
@@ -172,15 +172,70 @@ subroutine end_hybgen_regrid(CS)
   deallocate(CS)
 end subroutine end_hybgen_regrid
 
-!> This subroutine can be used to set the parameters for the hybgen module
-subroutine set_hybgen_regrid_params(CS, min_thickness)
+!> This subroutine can be used to retrieve the parameters for the hybgen regrid module
+subroutine get_hybgen_regrid_params(CS, nk, ref_pressure, hybiso, nhybrid, nsigma, dp00i, qhybrlx, &
+                                    isopcm, thbase, dp0k, ds0k, dpns, dsns, min_dilate, max_dilate, &
+                                    thkbot, topiso_const, target_density)
   type(hybgen_regrid_CS),  pointer    :: CS !< Coordinate regridding control structure
-  real,    optional, intent(in) :: min_thickness !< Minimum allowed thickness [H ~> m or kg m-2]
+  integer, optional, intent(out) :: nk  !< Number of layers on the target grid
+  real,    optional, intent(out) :: ref_pressure !< Reference pressure for density calculations [R L2 T-2 ~> Pa]
+  real,    optional, intent(out) :: hybiso !< Hybgen uses PCM if layer is within hybiso of target density [R ~> kg m-3]
+  integer, optional, intent(out) :: nhybrid !< Number of hybrid levels used by HYBGEN (0=all isopycnal)
+  integer, optional, intent(out) :: nsigma  !< Number of sigma levels used by HYBGEN (nhybrid-nsigma z-levels)
+  real,    optional, intent(out) :: dp00i   !< Deep isopycnal spacing minimum thickness (m)
+  real,    optional, intent(out) :: qhybrlx !< Hybgen relaxation coefficient (inverse baroclinic time steps) [s-1]
+  logical, optional, intent(out) :: isopcm  !< If true, Hybgen uses PCM to remap isopycnal layers
+  real,    optional, intent(out) :: thbase  !< Reference density for anomalies [R ~> kg m-3]
+  real,    optional, intent(out) :: dp0k(:) !< minimum deep    z-layer separation [H ~> m or kg m-2]
+  real,    optional, intent(out) :: ds0k(:) !< minimum shallow z-layer separation [H ~> m or kg m-2]
+  real,    optional, intent(out) :: dpns    !< depth to start terrain following [H ~> m or kg m-2]
+  real,    optional, intent(out) :: dsns    !< depth to stop terrain following [H ~> m or kg m-2]
+  real,    optional, intent(out) :: min_dilate !< The minimum amount of dilation that is permitted when
+                                            !! converting target coordinates from z to z* [nondim].
+                                            !! This limit applies when wetting occurs.
+  real,    optional, intent(out) :: max_dilate !< The maximum amount of dilation that is permitted when
+                                            !! converting target coordinates from z to z* [nondim].
+                                            !! This limit applies when drying occurs.
+  real,    optional, intent(out) :: thkbot  !< Thickness of a bottom boundary layer, within which
+                                            !! hybgen does something different. [H ~> m or kg m-2]
+  real,    optional, intent(out) :: topiso_const !< Shallowest depth for isopycnal layers [H ~> m or kg m-2]
+  ! real, dimension(:,:), allocatable :: topiso
+  real,    optional, intent(out) :: target_density(:) !< Nominal density of interfaces [R ~> kg m-3]
 
-  if (.not. associated(CS)) call MOM_error(FATAL, "set_hybgen_params: CS not associated")
+  if (.not. associated(CS)) call MOM_error(FATAL, "get_hybgen_params: CS not associated")
 
-!  if (present(min_thickness)) CS%min_thickness = min_thickness
-end subroutine set_hybgen_regrid_params
+  if (present(nk))      nk = CS%nk
+  if (present(ref_pressure)) ref_pressure = CS%ref_pressure
+  if (present(hybiso))  hybiso = CS%hybiso
+  if (present(nhybrid)) nhybrid = CS%nhybrid
+  if (present(nsigma))  nsigma = CS%nsigma
+  if (present(dp00i))   dp00i = CS%dp00i
+  if (present(qhybrlx)) qhybrlx = CS%qhybrlx
+  if (present(isopcm))  isopcm = CS%isopcm
+  if (present(thbase))  thbase = CS%thbase
+  if (present(dp0k)) then
+    if (size(dp0k) < CS%nk) call MOM_error(FATAL, "get_hybgen_regrid_params: "//&
+                                    "The dp0k argument is not allocated with enough space.")
+    dp0k(1:CS%nk) = CS%dp0k(1:CS%nk)
+  endif
+  if (present(ds0k)) then
+    if (size(ds0k) < CS%nk) call MOM_error(FATAL, "get_hybgen_regrid_params: "//&
+                                    "The ds0k argument is not allocated with enough space.")
+    ds0k(1:CS%nk) = CS%ds0k(1:CS%nk)
+  endif
+  if (present(dpns))    dpns = CS%dpns
+  if (present(dsns))    dsns = CS%dsns
+  if (present(min_dilate)) min_dilate = CS%min_dilate
+  if (present(max_dilate)) max_dilate = CS%max_dilate
+  if (present(thkbot))  thkbot = CS%thkbot
+  if (present(topiso_const)) topiso_const = CS%topiso_const
+  if (present(target_density)) then
+    if (size(target_density) < CS%nk) call MOM_error(FATAL, "get_hybgen_regrid_params: "//&
+                                    "The target_density argument is not allocated with enough space.")
+    target_density(1:CS%nk) = CS%target_density(1:CS%nk)
+  endif
+
+end subroutine get_hybgen_regrid_params
 
 
 !> Modify the input grid to give a new vertical grid based on the HYCOM hybgen code.

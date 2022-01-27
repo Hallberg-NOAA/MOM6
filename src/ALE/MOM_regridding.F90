@@ -854,12 +854,15 @@ end subroutine regridding_main
 !------------------------------------------------------------------------------
 !> This routine returns flags indicating which pre-remapping state adjustments
 !! are needed depending on the coordinate mode in use.
-subroutine regridding_preadjust_reqs(CS, do_conv_adj, do_hybgen_unmix)
+subroutine regridding_preadjust_reqs(CS, do_conv_adj, do_hybgen_unmix, hybgen_CS)
 
   ! Arguments
   type(regridding_CS), intent(in)  :: CS          !< Regridding control structure
   logical,             intent(out) :: do_conv_adj !< Convective adjustment should be done
   logical,             intent(out) :: do_hybgen_unmix !< Hybgen unmixing should be done
+  type(hybgen_regrid_CS), pointer, &
+             optional, intent(out) :: hybgen_CS   !< Control structure for hybgen regridding for sharing parameters.
+
 
   do_conv_adj = .false. ; do_hybgen_unmix = .false.
   select case ( CS%regridding_scheme )
@@ -875,6 +878,8 @@ subroutine regridding_preadjust_reqs(CS, do_conv_adj, do_hybgen_unmix)
       call MOM_error(FATAL,'MOM_regridding, regridding_preadjust_reqs: '//&
                      'Unknown regridding scheme selected!')
   end select ! type of grid
+
+  if (present(hybgen_CS) .and. do_hybgen_unmix) hybgen_CS => CS%hybgen_CS
 
 end subroutine regridding_preadjust_reqs
 

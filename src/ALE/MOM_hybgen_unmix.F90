@@ -8,6 +8,7 @@ use MOM_EOS,             only : EOS_type, calculate_density, calculate_density_d
 use MOM_error_handler,   only : MOM_mesg, MOM_error, FATAL, WARNING
 use MOM_file_parser,     only : get_param, param_file_type, log_param
 use MOM_hybgen_regrid,   only : hybgen_column_init
+use MOM_hybgen_regrid,   only : hybgen_regrid_CS, get_hybgen_regrid_params
 use MOM_tracer_registry, only : tracer_registry_type, tracer_type, MOM_tracer_chkinv
 use MOM_unit_scaling,    only : unit_scale_type
 use MOM_variables,       only : ocean_grid_type, thermo_var_ptrs
@@ -20,32 +21,16 @@ implicit none ; private
 !> Control structure containing required parameters for the hybgen coordinate generator
 type, public :: hybgen_unmix_CS ; private
 
-!  !> Number of layers
-!  integer :: nk
+  integer :: nhybrid !< Number of hybrid levels used by HYBGEN (0=all isopycnal)
+  integer :: nsigma  !< Number of sigma levels used by HYBGEN (nhybrid-nsigma z-levels)
+  real :: hybiso     !< Hybgen uses PCM if layer is within hybiso of target density [kg m-3]
 
-!  !> Minimum thickness allowed for layers, often in [H ~> m or kg m-2]
-!  real :: min_thickness = 0.
-
-  !> Reference pressure for density calculations [R L2 T-2 ~> Pa]
-  real :: ref_pressure
-
-  !> Hybgen uses PCM if layer is within hybiso of target density [kg m-3]
-  real :: hybiso
-  !> Number of hybrid levels used by HYBGEN (0=all isopycnal)
-  integer :: nhybrid
-  !> Number of sigma levels used by HYBGEN (nhybrid-nsigma z-levels)
-  integer :: nsigma
-  !> Deep isopycnal spacing minimum thickness [H ~> m or kg m-2]
-  real :: dp00i
-  !> Hybgen relaxation coefficient (inverse baroclinic time steps) [s-1]
-  real :: qhybrlx
-
-  !> Reference density for anomalies [R ~> kg m-3]
-  real :: thbase
+  real :: dp00i   !< Deep isopycnal spacing minimum thickness [H ~> m or kg m-2]
+  real :: qhybrlx !< Hybgen relaxation coefficient (inverse baroclinic time steps) [s-1]
 
   real, allocatable, dimension(:) ::  &
-    dp0k, & !< minimum deep    z-layer separation [H ~> m or kg m-2]
-    ds0k    !< minimum shallow z-layer separation [H ~> m or kg m-2]
+    dp0k, &     !< minimum deep    z-layer separation [H ~> m or kg m-2]
+    ds0k        !< minimum shallow z-layer separation [H ~> m or kg m-2]
 
   real :: dpns  !< depth to start terrain following [H ~> m or kg m-2]
   real :: dsns  !< depth to stop terrain following [H ~> m or kg m-2]
@@ -54,14 +39,12 @@ type, public :: hybgen_unmix_CS ; private
   real :: max_dilate !< The maximum amount of dilation that is permitted when converting target
                      !! coordinates from z to z* [nondim].  This limit applies when drying occurs.
 
-  !> Shallowest depth for isopycnal layers [H ~> m or kg m-2]
-  real :: topiso_const
+  real :: topiso_const !< Shallowest depth for isopycnal layers [H ~> m or kg m-2]
   ! real, dimension(:,:), allocatable :: topiso
 
-  !> Nominal density of interfaces [R ~> kg m-3]
-  real, allocatable, dimension(:) :: target_density
-
-  real :: onem       !< Nominally one m in thickness units [H ~> m or kg m-2]
+  real :: ref_pressure !< Reference pressure for density calculations [R L2 T-2 ~> Pa]
+  real :: thbase  !< Reference density for anomalies [R ~> kg m-3]
+  real, allocatable, dimension(:) :: target_density !< Nominal density of interfaces [R ~> kg m-3]
 
 end type hybgen_unmix_CS
 
@@ -71,11 +54,13 @@ public set_hybgen_unmix_params
 contains
 
 !> Initialise a hybgen_unmix_CS control structure and store its parameters
-subroutine init_hybgen_unmix(CS, GV, US, param_file)
+subroutine init_hybgen_unmix(CS, GV, US, param_file, hybgen_regridCS)
   type(hybgen_unmix_CS),   pointer    :: CS  !< Unassociated pointer to hold the control structure
   type(verticalGrid_type), intent(in) :: GV  !< Ocean vertical grid structure
   type(unit_scale_type),   intent(in) :: US  !< A dimensional unit scaling type
   type(param_file_type),   intent(in) :: param_file !< Parameter file
+  type(hybgen_regrid_CS),  pointer    :: hybgen_regridCS !< Control structure for hybgen
+                                             !! regridding for sharing parameters.
 
   character(len=40)               :: mdl = "MOM_hybgen" ! This module's name.
   integer :: k
@@ -87,49 +72,12 @@ subroutine init_hybgen_unmix(CS, GV, US, param_file)
   allocate(CS%dp0k(GV%ke), source=0.0) ! minimum deep z-layer separation
   allocate(CS%ds0k(GV%ke), source=0.0) ! minimum shallow z-layer separation
 
-  call get_param(param_file, mdl, "P_REF", CS%ref_pressure, &
-                 "The pressure that is used for calculating the coordinate "//&
-                 "density.  (1 Pa = 1e4 dbar, so 2e7 is commonly used.) "//&
-                 "This is only used if USE_EOS and ENABLE_THERMODYNAMICS are true.", &
-                 units="Pa", default=2.0e7, scale=US%kg_m3_to_R*US%m_s_to_L_T**2)
-
-  call get_param(param_file, mdl, "HYBGEN_N_HYBRID", CS%nhybrid, &
-                 "The number of hybrid layers with Hybgen regridding, or 0 to use all "//&
-                 "isopycnal layers.", default=0)
-  call get_param(param_file, mdl, "HYBGEN_N_SIGMA", CS%nsigma, &
-                 "The number of sigma-coordinate (terrain-following) layers with Hybgen regridding.", &
-                 default=0)
-  call get_param(param_file, mdl, "HYBGEN_DEEP_DZ_PR0FILE", CS%dp0k, &
-                 "The layerwise list of deep z-level minimum thicknesses for Hybgen (dp0k in Hycom).", &
-                 units="m", default=0.0, scale=GV%m_to_H)
-  call get_param(param_file, mdl, "HYBGEN_SHALLOW_DZ_PR0FILE", CS%ds0k, &
-                 "The layerwise list of shallow z-level minimum thicknesses for Hybgen (ds0k in Hycom).", &
-                 units="m", default=0.0, scale=GV%m_to_H)
-  call get_param(param_file, mdl, "HYBGEN_ISOPYCNAL_DZ_MIN", CS%dp00i, &
-                 "The Hybgen deep isopycnal spacing minimum thickness (dp00i in Hycom)", &
-                 units="m", default=0.0, scale=GV%m_to_H)
-  call get_param(param_file, mdl, "HYBGEN_MIN_ISO_DEPTH", CS%topiso_const, &
-                 "The Hybgen shallowest depth for isopycnal layers (isotop in Hycom)", &
-                 units="m", default=0.0, scale=GV%m_to_H)
-  call get_param(param_file, mdl, "HYBGEN_RELAX_PERIOD", CS%qhybrlx, &
-                 "The Hybgen relaxation inteval in timesteps, or 1 for no relaxation (qhbrlx in Hycom)", &
-                 units="timesteps", default=1.0)
-  call get_param(param_file, mdl, "HYBGEN_REMAP_DENSITY_MATCH", CS%hybiso, &
-                 "A tolerance between the layer densities and their target, within which "//&
-                 "Hybgen determines that remapping uses PCM for a layer.", &
-                 units="kg m-3", default=0.0, scale=US%kg_m3_to_R)
-  call get_param(param_file, mdl, "HYBGEN_REMAP_MIN_ZSTAR_DILATE", CS%min_dilate, &
-                 "The maximum amount of dilation that is permitted when converting target "//&
-                 "coordinates from z to z* [nondim].  This limit applies when drying occurs.", &
-                 default=0.5)
-  call get_param(param_file, mdl, "HYBGEN_REMAP_MAX_ZSTAR_DILATE", CS%max_dilate, &
-                 "The maximum amount of dilation that is permitted when converting target "//&
-                 "coordinates from z to z* [nondim].  This limit applies when drying occurs.", &
-                 default=2.0)
-
-  CS%onem = 1.0 * GV%m_to_H
-
-  do k=1,GV%ke ;  CS%target_density(k) = GV%Rlay(k) ; enddo
+  ! Set the parameters for the hybgen unmixing from a hybgen regridding control structure.
+  call get_hybgen_regrid_params(hybgen_regridCS, ref_pressure=CS%ref_pressure, &
+                nhybrid=CS%nhybrid, nsigma=CS%nsigma, dp0k=CS%dp0k, ds0k=CS%ds0k, &
+                dp00i=CS%dp00i, topiso_const=CS%topiso_const, qhybrlx=CS%qhybrlx, &
+                hybiso=CS%hybiso, min_dilate=CS%min_dilate, max_dilate=CS%max_dilate, &
+                target_density=CS%target_density)
 
   ! reference density for anomalies [R ~> kg m-3]
   CS%thbase = 1000.0*US%kg_m3_to_R
@@ -186,41 +134,38 @@ subroutine hybgen_unmix(G, GV, US, CS, tv, Reg, ntracer, dp)
                                                 !! 0 if the registry is not in use.
   real, dimension(SZI_(G),SZJ_(G),SZK_(GV)), &
                            intent(inout) :: dp  !< Layer thicknesses [H ~> m or kg m-2]
-!   integer,                 intent(in)    :: j   !< The j-slice to work on
 
-!
 ! --- --------------------------------------------
 ! --- hybrid grid generator, single j-row (part A).
 ! --- --------------------------------------------
-!
-!
 
-  integer :: fixlay            !deepest fixed coordinate layer
-  real :: qhrlx( GV%ke+1)   !relaxation coefficient
-  real :: dp0ij( GV%ke)     !minimum layer thickness
-  real :: dp0cum(GV%ke+1)   !minimum interface depth
-  real :: pres(GV%ke+1)     !original layer interfaces
-!
-  real :: theta_i_j(GV%ke)   ! Target potential density [R ~> kg m-3]
-  real ::  temp_i_j(GV%ke)   !  temp(i,j,:) potential temperature [degC]
-  real ::  saln_i_j(GV%ke)   !  saln(i,j,:) salinity [ppt]
-  real ::  th3d_i_j(GV%ke)   !  Coordinate potential density
-  real ::    dp_i_j(GV%ke)   !    dp(i,j,:,n) layer thicknesses
-  real :: p_col(GV%ke)       ! A column of reference pressures [R L2 T-2 ~> Pa]
-  real :: tracer_i_j(GV%ke,max(ntracer,1))  !  Columns of each tracer [Conc]
+  integer :: fixlay         ! deepest fixed coordinate layer
+  real :: qhrlx( GV%ke+1)   ! relaxation coefficient
+  real :: dp0ij( GV%ke)     ! minimum layer thickness
+  real :: dp0cum(GV%ke+1)   ! minimum interface depth
+
+  real :: theta_i_j(GV%ke)  ! Target potential density [R ~> kg m-3]
+  real ::  temp_i_j(GV%ke)  ! A column of potential temperature [degC]
+  real ::  saln_i_j(GV%ke)  ! A column of salinity [ppt]
+  real ::  th3d_i_j(GV%ke)  ! A column of coordinate potential density
+  real ::    dp_i_j(GV%ke)  ! A column of layer thicknesses
+  real :: p_col(GV%ke)      ! A column of reference pressures [R L2 T-2 ~> Pa]
+  real :: tracer_i_j(GV%ke,max(ntracer,1))  ! Columns of each tracer [Conc]
   real :: h_tot             ! Total thickness of the water column [H ~> m or kg m-2]
   real :: nominalDepth      ! Depth of ocean bottom (positive downward) [H ~> m or kg m-2]
+  real :: dpthin            ! A negligibly small thickness to identify essentially
+                            ! vanished layers [H ~> m or kg m-2]
   real :: dilate            ! A factor by which to dilate the target positions from z to z* [nondim]
-  real :: onemm ! one mm in thickness units [H ~> m or kg m-2]
   logical :: terrain_following  ! True if this column is terrain following.
   integer :: trcflg(max(ntracer,1))  ! Hycom tracer type flag for each tracer
   integer :: i, j, k, kdm, m
-!
+
   kdm = GV%ke
-  onemm = 0.001*CS%onem
 
   ! Set all tracers to be passive.  Setting this to 2 treats a tracer like temperature.
   trcflg(:) = 3
+
+  dpthin = 1e-6*GV%m_to_H
 
   p_col(:) = CS%ref_pressure
 
@@ -263,7 +208,7 @@ subroutine hybgen_unmix(G, GV, US, CS, tv, Reg, ntracer, dp)
     ! Do any unmixing of the column that is needed to move the layer properties toward their targets.
     call hybgenaij_unmix(CS, kdm, theta_i_j, temp_i_j, saln_i_j, th3d_i_j, tv%eqn_of_state, &
                          ntracer, tracer_i_j, trcflg, fixlay, qhrlx, &
-                         dp_i_j, terrain_following, onemm, 1.0e-11*US%kg_m3_to_R)
+                         dp_i_j, terrain_following, dpthin, 1.0e-11*US%kg_m3_to_R)
 
     ! Store the output from hybgen_unmix in the 3-d arrays.
     do k=1,kdm
@@ -280,8 +225,8 @@ end subroutine hybgen_unmix
 
 !> Unmix the properties in the lowest layer if it is too light.
 subroutine hybgenaij_unmix(CS, kdm, theta_i_j, temp_i_j, saln_i_j, th3d_i_j, eqn_of_state, &
-                           ntracr, trac_i_j, trcflg, fixlay, qhrlx, &
-                           dp_i_j, terrain_following, onemm, epsil)
+                           ntracr, trac_i_j, trcflg, fixlay, qhrlx, dp_i_j, &
+                           terrain_following, dpthin, epsil)
   type(hybgen_unmix_CS), intent(in) :: CS  !< hybgen unmixing control structure
   integer,        intent(in)    :: kdm           !< The number of layers
   integer,        intent(in)    :: fixlay        !< deepest fixed coordinate layer
@@ -296,7 +241,8 @@ subroutine hybgenaij_unmix(CS, kdm, theta_i_j, temp_i_j, saln_i_j, th3d_i_j, eqn
   integer,        intent(in)    :: trcflg(max(ntracr,1)) !< Hycom tracer type flag for each tracer
   real,           intent(inout) :: dp_i_j(kdm+1) !< Layer thicknesses [H ~> m or kg m-2]
   logical,        intent(in)    :: terrain_following !< True if this column is terrain following
-  real,           intent(in)    :: onemm         !< one mm in pressure units
+  real,           intent(in)    :: dpthin        !< A negligibly small thickness to identify
+                                                 !! essentially vanished layers [H ~> m or kg m-2]
   real,           intent(in)    :: epsil         !< small nonzero density difference to prevent
                                                  !! division by zero [R ~> kg m-3]
 !
@@ -304,16 +250,16 @@ subroutine hybgenaij_unmix(CS, kdm, theta_i_j, temp_i_j, saln_i_j, th3d_i_j, eqn
 ! --- hybrid grid generator, single column(part A) - ummix lowest layer.
 ! --- ------------------------------------------------------------------
 !
-      logical, parameter :: lunmix=.true.     !unmix a too light deepest layer
-!
-  integer :: k, ka, kk, kp, ktr, fixall
   character(len=256) :: mesg  ! A string for output messages
-  real :: p_hat, dpthin
-  real :: delt, deltm, dels, delsm, q, qtr, qts
+  real :: p_hat       ! A portion of a layer to move across an interface [H ~> m or kg m-2]
+  real :: delt, deltm ! Temperature differences between successive layers [degC]
+  real :: dels, delsm ! Salinity differences between successive layers [ppt]
+  real :: q, qtr, qts ! Nondimensional fractions [nondim]
   real :: s1d(kdm, ntracr+4) !original scalar fields
+  logical, parameter :: lunmix=.true.     ! unmix a too light deepest layer
+  integer :: k, ka, kk, kp, ktr, fixall
 
   kk = kdm
-  dpthin = 1e-6*CS%onem
 
   ! --- identify the deepest layer kp with significant thickness (> dpthin)
   kp = 2  !minimum allowed value
