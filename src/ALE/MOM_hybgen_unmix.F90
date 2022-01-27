@@ -195,7 +195,6 @@ subroutine hybgen_unmix(G, GV, US, CS, tv, Reg, ntracer, dp)
 !
 
   integer :: fixlay            !deepest fixed coordinate layer
-  real :: qdep              !fraction not terrain following
   real :: qhrlx( GV%ke+1)   !relaxation coefficient
   real :: dp0ij( GV%ke)     !minimum layer thickness
   real :: dp0cum(GV%ke+1)   !minimum interface depth
@@ -206,11 +205,13 @@ subroutine hybgen_unmix(G, GV, US, CS, tv, Reg, ntracer, dp)
   real ::  saln_i_j(GV%ke)   !  saln(i,j,:) salinity [ppt]
   real ::  th3d_i_j(GV%ke)   !  Coordinate potential density
   real ::    dp_i_j(GV%ke)   !    dp(i,j,:,n) layer thicknesses
-  real ::     p_i_j(GV%ke+1) !     p(i,j,:)   interface depths
   real :: p_col(GV%ke)       ! A column of reference pressures [R L2 T-2 ~> Pa]
   real :: tracer_i_j(GV%ke,max(ntracer,1))  !  Columns of each tracer [Conc]
   real :: h_tot             ! Total thickness of the water column [H ~> m or kg m-2]
+  real :: nominalDepth      ! Depth of ocean bottom (positive downward) [H ~> m or kg m-2]
+  real :: dilate            ! A factor by which to dilate the target positions from z to z* [nondim]
   real :: onemm ! one mm in thickness units [H ~> m or kg m-2]
+  logical :: terrain_following  ! True if this column is terrain following.
   integer :: trcflg(max(ntracer,1))  ! Hycom tracer type flag for each tracer
   integer :: i, j, k, kdm, m
 !
@@ -241,12 +242,21 @@ subroutine hybgen_unmix(G, GV, US, CS, tv, Reg, ntracer, dp)
       tracer_i_j(k,m) = Reg%Tr(m)%t(i,j,k)
     enddo ; enddo
 
+    nominalDepth = h_tot
+    dilate = 1.0
+    !### Uncomment the following two lines to use z* stretching of the targets heights.
+    ! nominalDepth = (G%bathyT(i,j)+G%Z_ref)*GV%Z_to_H
+    ! dilate = 1.0 ; if (nominalDepth > 0.0) dilate = h_tot / nominalDepth
+
+
+    terrain_following = (nominalDepth < CS%dpns) .and. (CS%dpns >= CS%dsns)
+
     call hybgen_column_init(kdm, CS%nhybrid, CS%nsigma, CS%dp0k, CS%ds0k, CS%dp00i, &
-                            CS%topiso_const, CS%qhybrlx, CS%dpns, CS%dsns, h_tot, &
-                            dp_i_j, fixlay, qdep, qhrlx, dp0ij, dp0cum, p_i_j)
+                            CS%topiso_const, CS%qhybrlx, CS%dpns, CS%dsns, nominalDepth, dilate, &
+                            dp_i_j, fixlay, qhrlx, dp0ij, dp0cum)
     call hybgenaij_unmix(CS, kdm, theta_i_j, temp_i_j, saln_i_j, th3d_i_j, tv%eqn_of_state, &
-                         ntracer, tracer_i_j, trcflg, fixlay, qdep, qhrlx, &
-                         dp_i_j, onemm, 1.0e-11*US%kg_m3_to_R)
+                         ntracer, tracer_i_j, trcflg, fixlay, qhrlx, &
+                         dp_i_j, terrain_following, onemm, 1.0e-11*US%kg_m3_to_R)
 
     ! Store the output from hybgen_unmix
     do k=1,kdm
@@ -263,12 +273,11 @@ end subroutine hybgen_unmix
 
 !> Unmix the properties in the lowest layer if it is too light.
 subroutine hybgenaij_unmix(CS, kdm, theta_i_j, temp_i_j, saln_i_j, th3d_i_j, eqn_of_state, &
-                           ntracr, trac_i_j, trcflg, fixlay, qdep, qhrlx, &
-                           dp_i_j, onemm, epsil)
+                           ntracr, trac_i_j, trcflg, fixlay, qhrlx, &
+                           dp_i_j, terrain_following, onemm, epsil)
   type(hybgen_unmix_CS), intent(in) :: CS  !< hybgen unmixing control structure
   integer,        intent(in)    :: kdm           !< The number of layers
   integer,        intent(in)    :: fixlay        !< deepest fixed coordinate layer
-  real,           intent(in)    :: qdep          !< fraction dp0k (vs ds0k)
   real,           intent(in)    :: qhrlx( kdm+1) !< relaxation coefficient [s-1]
   real,           intent(in)    :: theta_i_j(kdm) !< Target density [R ~> kg m-3]
   real,           intent(inout) :: temp_i_j(kdm) !< A column of potential temperature [degC]
@@ -279,6 +288,7 @@ subroutine hybgenaij_unmix(CS, kdm, theta_i_j, temp_i_j, saln_i_j, th3d_i_j, eqn
   real,           intent(inout) :: trac_i_j(kdm, max(ntracr,1)) !< Columns of the passive tracers [Conc]
   integer,        intent(in)    :: trcflg(max(ntracr,1)) !< Hycom tracer type flag for each tracer
   real,           intent(inout) :: dp_i_j(kdm+1) !< Layer thicknesses [H ~> m or kg m-2]
+  logical,        intent(in)    :: terrain_following !< True if this column is terrain following
   real,           intent(in)    :: onemm         !< one mm in pressure units
   real,           intent(in)    :: epsil         !< small nonzero density difference to prevent
                                                  !! division by zero [R ~> kg m-3]
@@ -310,7 +320,7 @@ subroutine hybgenaij_unmix(CS, kdm, theta_i_j, temp_i_j, saln_i_j, th3d_i_j, eqn
   k  = kp  !at least 2
   ka = max(k-2,1)  !k might be 2
 !
-  if ( ((k > fixlay+1) .and. (qdep == 1.0)) .and. & ! layer not fixed depth
+  if ( ((k > fixlay+1) .and. (.not.terrain_following)) .and. & ! layer not fixed depth
        (dp_i_j(k-1) >= dpthin)              .and. & ! layer above not too thin
        (theta_i_j(k)-epsil > th3d_i_j(k))   .and. & ! layer is lighter than its target
        ((th3d_i_j(k-1) > th3d_i_j(k)) .and. (th3d_i_j(ka) > th3d_i_j(k))) ) then
@@ -337,7 +347,7 @@ subroutine hybgenaij_unmix(CS, kdm, theta_i_j, temp_i_j, saln_i_j, th3d_i_j, eqn
     dp_i_j(k-1) = dp_i_j(k-1) + dp_i_j(k)
     dp_i_j(k) = 0.0
     kp = k-1
-  elseif ( ((k > fixlay+1) .and. (qdep == 1.0)) .and. & ! layer not fixed depth
+  elseif ( ((k > fixlay+1) .and. (.not.terrain_following)) .and. & ! layer not fixed depth
            (dp_i_j(k-1) >= dpthin)              .and. & ! layer above not too thin
            (theta_i_j(k)-epsil > th3d_i_j(k))   .and. & ! layer is lighter than its target
            (th3d_i_j(k-1) > th3d_i_j(k)) ) then
@@ -397,7 +407,7 @@ subroutine hybgenaij_unmix(CS, kdm, theta_i_j, temp_i_j, saln_i_j, th3d_i_j, eqn
   ka = max(k-2,1)  !k might be 2
 !
   if ( lunmix .and.  & !usually .true.
-       ((k > fixlay+1) .and. (qdep == 1.0)) .and. & ! layer not fixed depth
+       ((k > fixlay+1) .and. (.not.terrain_following)) .and. & ! layer not fixed depth
        (dp_i_j(k-1) >= dpthin)      .and. & ! layer above not too thin
        (theta_i_j(k)-epsil > th3d_i_j(k))   .and. & ! layer is lighter than its target
        (theta_i_j(k-1) < th3d_i_j(k))       .and. & ! layer is denser than the target above
