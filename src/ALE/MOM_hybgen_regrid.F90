@@ -607,26 +607,18 @@ subroutine hybgen_column_regrid(CS, kdm, nhybrd, thbase, thkbot, onem, epsil, th
     dp_rem = h1_tgt - h_i_j(1)
     h_i_j(1) = h1_tgt
     p_i_j(2) = h1_tgt
-    dp_int(2) = dp_rem
-    if (dp_rem <= h_i_j(2)) then
-      h_i_j(2) = h_i_j(2) - dp_rem
-      dp_rem = 0.0
-    else
-      h_i_j(2) = 0.0
-      dp_rem = dp_rem - h_i_j(2)
-      do K=2,kdm
-        dp_int(K+1) = dp_int(K+1) + (h1_tgt - p_i_j(K+1))
+    do K=2,kdm
+      dp_int(K) = dp_rem
+      if (dp_rem <= h_i_j(k)) then
+        h_i_j(k) = h_i_j(k) - dp_rem
+        dp_rem = 0.0
+        exit  ! usually get here quickly
+      else
+        dp_rem = dp_rem - h_i_j(k)
+        h_i_j(k) = 0.0
         p_i_j(K+1) = h1_tgt
-        if (dp_rem <= h_i_j(k+1)) then
-          h_i_j(k+1) = h_i_j(k+1) - dp_rem
-          dp_rem = 0.0
-          exit  ! usually get here quickly
-        else
-          dp_rem = dp_rem - h_i_j(k+1)
-          h_i_j(k+1) = 0.0
-        endif
-      enddo
-    endif
+      endif
+    enddo
   endif
 
   do k=2,nhybrd
@@ -817,13 +809,13 @@ subroutine hybgen_column_regrid(CS, kdm, nhybrd, thbase, thkbot, onem, epsil, th
 
   ! Verify that everything is consistent.  This block should be removed or
   ! commented out after the code is verified to work.
-!  do k=1,kdm
-!    if (abs((h_i_j(k) - h_in(k)) + (dp_int(K) - dp_int(K+1))) > 1.0e-13*max(p_i_j(kdm+1), onem)) then
-!      write(mesg, '("h ",es13.4," h_in ",es13.4, " dp ",2es13.4," err ",es13.4)') &
-!          h_i_j(k), h_in(k), dp_int(K), dp_int(K+1), (h_i_j(k) - h_in(k)) + (dp_int(K) - dp_int(K+1))
-!      call MOM_error(FATAL, "Mismatched thickness changes in hybgen_regrid: "//trim(mesg))
-!    endif
-!  enddo
+  do k=1,kdm
+    if (abs((h_i_j(k) - h_in(k)) + (dp_int(K) - dp_int(K+1))) > 1.0e-13*max(p_i_j(kdm+1), onem)) then
+      write(mesg, '("k ",i4," h ",es13.4," h_in ",es13.4, " dp ",2es13.4," err ",es13.4)') &
+          k, h_i_j(k), h_in(k), dp_int(K), dp_int(K+1), (h_i_j(k) - h_in(k)) + (dp_int(K) - dp_int(K+1))
+      call MOM_error(FATAL, "Mismatched thickness changes in hybgen_regrid: "//trim(mesg))
+    endif
+  enddo
   do K=1,kdm+1
     if (abs(dp_int(K) - (p_i_j(K) - pres_in(K))) > 1.0e-13*max(p_i_j(kdm+1), onem)) then
       call MOM_error(FATAL, "Mismatched interface height changes in hybgen_regrid.")
