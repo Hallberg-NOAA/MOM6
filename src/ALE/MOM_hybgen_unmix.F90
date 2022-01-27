@@ -49,11 +49,10 @@ type, public :: hybgen_unmix_CS ; private
 
   real :: dpns  !< depth to start terrain following [H ~> m or kg m-2]
   real :: dsns  !< depth to stop terrain following [H ~> m or kg m-2]
-
-  !> Global i-index of a point where detailed diagnostics of hybgen are desired
-  integer :: itest = -1
-  !> Global j-index of a point where detailed diagnostics of hybgen are desired
-  integer :: jtest = -1
+  real :: min_dilate !< The minimum amount of dilation that is permitted when converting target
+                     !! coordinates from z to z* [nondim].  This limit applies when wetting occurs.
+  real :: max_dilate !< The maximum amount of dilation that is permitted when converting target
+                     !! coordinates from z to z* [nondim].  This limit applies when drying occurs.
 
   !> Shallowest depth for isopycnal layers [H ~> m or kg m-2]
   real :: topiso_const
@@ -63,8 +62,6 @@ type, public :: hybgen_unmix_CS ; private
   real, allocatable, dimension(:) :: target_density
 
   real :: onem       !< Nominally one m in thickness units [H ~> m or kg m-2]
-
-  logical :: debug   !< If true, write verbose checksums for debugging purposes.
 
 end type hybgen_unmix_CS
 
@@ -90,7 +87,6 @@ subroutine init_hybgen_unmix(CS, GV, US, param_file)
   allocate(CS%dp0k(GV%ke), source=0.0) ! minimum deep z-layer separation
   allocate(CS%ds0k(GV%ke), source=0.0) ! minimum shallow z-layer separation
 
-!  CS%nk = GV%ke
   call get_param(param_file, mdl, "P_REF", CS%ref_pressure, &
                  "The pressure that is used for calculating the coordinate "//&
                  "density.  (1 Pa = 1e4 dbar, so 2e7 is commonly used.) "//&
@@ -122,9 +118,14 @@ subroutine init_hybgen_unmix(CS, GV, US, param_file)
                  "A tolerance between the layer densities and their target, within which "//&
                  "Hybgen determines that remapping uses PCM for a layer.", &
                  units="kg m-3", default=0.0, scale=US%kg_m3_to_R)
-  call get_param(param_file, "MOM", "DEBUG", CS%debug, &
-                 "If true, write out verbose debugging data.", &
-                 default=.false., debuggingParam=.true.)
+  call get_param(param_file, mdl, "HYBGEN_REMAP_MIN_ZSTAR_DILATE", CS%min_dilate, &
+                 "The maximum amount of dilation that is permitted when converting target "//&
+                 "coordinates from z to z* [nondim].  This limit applies when drying occurs.", &
+                 default=0.5)
+  call get_param(param_file, mdl, "HYBGEN_REMAP_MAX_ZSTAR_DILATE", CS%max_dilate, &
+                 "The maximum amount of dilation that is permitted when converting target "//&
+                 "coordinates from z to z* [nondim].  This limit applies when drying occurs.", &
+                 default=2.0)
 
   CS%onem = 1.0 * GV%m_to_H
 
@@ -242,23 +243,29 @@ subroutine hybgen_unmix(G, GV, US, CS, tv, Reg, ntracer, dp)
       tracer_i_j(k,m) = Reg%Tr(m)%t(i,j,k)
     enddo ; enddo
 
-    nominalDepth = h_tot
-    dilate = 1.0
-    !### Uncomment the following two lines to use z* stretching of the targets heights.
-    ! nominalDepth = (G%bathyT(i,j)+G%Z_ref)*GV%Z_to_H
-    ! dilate = 1.0 ; if (nominalDepth > 0.0) dilate = h_tot / nominalDepth
+    ! The following block of code is used to trigger z* stretching of the targets heights.
+    nominalDepth = (G%bathyT(i,j)+G%Z_ref)*GV%Z_to_H
+    if (h_tot <= CS%min_dilate*nominalDepth) then
+      dilate = CS%min_dilate
+    elseif (h_tot >= CS%max_dilate*nominalDepth) then
+      dilate = CS%max_dilate
+    else
+      dilate = h_tot / nominalDepth
+    endif
 
+    terrain_following = (h_tot < dilate*CS%dpns) .and. (CS%dpns >= CS%dsns)
 
-    terrain_following = (nominalDepth < CS%dpns) .and. (CS%dpns >= CS%dsns)
-
+    ! Convert the regridding parameters into specific constraints for this column.
     call hybgen_column_init(kdm, CS%nhybrid, CS%nsigma, CS%dp0k, CS%ds0k, CS%dp00i, &
-                            CS%topiso_const, CS%qhybrlx, CS%dpns, CS%dsns, nominalDepth, dilate, &
+                            CS%topiso_const, CS%qhybrlx, CS%dpns, CS%dsns, h_tot, dilate, &
                             dp_i_j, fixlay, qhrlx, dp0ij, dp0cum)
+
+    ! Do any unmixing of the column that is needed to move the layer properties toward their targets.
     call hybgenaij_unmix(CS, kdm, theta_i_j, temp_i_j, saln_i_j, th3d_i_j, tv%eqn_of_state, &
                          ntracer, tracer_i_j, trcflg, fixlay, qhrlx, &
                          dp_i_j, terrain_following, onemm, 1.0e-11*US%kg_m3_to_R)
 
-    ! Store the output from hybgen_unmix
+    ! Store the output from hybgen_unmix in the 3-d arrays.
     do k=1,kdm
       dp(i,j,k) = dp_i_j(k)
     enddo

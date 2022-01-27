@@ -18,11 +18,11 @@ implicit none ; private
 !> Control structure containing required parameters for the hybgen coordinate generator
 type, public :: hybgen_regrid_CS ; private
 
-  !> Number of layers on the target grid
-  integer :: nk
-
 !  !> Minimum thickness allowed for layers, often in [H ~> m or kg m-2]
 !  real :: min_thickness = 0.
+
+  !> Number of layers on the target grid
+  integer :: nk
 
   !> Reference pressure for density calculations [R L2 T-2 ~> Pa]
   real :: ref_pressure
@@ -49,6 +49,10 @@ type, public :: hybgen_regrid_CS ; private
 
   real :: dpns  !< depth to start terrain following [H ~> m or kg m-2]
   real :: dsns  !< depth to stop terrain following [H ~> m or kg m-2]
+  real :: min_dilate !< The minimum amount of dilation that is permitted when converting target
+                     !! coordinates from z to z* [nondim].  This limit applies when wetting occurs.
+  real :: max_dilate !< The maximum amount of dilation that is permitted when converting target
+                     !! coordinates from z to z* [nondim].  This limit applies when drying occurs.
 
   real :: thkbot !< Thickness of a bottom boundary layer, within which hybgen does
                  !! something different. [H ~> m or kg m-2]
@@ -61,8 +65,6 @@ type, public :: hybgen_regrid_CS ; private
   real, allocatable, dimension(:) :: target_density
 
   real :: onem       !< Nominally one m in thickness units [H ~> m or kg m-2]
-
-  logical :: debug   !< If true, write verbose checksums for debugging purposes.
 
 end type hybgen_regrid_CS
 
@@ -126,9 +128,14 @@ subroutine init_hybgen_regrid(CS, GV, US, param_file)
                  "A tolerance between the layer densities and their target, within which "//&
                  "Hybgen determines that remapping uses PCM for a layer.", &
                  units="kg m-3", default=0.0, scale=US%kg_m3_to_R)
-  call get_param(param_file, "MOM", "DEBUG", CS%debug, &
-                 "If true, write out verbose debugging data.", &
-                 default=.false., debuggingParam=.true.)
+  call get_param(param_file, mdl, "HYBGEN_REMAP_MIN_ZSTAR_DILATE", CS%min_dilate, &
+                 "The maximum amount of dilation that is permitted when converting target "//&
+                 "coordinates from z to z* [nondim].  This limit applies when drying occurs.", &
+                 default=0.5)
+  call get_param(param_file, mdl, "HYBGEN_REMAP_MAX_ZSTAR_DILATE", CS%max_dilate, &
+                 "The maximum amount of dilation that is permitted when converting target "//&
+                 "coordinates from z to z* [nondim].  This limit applies when drying occurs.", &
+                 default=2.0)
 
   CS%onem = 1.0 * GV%m_to_H
 
@@ -337,15 +344,20 @@ subroutine hybgen_regrid(G, GV, US, dp, tv, CS, dzInterface, PCM_cell)
       theta_i_j(k) = CS%target_density(k)  ! MOM6 does not yet support 3-d target densities.
     enddo
 
-    nominalDepth = h_tot
-    dilate = 1.0
-    !### Uncomment the following two lines to use z* stretching of the targets heights.
-    ! nominalDepth = (G%bathyT(i,j)+G%Z_ref)*GV%Z_to_H
-    ! dilate = 1.0 ; if (nominalDepth > 0.0) dilate = h_tot / nominalDepth
+    ! The following block of code is used to trigger z* stretching of the targets heights.
+    nominalDepth = (G%bathyT(i,j)+G%Z_ref)*GV%Z_to_H
+    if (h_tot <= CS%min_dilate*nominalDepth) then
+      dilate = CS%min_dilate
+    elseif (h_tot >= CS%max_dilate*nominalDepth) then
+      dilate = CS%max_dilate
+    else
+      dilate = h_tot / nominalDepth
+    endif
 
+    ! Convert the regridding parameters into specific constraints for this column.
     call hybgen_column_init(kdm, CS%nhybrid, CS%nsigma, CS%dp0k, CS%ds0k, CS%dp00i, &
-                            CS%topiso_const, CS%qhybrlx, CS%dpns, CS%dsns, nominalDepth, &
-                            dilate, dp_i_j, fixlay, qhrlx, dp0ij, dp0cum)
+                            CS%topiso_const, CS%qhybrlx, CS%dpns, CS%dsns, h_tot, dilate, &
+                            dp_i_j, fixlay, qhrlx, dp0ij, dp0cum)
 
     ! Determine whether to require the use of PCM remapping from each source layer.
     do k=1,GV%ke
@@ -359,6 +371,7 @@ subroutine hybgen_regrid(G, GV, US, dp, tv, CS, dzInterface, PCM_cell)
       endif ! hybiso
     enddo !k
 
+    ! Determine the new layer thicknesses.
     call hybgen_column_regrid(CS, kdm, CS%nhybrid, CS%thbase, CS%thkbot, CS%onem, &
                               1.0e-11*US%kg_m3_to_R, theta_i_j, fixlay, qhrlx, dp0ij, &
                               dp0cum, th3d_i_j, dp_i_j, dz_int)
@@ -385,7 +398,7 @@ end subroutine hybgen_regrid
 !> Initialize some of the variables that are used for regridding or unmixing, including the
 !! stretched contraits on where the new interfaces can be.
 subroutine hybgen_column_init(kdm, nhybrd, nsigma, dp0k, ds0k, dp00i, topiso_i_j, &
-                          qhybrlx, dpns, dsns, depth, dilate, dp_i_j, &
+                          qhybrlx, dpns, dsns, h_tot, dilate, dp_i_j, &
                           fixlay, qhrlx, dp0ij, dp0cum)
   integer, intent(in)    :: kdm          !< The number of layers in the new grid
   integer, intent(in)    :: nhybrd       !< The number of hybrid layers (typically kdm)
@@ -395,7 +408,7 @@ subroutine hybgen_column_init(kdm, nhybrd, nsigma, dp0k, ds0k, dp00i, topiso_i_j
   real,    intent(in)    :: dp00i        !< Deep isopycnal spacing minimum thickness [H ~> m or kg m-2]
   real,    intent(in)    :: topiso_i_j   !< Shallowest depth for isopycnal layers [H ~> m or kg m-2]
   real,    intent(in)    :: qhybrlx      !< relaxation coefficient, 1/s?
-  real,    intent(in)    :: depth        !< Depth of ocean bottom (positive downward) [H ~> m or kg m-2]
+  real,    intent(in)    :: h_tot        !< The sum of the initial layer thicknesses [H ~> m or kg m-2]
   real,    intent(in)    :: dilate       !< A factor by which to dilate the target positions
                                          !! from z to z* [nondim]
   real,    intent(in)    :: dp_i_j(kdm)  !< Initial layer thicknesses [H ~> m or kg m-2]
@@ -412,7 +425,7 @@ subroutine hybgen_column_init(kdm, nhybrd, nsigma, dp0k, ds0k, dp00i, topiso_i_j
 !
   character(len=256) :: mesg  ! A string for output messages
   real :: hybrlx  ! The relaxation rate in the hybrid region [timestep-1]?
-  real :: qdep    ! Depth as a fraction of dp0k (vs ds0k) [nondim]
+  real :: qdep    ! Total water column thickness as a fraction of dp0k (vs ds0k) [nondim]
   real :: q       ! A portion of the thickness that contributes to the new cell [H ~> m or kg m-2]
   real :: p_i_j(kdm+1)  ! Interface depths [H ~> m or kg m-2]
   integer :: k, fixall
@@ -426,14 +439,16 @@ subroutine hybgen_column_init(kdm, nhybrd, nsigma, dp0k, ds0k, dp00i, topiso_i_j
 ! --- shallow side) at depth dsns and the depth of the k-th layer interface varies
 ! --- linearly with total depth between these two reference depths.
 !
-  if ((dpns <= dsns) .or. (depth >= dpns)) then
-    qdep = 1.0  ! not terrain following
+  if ((h_tot >= dilate * dpns) .or. (dpns <= dsns)) then
+    qdep = 1.0  ! Not terrain following - this column is too thick or terrain following is disabled.
+  elseif (h_tot <= dilate * dsns) then
+    qdep = 0.0  ! Not terrain following - this column is too thin
   else
-    qdep = max( 0.0, (depth - dsns) / (dpns - dsns) )
+    qdep = (h_tot - dilate * dsns) / (dilate * (dpns - dsns))
   endif
 
   if (qdep < 1.0) then
-! ---   terrain following, qhrlx=1 and ignore dp00
+    ! ---  terrain following or shallow fixed coordinates, qhrlx=1 and ignore dp00
     p_i_j( 1) = 0.0
     dp0cum(1) = 0.0
     qhrlx( 1) = 1.0
@@ -449,7 +464,7 @@ subroutine hybgen_column_init(kdm, nhybrd, nsigma, dp0k, ds0k, dp00i, topiso_i_j
       p_i_j( k+1) = p_i_j(k)+dp_i_j(k)
     enddo !k
   else
-! ---   not terrain following
+    ! ---  not terrain following
     p_i_j( 1) = 0.0
     dp0cum(1) = 0.0
     qhrlx( 1) = 1.0 !no relaxation in top layer
