@@ -27,18 +27,15 @@ type, public :: hybgen_regrid_CS ; private
   !> Reference pressure for density calculations [R L2 T-2 ~> Pa]
   real :: ref_pressure
 
-  !> Hybgen uses PCM if layer is within hybiso of target density [kg m-3]
+  !> Hybgen uses PCM if layer is within hybiso of target density [R ~> kg m-3]
   real :: hybiso
   !> Number of hybrid levels used by HYBGEN (0=all isopycnal)
   integer :: nhybrid
   !> Number of sigma levels used by HYBGEN (nhybrid-nsigma z-levels)
   integer :: nsigma
-  !> Deep isopycnal spacing minimum thickness (m)
-  real :: dp00i
-  !> Hybgen relaxation coefficient (inverse baroclinic time steps) [s-1]
-  real :: qhybrlx
-  !> If true, Hybgen uses PCM to remap isopycnal layers
-  logical :: isopcm
+
+  real :: dp00i    !< Deep isopycnal spacing minimum thickness [H ~> m or kg m-2]
+  real :: qhybrlx  !< Fractional relaxation within a regridding step [nondim]
 
   !> Reference density for anomalies [R ~> kg m-3]
   real :: thbase
@@ -81,7 +78,8 @@ subroutine init_hybgen_regrid(CS, GV, US, param_file)
   type(unit_scale_type),   intent(in) :: US  !< A dimensional unit scaling type
   type(param_file_type),   intent(in) :: param_file !< Parameter file
 
-  character(len=40)               :: mdl = "MOM_hybgen" ! This module's name.
+  character(len=40) :: mdl = "MOM_hybgen_regrid" ! This module's name.
+  real    :: hybrlx  ! The number of remappings over which to move toward the target coordinate [timesteps]
   integer :: k
 
   if (associated(CS)) call MOM_error(FATAL, "init_hybgen_regrid: CS already associated!")
@@ -117,9 +115,12 @@ subroutine init_hybgen_regrid(CS, GV, US, param_file)
   call get_param(param_file, mdl, "HYBGEN_MIN_ISO_DEPTH", CS%topiso_const, &
                  "The Hybgen shallowest depth for isopycnal layers (isotop in Hycom)", &
                  units="m", default=0.0, scale=GV%m_to_H)
-  call get_param(param_file, mdl, "HYBGEN_RELAX_PERIOD", CS%qhybrlx, &
-                 "The Hybgen relaxation inteval in timesteps, or 1 for no relaxation (qhybrlx in Hycom)", &
+  call get_param(param_file, mdl, "HYBGEN_RELAX_PERIOD", hybrlx, &
+                 "The Hybgen coordinate relaxation period in timesteps, or 1 to move to "//&
+                 "the new target coordinates in a single step.  This must be >= 1.", &
                  units="timesteps", default=1.0)
+  if (hybrlx < 1.0) call MOM_error(FATAL, "init_hybgen_regrid: HYBGEN_RELAX_PERIOD must be at least 1.")
+  CS%qhybrlx = 1.0 / hybrlx
   call get_param(param_file, mdl, "HYBGEN_BBL_THICKNESS", CS%thkbot, &
                  "A bottom boundary layer thickness within which Hybgen is able to move "//&
                  "overlying layers upward to match a target density.", &
@@ -174,17 +175,16 @@ end subroutine end_hybgen_regrid
 
 !> This subroutine can be used to retrieve the parameters for the hybgen regrid module
 subroutine get_hybgen_regrid_params(CS, nk, ref_pressure, hybiso, nhybrid, nsigma, dp00i, qhybrlx, &
-                                    isopcm, thbase, dp0k, ds0k, dpns, dsns, min_dilate, max_dilate, &
+                                    thbase, dp0k, ds0k, dpns, dsns, min_dilate, max_dilate, &
                                     thkbot, topiso_const, target_density)
   type(hybgen_regrid_CS),  pointer    :: CS !< Coordinate regridding control structure
   integer, optional, intent(out) :: nk  !< Number of layers on the target grid
   real,    optional, intent(out) :: ref_pressure !< Reference pressure for density calculations [R L2 T-2 ~> Pa]
-  real,    optional, intent(out) :: hybiso !< Hybgen uses PCM if layer is within hybiso of target density [R ~> kg m-3]
+  real,    optional, intent(out) :: hybiso  !< Hybgen uses PCM if layer is within hybiso of target density [R ~> kg m-3]
   integer, optional, intent(out) :: nhybrid !< Number of hybrid levels used by HYBGEN (0=all isopycnal)
   integer, optional, intent(out) :: nsigma  !< Number of sigma levels used by HYBGEN (nhybrid-nsigma z-levels)
   real,    optional, intent(out) :: dp00i   !< Deep isopycnal spacing minimum thickness (m)
-  real,    optional, intent(out) :: qhybrlx !< Hybgen relaxation coefficient (inverse baroclinic time steps) [s-1]
-  logical, optional, intent(out) :: isopcm  !< If true, Hybgen uses PCM to remap isopycnal layers
+  real,    optional, intent(out) :: qhybrlx !< Fractional relaxation amount per timestep, 0 < qyhbrlx <= 1 [nondim]
   real,    optional, intent(out) :: thbase  !< Reference density for anomalies [R ~> kg m-3]
   real,    optional, intent(out) :: dp0k(:) !< minimum deep    z-layer separation [H ~> m or kg m-2]
   real,    optional, intent(out) :: ds0k(:) !< minimum shallow z-layer separation [H ~> m or kg m-2]
@@ -211,7 +211,6 @@ subroutine get_hybgen_regrid_params(CS, nk, ref_pressure, hybiso, nhybrid, nsigm
   if (present(nsigma))  nsigma = CS%nsigma
   if (present(dp00i))   dp00i = CS%dp00i
   if (present(qhybrlx)) qhybrlx = CS%qhybrlx
-  if (present(isopcm))  isopcm = CS%isopcm
   if (present(thbase))  thbase = CS%thbase
   if (present(dp0k)) then
     if (size(dp0k) < CS%nk) call MOM_error(FATAL, "get_hybgen_regrid_params: "//&
@@ -316,8 +315,8 @@ subroutine hybgen_regrid(G, GV, US, dp, tv, CS, dzInterface, PCM_cell)
   real :: dz_int(CS%nk+1)   ! The change in interface height due to remapping [H ~> m or kg m-2]
   real :: th3d_integral     ! Integrated coordinate potential density in a layer [R H ~> kg m-2 or kg2 m-5]
 
-  real :: qhrlx( CS%nk+1)   ! relaxation coefficient [inverse timesteps?]
-  real :: dp0ij( CS%nk)     ! minimum layer thickness [H ~> m or kg m-2]
+  real :: qhrlx(CS%nk+1)    ! Fractional relaxation within a timestep (between 0 and 1) [nondim]
+  real :: dp0ij(CS%nk)      ! minimum layer thickness [H ~> m or kg m-2]
   real :: dp0cum(CS%nk+1)   ! minimum interface depth [H ~> m or kg m-2]
 
   real :: h_tot             ! Total thickness of the water column [H ~> m or kg m-2]
@@ -462,7 +461,7 @@ subroutine hybgen_column_init(kdm, nhybrd, nsigma, dp0k, ds0k, dp00i, topiso_i_j
   real,    intent(in)    :: ds0k(nsigma) !< Layer shallow z-level spacing minimum thicknesses [H ~> m or kg m-2]
   real,    intent(in)    :: dp00i        !< Deep isopycnal spacing minimum thickness [H ~> m or kg m-2]
   real,    intent(in)    :: topiso_i_j   !< Shallowest depth for isopycnal layers [H ~> m or kg m-2]
-  real,    intent(in)    :: qhybrlx      !< relaxation coefficient, 1/s?
+  real,    intent(in)    :: qhybrlx      !< Fractional relaxation amount per timestep, 0 < qyhbrlx <= 1 [nondim]
   real,    intent(in)    :: h_tot        !< The sum of the initial layer thicknesses [H ~> m or kg m-2]
   real,    intent(in)    :: dilate       !< A factor by which to dilate the target positions
                                          !! from z to z* [nondim]
@@ -470,7 +469,7 @@ subroutine hybgen_column_init(kdm, nhybrd, nsigma, dp0k, ds0k, dp00i, topiso_i_j
   real,    intent(in)    :: dpns         !< Vertical sum of dp0k [H ~> m or kg m-2]
   real,    intent(in)    :: dsns         !< Vertical sum of ds0k [H ~> m or kg m-2]
   integer, intent(out)   :: fixlay       !< Deepest fixed coordinate layer
-  real,    intent(out)   :: qhrlx( kdm+1) !< Interface relaxation coefficient [timesteps-1?]
+  real,    intent(out)   :: qhrlx( kdm+1) !< Fractional relaxation within a timestep (between 0 and 1) [nondim]
   real,    intent(out)   :: dp0ij( kdm)   !< minimum layer thickness [H ~> m or kg m-2]
   real,    intent(out)   :: dp0cum(kdm+1) !< minimum interface depth [H ~> m or kg m-2]
 !
@@ -484,16 +483,12 @@ subroutine hybgen_column_init(kdm, nhybrd, nsigma, dp0k, ds0k, dp00i, topiso_i_j
   real :: q       ! A portion of the thickness that contributes to the new cell [H ~> m or kg m-2]
   real :: p_i_j(kdm+1)  ! Interface depths [H ~> m or kg m-2]
   integer :: k, fixall
-!
-  hybrlx = 1.0 / qhybrlx
 
-!
 ! --- dpns = sum(dp0k(k),k=1,nsigma)
 ! --- dsns = sum(ds0k(k),k=1,nsigma)
 ! --- terrain following starts (on the deep side) at depth dpns and ends (on the
 ! --- shallow side) at depth dsns and the depth of the k-th layer interface varies
 ! --- linearly with total depth between these two reference depths.
-!
   if ((h_tot >= dilate * dpns) .or. (dpns <= dsns)) then
     qdep = 1.0  ! Not terrain following - this column is too thick or terrain following is disabled.
   elseif (h_tot <= dilate * dsns) then
@@ -538,7 +533,7 @@ subroutine hybgen_column_init(kdm, nhybrd, nsigma, dp0k, ds0k, dp00i, topiso_i_j
         if (dp00i >= q) then
           ! This layer is much deeper than the fixed surface coordinates.
           dp0ij(k) = dp00i
-          qhrlx(k+1) = qhybrlx  ! 1 at  dp0k, qhybrlx at dp00i
+          qhrlx(k+1) = qhybrlx  ! 1 at  dp0k, qhybrlx < 1 at dp00i
         else
           ! This layer spans the margines of the fixed surface coordinates.
           ! In this case dp00i < q < dp0k.
