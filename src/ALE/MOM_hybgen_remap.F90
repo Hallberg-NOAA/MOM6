@@ -46,6 +46,7 @@ integer, parameter  :: REMAPPING_PPM_H4     = 2 !< O(h^3) remapping scheme
 integer, parameter  :: REMAPPING_WENO       = 15 !< O(h^5) remapping scheme
 
 public hybgen_remap, init_hybgen_remap, mask_near_bottom_vel, hybgen_remap_column
+public hybgen_remap_tracers, hybgen_remap_velocities
 
 contains
 
@@ -115,19 +116,40 @@ subroutine hybgen_remap(G, GV, remap_CS, dp_orig, dp, Reg, OBC, u, v, PCM_cell)
                  optional, intent(in)    :: PCM_cell !< If true, PCM remapping should be used in a cell.
 
   ! Local variables
+  integer :: ntr
+
+  ntr = 0 ; if (associated(Reg)) ntr = Reg%ntr
+
+  call hybgen_remap_tracers(G, GV, remap_CS, Reg, ntr, dp_orig, dp, PCM_cell)
+
+  if (present(u) .and. present(v)) &
+    call hybgen_remap_velocities(G, GV, remap_CS, dp_orig, dp, OBC, u, v)
+
+end subroutine hybgen_remap
+
+!> Hybgen_remap remaps the state variables, velocities and any tracers to a new
+!! vertical grid using the algorithms imported from the HYCOM ocean model.
+subroutine hybgen_remap_velocities(G, GV, remap_CS, dp_orig, dp, OBC, u, v)
+  type(ocean_grid_type),   intent(in)    :: G   !< Ocean grid structure
+  type(verticalGrid_type), intent(in)    :: GV  !< Ocean vertical grid structure
+  type(hybgen_remap_CS),   intent(in)    :: remap_CS !< hybgen remapping control structure
+  real, dimension(SZI_(G),SZJ_(G),SZK_(GV)), &
+                           intent(in)    :: dp_orig !< Thicknesses on the source grid [H ~> m or kg m-2]
+  real, dimension(SZI_(G),SZJ_(G),SZK_(GV)), &
+                           intent(in)    :: dp  !< Thicknesses on the destination grid [H ~> m or kg m-2]
+  type(ocean_OBC_type),    pointer       :: OBC !< Open boundary structure
+  real, dimension(SZIB_(G),SZJ_(G),SZK_(GV)), &
+                 optional, intent(inout) :: u   !< Zonal velocity field [L T-1 ~> m s-1]
+  real, dimension(SZI_(G),SZJB_(G),SZK_(GV)), &
+                 optional, intent(inout) :: v   !< Meridional velocity field [L T-1 ~> m s-1]
+
+  ! Local variables
   real :: dpu_orig(SZIB_(G),SZJ_(G),SZK_(GV))  ! Original U-point thicknesses [H ~> m or kg m-2]
   real :: dpv_orig(SZI_(G),SZJB_(G),SZK_(GV))  ! Original V-point thicknesses [H ~> m or kg m-2]
   real :: dpu(SZIB_(G),SZJ_(G),SZK_(GV))       ! Updated U-point layer thicknesses [H ~> m or kg m-2]
   real :: dpv(SZI_(G),SZJB_(G),SZK_(GV))       ! Updated v-point layer thicknesses [H ~> m or kg m-2]
   real :: h_tot(SZI_(G),SZJ_(G))               ! Total thicknesses of the water column [H ~> m or kg m-2]
-  character(len=256) :: mesg  ! A string for output messages
-  integer :: i, j, k, ntr
-
-  ntr = 0 ; if (associated(Reg)) ntr = Reg%ntr
-
-  call hybgen_remap_tracers(G, GV, remap_CS, Reg, ntr, dp, dp_orig, PCM_cell)
-
-  if (.not.(present(u) .and. present(v))) return
+  integer :: i, j, k
 
 ! --- vertical momentum flux across moving interfaces (the s-dot term in the
 ! --- momentum equation) - required to locally conserve momentum when hybgen
@@ -155,10 +177,10 @@ subroutine hybgen_remap(G, GV, remap_CS, dp_orig, dp, Reg, OBC, u, v, PCM_cell)
     call hybgenbj_v(remap_CS, G, GV, dpv, dpv_orig, v, j)  !update v-velocity
   enddo
 
-end subroutine hybgen_remap
+end subroutine hybgen_remap_velocities
 
 !> Apply vertical remapping for all tracers (incluiding temperature and salinity) to the new grid.
-subroutine hybgen_remap_tracers(G, GV, CS, Reg, ntracer, dp_new, dp_orig, PCM_cell)
+subroutine hybgen_remap_tracers(G, GV, CS, Reg, ntracer, dp_orig, dp_new, PCM_cell)
   type(ocean_grid_type),   intent(in)    :: G   !< Ocean grid structure
   type(verticalGrid_type), intent(in)    :: GV  !< Ocean vertical grid structure
   type(hybgen_remap_CS),   intent(in)    :: CS  !< hybgen control structure
@@ -166,9 +188,9 @@ subroutine hybgen_remap_tracers(G, GV, CS, Reg, ntracer, dp_new, dp_orig, PCM_ce
   integer,                 intent(in)    :: ntracer !< The number of tracers in the registry, or
                                                 !! 0 if the registry is not in use.
   real, dimension(SZI_(G),SZJ_(G),SZK_(GV)), &
-                           intent(in)    :: dp_new  !< New layer thicknesses [H ~> m or kg m-2]
-  real, dimension(SZI_(G),SZJ_(G),SZK_(GV)), &
                            intent(in)    :: dp_orig !< Original layer thicknesses [H ~> m or kg m-2]
+  real, dimension(SZI_(G),SZJ_(G),SZK_(GV)), &
+                           intent(in)    :: dp_new  !< New layer thicknesses [H ~> m or kg m-2]
   logical, dimension(SZI_(G),SZJ_(G),SZK_(GV)), &
                  optional, intent(in)    :: PCM_cell !< If true, PCM remapping should be used in cell.
 

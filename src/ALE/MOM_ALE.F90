@@ -21,7 +21,8 @@ use MOM_error_handler,    only : MOM_error, FATAL, WARNING
 use MOM_error_handler,    only : callTree_showQuery
 use MOM_error_handler,    only : callTree_enter, callTree_leave, callTree_waypoint
 use MOM_hybgen_unmix,     only : hybgen_unmix, init_hybgen_unmix, end_hybgen_unmix, hybgen_unmix_CS
-use MOM_hybgen_remap,     only : hybgen_remap, init_hybgen_remap, hybgen_remap_CS
+use MOM_hybgen_remap,     only : hybgen_remap, init_hybgen_remap, hybgen_remap_CS, mask_near_bottom_vel
+use MOM_hybgen_remap,     only : hybgen_remap_tracers, hybgen_remap_velocities
 use MOM_hybgen_regrid,    only : hybgen_regrid_CS
 use MOM_file_parser,      only : get_param, param_file_type, log_param
 use MOM_io,               only : vardesc, var_desc, fieldtype, SINGLE_FILE
@@ -68,6 +69,9 @@ type, public :: ALE_CS ; private
   logical :: remap_uv_using_old_alg !< If true, uses the old "remapping via a delta z"
                                     !! method. If False, uses the new method that
                                     !! remaps between grids described by h.
+  logical :: partial_cell_vel_remap !< If true, use partial cell thicknesses at velocity points
+                                    !! that are masked out where they extend below the shallower
+                                    !! of the neighboring bathymetry for remapping velocity.
 
   real :: regrid_time_scale !< The time-scale used in blending between the current (old) grid
                             !! and the target (new) grid [T ~> s]
@@ -83,6 +87,14 @@ type, public :: ALE_CS ; private
   logical :: use_hybgen_remap   !< If true, use the hybgen code for remapping
 
   integer :: nk             !< Used only for queries, not directly by this module
+  real :: BBL_h_vel_mask    !< The thickness of a bottom boundary layer within which velocities in
+                            !! thin layers are zeroed out after remapping, following practice with
+                            !! Hybgen remapping, or a negative value to avoid such filtering
+                            !! altogether, in [H ~> m or kg m-2].
+  real :: h_vel_mask        !< A thickness at velocity points below which near-bottom layers are
+                            !! zeroed out after remapping, following the practice with Hybgen
+                            !! remapping, or a negative value to avoid such filtering altogether,
+                            !! in [H ~> m or kg m-2].
 
   logical :: remap_after_initialization !< Indicates whether to regrid/remap after initializing the state.
 
@@ -160,6 +172,7 @@ subroutine ALE_init( param_file, GV, US, max_depth, CS)
   character(len=40) :: mdl = "MOM_ALE" ! This module's name.
   character(len=80) :: string ! Temporary strings
   real              :: filter_shallow_depth, filter_deep_depth
+  real              :: sign ! +1 or -1, used in setting some parameter defaults.
   logical           :: default_2018_answers
   logical           :: check_reconstruction
   logical           :: check_remapping
@@ -229,6 +242,10 @@ else
                              force_bounds_in_subcell=force_bounds_in_subcell, &
                              answers_2018=CS%answers_2018)
 endif
+  call get_param(param_file, mdl, "PARTIAL_CELL_VELOCITY_REMAP", CS%partial_cell_vel_remap, &
+                 "If true, use partial cell thicknesses at velocity points that are masked out "//&
+                 "where they extend below the shallower of the neighboring bathymetry for "//&
+                 "remapping velocity.", default=.false.)
 
   call get_param(param_file, mdl, "REMAP_AFTER_INITIALIZATION", CS%remap_after_initialization, &
                  "If true, applies regridding and remapping immediately after "//&
@@ -259,6 +276,18 @@ endif
                  "regridding integrates downward, consistant with the remapping "//&
                  "code.", default=.true., do_not_log=.true.)
   call set_regrid_params(CS%regridCS, integrate_downward_for_e=.not.local_logical)
+
+  sign = -1.0 ; if (CS%use_hybgen_remap) sign = 1.0
+  call get_param(param_file, mdl, "HYBGEN_REMAP_MASK_BBL_THICK", CS%BBL_h_vel_mask, &
+                 "A thickness of a bottom boundary layer below which velocities in thin layers "//&
+                 "are zeroed out after remapping, following practice with Hybgen remapping, "//&
+                 "or a negative value to avoid such filtering altogether.", &
+                 default=0.001*sign, units="m", scale=GV%m_to_H)
+  call get_param(param_file, mdl, "HYBGEN_REMAP_VEL_MASK_H", CS%h_vel_mask, &
+                 "A thickness at velocity points below which near-bottom layers are zeroed out "//&
+                 "after remapping, following practice with Hybgen remapping, or a negative value "//&
+                 "to avoid such filtering altogether.", default=1.0e-6*sign, units="m", scale=GV%m_to_H)
+
   if (CS%use_hybgen_unmix) &
     call init_hybgen_unmix(CS%hybgen_unmixCS, GV, US, param_file, hybgen_regridCS)
 
@@ -794,6 +823,8 @@ subroutine remap_all_state_vars(CS_remapping, CS_ALE, G, GV, h_old, h_new, Reg, 
   logical, dimension(SZI_(G),SZJ_(G),SZK_(GV)), &
                                    optional, intent(in)    :: PCM_cell !< Use PCM remapping in cells where true
   ! Local variables
+  real, dimension(SZI_(G),SZJ_(G)) :: h_tot  ! The vertically summed thicknesses [H ~> m or kg m-2]
+  real :: h_mask_vel ! A depth below which the thicknesses at a velocity point are masked out [H ~> m or kg m-2]
   integer                                     :: i, j, k, m
   integer                                     :: nz, ntr
   real, dimension(GV%ke+1)                    :: dx
@@ -811,15 +842,6 @@ subroutine remap_all_state_vars(CS_remapping, CS_ALE, G, GV, h_old, h_new, Reg, 
 
   show_call_tree = .false.
   if (present(debug)) show_call_tree = debug
-
-  if (CS_ALE%use_hybgen_remap) then
-    ! Use the hybgen alternate version of this code.  Some diagnostics are still missing
-    ! with this version of the code.
-    if (show_call_tree) call callTree_enter("remap_all_state_vars() Hybgen, MOM_ALE.F90")
-    call hybgen_remap(G, GV, CS_ALE%hybgen_remapCS, h_old, h_new, Reg, OBC, u, v, PCM_cell)
-    if (show_call_tree) call callTree_leave("remap_all_state_vars() Hybgen")
-    return
-  endif
 
   ! If remap_uv_using_old_alg is .true. and u or v is requested, then we must have dxInterface. Otherwise,
   ! u and v can be remapped without dxInterface
@@ -849,8 +871,11 @@ subroutine remap_all_state_vars(CS_remapping, CS_ALE, G, GV, h_old, h_new, Reg, 
     work_cont(:,:,:) = 0.0
   endif
 
-  ! Remap tracer
-  if (ntr>0) then
+  ! Remap all registered tracers, including temperature and salinity.
+  if (ntr>0) then ; if (CS_ALE%use_hybgen_remap) then
+    ! Use the hybgen alternate version of the tracer remapping code.
+    call hybgen_remap_tracers(G, GV, CS_ALE%hybgen_remapCS, Reg, ntr, h_old, h_new, PCM_cell)
+  else
     if (show_call_tree) call callTree_waypoint("remapping tracers (remap_all_state_vars)")
     !$OMP parallel do default(shared) private(h1,h2,u_column,Tr)
     do m=1,ntr ! For each tracer
@@ -905,12 +930,26 @@ subroutine remap_all_state_vars(CS_remapping, CS_ALE, G, GV, h_old, h_new, Reg, 
       endif
     enddo ! m=1,ntr
 
-  endif   ! endif for ntr > 0
+  endif ; endif  ! endif for ntr > 0
 
   if (show_call_tree) call callTree_waypoint("tracers remapped (remap_all_state_vars)")
 
+  if (CS_ALE%partial_cell_vel_remap .and. (present(u) .or. present(v)) ) then
+    h_tot(:,:) = 0.0
+    do k=1,GV%ke ; do j=G%jsc-1,G%jec+1 ; do i=G%isc-1,G%iec+1
+      h_tot(i,j) = h_tot(i,j) + h_old(i,j,k)
+    enddo ; enddo ; enddo
+  endif
+
+
+  if (CS_ALE%use_hybgen_remap) then
+    ! Use the hybgen alternate version of the velocity remapping code.
+    if (present(u) .and. present(v)) &
+      call hybgen_remap_velocities(G, GV, CS_ALE%hybgen_remapCS, h_old, h_new, OBC, u, v)
+  endif
+
   ! Remap u velocity component
-  if ( present(u) ) then
+  if ( present(u) .and. .not.CS_ALE%use_hybgen_remap ) then
     !$OMP parallel do default(shared) private(h1,h2,dx,u_column)
     do j = G%jsc,G%jec ; do I = G%iscB,G%iecB ; if (G%mask2dCu(I,j)>0.) then
       ! Build the start and final grids
@@ -923,8 +962,13 @@ subroutine remap_all_state_vars(CS_remapping, CS_ALE, G, GV, h_old, h_new, Reg, 
       else
         h2(:) = 0.5 * ( h_new(i,j,:) + h_new(i+1,j,:) )
       endif
+      if (CS_ALE%partial_cell_vel_remap) then
+        h_mask_vel = min(h_tot(i,j), h_tot(i+1,j))
+        call apply_partial_cell_mask(h1, h_mask_vel)
+        call apply_partial_cell_mask(h2, h_mask_vel)
+      endif
       if (associated(OBC)) then
-        if (OBC%segnum_u(I,j) .ne. 0) then
+        if (OBC%segnum_u(I,j) /= 0) then
           if (OBC%segment(OBC%segnum_u(I,j))%direction == OBC_DIRECTION_E) then
             h1(:) = h_old(i,j,:)
             h2(:) = h_new(i,j,:)
@@ -936,14 +980,22 @@ subroutine remap_all_state_vars(CS_remapping, CS_ALE, G, GV, h_old, h_new, Reg, 
       endif
       call remapping_core_h(CS_remapping, nz, h1, u(I,j,:), nz, h2, &
                             u_column, h_neglect, h_neglect_edge)
+
+      if ((CS_ALE%BBL_h_vel_mask > 0.0) .and. (CS_ALE%h_vel_mask > 0.0)) then
+        ! The use of the source and target thicknesses here comes from the Hycom implementation,
+        ! but I do not understand it.  I think both should be the target thicknesses.  -RWH
+        call mask_near_bottom_vel(u_column, h1, h2, CS_ALE%BBL_h_vel_mask, CS_ALE%h_vel_mask, nz)
+      endif
+
       u(I,j,:) = u_column(:)
+
     endif ; enddo ; enddo
   endif
 
   if (show_call_tree) call callTree_waypoint("u remapped (remap_all_state_vars)")
 
   ! Remap v velocity component
-  if ( present(v) ) then
+  if ( present(v) .and. .not.CS_ALE%use_hybgen_remap ) then
     !$OMP parallel do default(shared) private(h1,h2,dx,u_column)
     do J = G%jscB,G%jecB ; do i = G%isc,G%iec ; if (G%mask2dCv(i,j)>0.) then
       ! Build the start and final grids
@@ -955,6 +1007,11 @@ subroutine remap_all_state_vars(CS_remapping, CS_ALE, G, GV, h_old, h_new, Reg, 
         enddo
       else
         h2(:) = 0.5 * ( h_new(i,j,:) + h_new(i,j+1,:) )
+      endif
+      if (CS_ALE%partial_cell_vel_remap) then
+        h_mask_vel = min(h_tot(i,j), h_tot(i,j+1))
+        call apply_partial_cell_mask(h1, h_mask_vel)
+        call apply_partial_cell_mask(h2, h_mask_vel)
       endif
       if (associated(OBC)) then
         if (OBC%segnum_v(i,J) .ne. 0) then
@@ -969,7 +1026,15 @@ subroutine remap_all_state_vars(CS_remapping, CS_ALE, G, GV, h_old, h_new, Reg, 
       endif
       call remapping_core_h(CS_remapping, nz, h1, v(i,J,:), nz, h2, &
                             u_column, h_neglect, h_neglect_edge)
+
+      if ((CS_ALE%BBL_h_vel_mask > 0.0) .and. (CS_ALE%h_vel_mask > 0.0)) then
+        ! The use of the source and target thicknesses here comes from the Hycom implementation,
+        ! but I do not understand it.  I think both should be the target thicknesses. -RWH
+        call mask_near_bottom_vel(u_column, h1, h2, CS_ALE%BBL_h_vel_mask, CS_ALE%h_vel_mask, nz)
+      endif
+
       v(i,J,:) = u_column(:)
+
     endif ; enddo ; enddo
   endif
 
@@ -984,6 +1049,29 @@ subroutine remap_all_state_vars(CS_remapping, CS_ALE, G, GV, h_old, h_new, Reg, 
   if (show_call_tree) call callTree_leave("remap_all_state_vars()")
 
 end subroutine remap_all_state_vars
+
+
+!> Mask out thicknesses to 0 when their runing sum exceeds a specified value.
+subroutine apply_partial_cell_mask(h1, h_mask)
+  real, dimension(:), intent(inout) :: h1 !< A column of thicknesses to be masked out after their
+                                          !! running vertical sum exceeds h_mask [H ~> m or kg m-2]
+  real,               intent(in)    :: h_mask !< The depth after which the thicknesses in h1 are
+                                          !! masked out [H ~> m or kg m-2]
+  ! Local variables
+  real :: h1_rsum  ! The running sum of h1 [H ~> m or kg m-2]
+  integer :: k
+
+  h1_rsum = 0.0
+  do k=1,size(h1)
+    if (h1(k) > h_mask - h1_rsum) then
+      ! This thickness is reduced because it extends below the shallower neighboring bathymetry.
+      h1(k) = max(h_mask - h1_rsum, 0.0)
+      h1_rsum = h_mask
+    else
+      h1_rsum = h1_rsum + h1(k)
+    endif
+  enddo
+end subroutine apply_partial_cell_mask
 
 
 !> Remaps a single scalar between grids described by thicknesses h_src and h_dst.
