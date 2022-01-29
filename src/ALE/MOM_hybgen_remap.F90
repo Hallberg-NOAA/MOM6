@@ -142,12 +142,6 @@ subroutine hybgen_remap(G, GV, remap_CS, dp_orig, dp, Reg, OBC, u, v, PCM_cell)
   ! Find and store the previous thicknesses at velocity points.
   call dpudpv(dpu_orig, dpv_orig, dp_orig, h_tot, G, GV, OBC)
 
-  ! This is not supposed to do anything, but could change things at roundoff.
-  h_tot(:,:) = 0.0
-  do k=1,GV%ke ; do j=G%jsc-1,G%jec+1 ; do i=G%isc-1,G%iec+1
-    h_tot(i,j) = h_tot(i,j) + dp(i,j,k)
-  enddo ; enddo ; enddo
-
   ! --- update layer thickness at u- and v- points.
   call dpudpv(dpu, dpv, dp, h_tot, G, GV, OBC)
 
@@ -1377,7 +1371,7 @@ subroutine dpudpv(dpu, dpv, dp, h_tot, G, GV, OBC)
         if (h_rsum(I) + dpu(I,j,k) > h_mask_vel(I)) then
           ! This thickness is reduced because it extends below the shallower neighboring bathymetry.
           dpu(I,j,k) = max(h_mask_vel(I) - h_rsum(I), 0.0)
-          h_rsum(I) = h_rsum(I) + dpu(I,j,k) ! = h_mask_vel(I)
+          h_rsum(I) = h_mask_vel(I)
         else
           h_rsum(I) = h_rsum(I) + dpu(I,j,k)
         endif
@@ -1396,7 +1390,7 @@ subroutine dpudpv(dpu, dpv, dp, h_tot, G, GV, OBC)
         if (h_rsum(i) + dpv(i,J,k) > h_mask_vel(i)) then
           ! This thickness is reduced because it extends below the shallower neighboring bathymetry.
           dpv(i,J,k) = max(h_mask_vel(i) - h_rsum(i), 0.0)
-          h_rsum(i) = h_rsum(i) + dpv(i,J,k) ! = h_mask_vel(i)
+          h_rsum(i) = h_mask_vel(i)
         else
           h_rsum(i) = h_rsum(i) + dpv(i,J,k)
         endif
