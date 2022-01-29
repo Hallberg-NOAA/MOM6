@@ -24,10 +24,10 @@ implicit none ; private
 !> Control structure containing required parameters for the hybgen remapping
 type, public :: hybgen_remap_CS ; private
 
-  !> Hybgen remapper flag (0=PCM,1=PLM,2=PPM,-ve:isoPCM,3=WENO-like), usually 3
+  !> Hybgen remapping flag (0=PCM,1=PLM,2=PPM,3=WENO-like), by default 3
   integer :: hybmap
 
-  !> Hybgen velocity remapper flag (0=PCM,1=PLM,3=WENO-like), usually 3
+  !> Hybgen velocity remapping flag (0=PCM,1=PLM,3=WENO-like), by default 3
   integer :: hybmap_vel
 
 end type hybgen_remap_CS
@@ -45,7 +45,7 @@ integer, parameter  :: REMAPPING_PLM        = 1 !< O(h^2) remapping scheme
 integer, parameter  :: REMAPPING_PPM_H4     = 2 !< O(h^3) remapping scheme
 integer, parameter  :: REMAPPING_WENO       = 15 !< O(h^5) remapping scheme
 
-public hybgen_remap, init_hybgen_remap
+public hybgen_remap, init_hybgen_remap, mask_near_bottom_vel, hybgen_remap_column
 
 contains
 
@@ -175,6 +175,7 @@ subroutine hybgen_remap_tracers(G, GV, CS, Reg, ntracer, dp_new, dp_orig, PCM_ce
                             ! or division by 0 [H ~> m or kg m-2]
   integer :: i, j, k, nk, m
 
+  if (ntracer < 1) return   ! There is nothing to be done.
   nk = GV%ke
   dpthin = 1.0e-6*GV%m_to_H
 
@@ -192,6 +193,8 @@ subroutine hybgen_remap_tracers(G, GV, CS, Reg, ntracer, dp_new, dp_orig, PCM_ce
       tracer_i_j(k,m) = Reg%Tr(m)%t(i,j,k)
     enddo ; enddo
 
+    ! --- remap scalar field profiles from the source vertical grid
+    ! --- grid onto the new target vertical grid.
     call hybgen_remap_column(CS%hybmap, nk, h_src, h_tgt, ntracer, tracer_i_j, dpthin, PCM_lay)
 
     ! Note that temperature and salinity are among the tracers remapped here.
@@ -202,59 +205,45 @@ subroutine hybgen_remap_tracers(G, GV, CS, Reg, ntracer, dp_new, dp_orig, PCM_ce
 
 end subroutine hybgen_remap_tracers
 
-!> Vertically remap a column of scalars to the new grid
-subroutine hybgen_remap_column(remap_scheme, nk, h_src, h_tgt, ntracr, trac_i_j, dpthin, PCM_lay)
-  integer,         intent(in)    :: remap_scheme !< A coded integer indicating the remapping scheme to use
-  integer,         intent(in)    :: nk           !< Number of layers in this column
-  real,            intent(in)    :: h_src(nk)    !< Source grid layer thicknesses [H ~> m or kg m-2]
-  real,            intent(in)    :: h_tgt(nk)    !< Target grid layer thicknesses [H ~> m or kg m-2]
-  integer,         intent(in)    :: ntracr       !< The number of registered tracers (including temperature
-                                                 !! and salinity)
-  real,            intent(inout) :: trac_i_j(nk, max(ntracr,1)) !< Columns of the tracers [Conc] or [degC] or [ppt]
-  real,            intent(in)    :: dpthin       !< A negligibly small thickness for the purpose of cell
-                                                 !! reconstructions [H ~> m or kg m-2].
-  logical,         intent(in)    :: PCM_lay(nk)  !< If true for a layer, use PCM remapping for that layer
+!> Vertically remap a column of scalars (such as tracers or velocity components) to the new grid
+subroutine hybgen_remap_column(remap_scheme, nk, h_src, h_tgt, nfld, fld_col, dpthin, PCM_lay)
+  integer,           intent(in)    :: remap_scheme !< A coded integer indicating the remapping scheme to use
+  integer,           intent(in)    :: nk           !< Number of layers in this column
+  real,              intent(in)    :: h_src(nk)    !< Source grid layer thicknesses [H ~> m or kg m-2]
+  real,              intent(in)    :: h_tgt(nk)    !< Target grid layer thicknesses [H ~> m or kg m-2]
+  integer,           intent(in)    :: nfld         !< The number of fields to remap
+  real,              intent(inout) :: fld_col(nk,nfld) !< Columns of the fields in arbitrary units [A]
+                                                   !! that are input on the source grid and returned
+                                                   !! on the target grid.
+  real,              intent(in)    :: dpthin       !< A negligibly small thickness for the purpose of cell
+                                                   !! reconstructions [H ~> m or kg m-2].
+  logical, optional, intent(in)    :: PCM_lay(nk)  !< If true for a layer, use PCM remapping for that layer
 
 ! --- -------------------------------------------------------------
 ! --- hybrid grid generator, single column(part A) - remap scalars.
 ! --- -------------------------------------------------------------
-  real :: s1d(nk,ntracr)    ! original scalar fields [Conc] or [degC] or [ppt]
-  real :: f1d(nk,ntracr)    ! final    scalar fields [Conc] or [degC] or [ppt]
-  real :: c1d(nk,ntracr,3)  ! interpolation coefficients
-  integer :: k, ktr, nums1d
-  character(len=256) :: mesg  ! A string for output messages
+  real :: fld_src(nk,nfld) ! Original fields on the source grid [A]
+  real :: c1d(nk,nfld,3)   ! Interpolation coefficients
+  integer :: k, kfld
 
-  double precision, parameter :: zp5=0.5 ! for sign function
+  do kfld=1,nfld ; do k=1,nk
+    fld_src(k,kfld) = fld_col(k,kfld)
+  enddo ; enddo
 
-  nums1d = ntracr
-
-  do k=1,nk
-    do ktr=1,ntracr
-      s1d(k,ktr) = trac_i_j(k,ktr)
-    enddo !ktr
-  enddo !k
-
-!
-! --- remap scalar field profiles from the 'old' vertical
-! --- grid onto the 'new' vertical grid.
-!
+  ! --- remap scalar field profiles from the source vertical grid
+  ! --- grid onto the new target vertical grid.
   if     (remap_scheme == REMAPPING_PCM) then !PCM
-    call hybgen_pcm_remap(s1d, h_src, f1d, h_tgt, nk, nk, nums1d, dpthin)
+    call hybgen_pcm_remap(fld_src, h_src, fld_col, h_tgt, nk, nk, nfld, dpthin)
   elseif (remap_scheme == REMAPPING_PLM) then !PLM (as in 2.1.08)
-    call hybgen_plm_coefs(s1d, h_src, c1d, nk, nums1d, dpthin, PCM_lay)
-    call hybgen_plm_remap(s1d, h_src, c1d, f1d, h_tgt, nk, nk, nums1d, dpthin)
+    call hybgen_plm_coefs(fld_src, h_src, c1d, nk, nfld, dpthin, PCM_lay)
+    call hybgen_plm_remap(fld_src, h_src, c1d, fld_col, h_tgt, nk, nk, nfld, dpthin)
   elseif (remap_scheme == REMAPPING_PPM_H4) then !PPM
-    call hybgen_ppm_coefs(s1d, h_src, c1d, nk, nums1d, dpthin, PCM_lay)
-    call hybgen_ppm_remap(s1d, h_src, c1d, f1d, h_tgt, nk, nk, nums1d, dpthin)
+    call hybgen_ppm_coefs(fld_src, h_src, c1d, nk, nfld, dpthin, PCM_lay)
+    call hybgen_ppm_remap(fld_src, h_src, c1d, fld_col, h_tgt, nk, nk, nfld, dpthin)
   elseif (remap_scheme == REMAPPING_WENO) then !WENO-like
-    call hybgen_weno_coefs(s1d, h_src, c1d, nk, nums1d, dpthin, PCM_lay)
-    call hybgen_weno_remap(s1d, h_src, c1d, f1d, h_tgt, nk, nk, nums1d, dpthin)
+    call hybgen_weno_coefs(fld_src, h_src, c1d, nk, nfld, dpthin, PCM_lay)
+    call hybgen_weno_remap(fld_src, h_src, c1d, fld_col, h_tgt, nk, nk, nfld, dpthin)
   endif
-  do k=1,nk
-    do ktr=1,ntracr
-      trac_i_j(k,ktr) = f1d(k,ktr)
-    enddo !ktr
-  enddo !k
 
 end subroutine hybgen_remap_column
 
@@ -275,60 +264,41 @@ subroutine hybgenbj_u(CS, G, GV, dpu, dpu_orig, u, j)
 ! --- hybrid grid generator, single j-row at u points (part B).
 ! --- --------------------------------------------
 !
-  real :: s1d(GV%ke)      ! Original velocities [L T-1 ~> m s-1]
-  real :: f1d(GV%ke)      ! Final velocities [L T-1 ~> m s-1]
-  real :: c1d(GV%ke,3)    ! Interpolation coefficients
+  real :: u_col(GV%ke)    ! A column of velocities [L T-1 ~> m s-1], originally on the
+                          ! source but later on the target grid
   real :: h_src(GV%ke)    ! A column of source grid layer thicknesses [H ~> m or kg m-2]
   real :: h_tgt(GV%ke)    ! A column of target grid layer thicknesses [H ~> m or kg m-2]
   real :: dpthin ! A negligible layer thickness, used to avoid roundoff issues
                  ! or division by 0 [H ~> m or kg m-2]
-  real :: h_from_bot  ! The distance between the top of a layer and the seafloor [H ~> m or kg m-2]
   real :: onemm  ! one mm in pressure units [H ~> m or kg m-2]
-  character(len=256) :: mesg  ! A string for output messages
-  integer :: i, k, kk
+  integer :: i, k, nk
 
 ! --- vertical momentum flux across moving interfaces (the s-dot term in the
 ! --- momentum equation) - required to locally conserve momentum when hybgen
 ! --- moves vertical coordinates.
 
-  kk = GV%ke
+  nk = GV%ke
   onemm = 0.001*GV%m_to_H
   dpthin = 1.0e-6*GV%m_to_H
 
   do I=G%IscB,G%IecB ; if (G%mask2dCu(I,j)>0.) then
 !
 ! ---     store one-dimensional arrays of -u- and -p- for the 'old' vertical grid
-    do k=1,kk
-      s1d(k)   = u(I,j,k)
+    do k=1,nk
+      u_col(k) = u(I,j,k)
       h_src(k) = dpu_orig(I,j,k)
       h_tgt(k) = dpu(I,j,k)
     enddo !k
-!
-! ---     remap -u- profiles from the 'old' vertical grid onto the
-! ---     'new' vertical grid.
-!
-    if     (CS%hybmap_vel == REMAPPING_PCM) then !PCM
-      call hybgen_pcm_remap(s1d, h_src, f1d, h_tgt, kk, kk, 1, dpthin)
-    elseif (CS%hybmap_vel == REMAPPING_PLM) then !PLM (as in 2.1.08)
-      call hybgen_plm_coefs(s1d, h_src, c1d, kk, 1, dpthin)
-      call hybgen_plm_remap(s1d, h_src, c1d, f1d, h_tgt, kk, kk, 1, dpthin)
-    else !WENO-like (even if scalar fields are PLM or PPM)
-      call hybgen_weno_coefs(s1d, h_src, c1d, kk, 1, dpthin)
-      call hybgen_weno_remap(s1d, h_src, c1d, f1d, h_tgt, kk, kk, 1, dpthin)
-    endif !hybmap_vel
 
-    do k=1,kk
-      u(I,j,k) = f1d(k)
-    enddo !k
+    ! --- Remap u profiles from the source vertical grid onto the new target grid.
+    call hybgen_remap_column(CS%hybmap_vel, nk, h_src, h_tgt, 1, u_col, dpthin)
 
-    h_from_bot = 0.0
-    do k=kk,1,-1
-      h_from_bot = h_from_bot + h_tgt(k)
-      if (h_from_bot > onemm) exit
-      ! Set the velocity to zero in thin, near-bottom layers.
-      if ((h_src(k) <= dpthin) .and. (h_from_bot <= onemm)) then
-        u(I,j,k) = 0.0
-      endif
+    ! The use of the source and target thicknesses here comes from the Hycom
+    ! implementation, but I do not understand it.  -RWH
+    call mask_near_bottom_vel(u_col, h_tgt, h_src, onemm, dpthin, nk)
+
+    do k=1,nk
+      u(I,j,k) = u_col(k)
     enddo !k
 
   endif ; enddo !iu
@@ -352,66 +322,75 @@ subroutine hybgenbj_v(CS, G, GV, dpv, dpv_orig, v, j)
 ! --- hybrid grid generator, single j-row at v points (part B).
 ! --- --------------------------------------------
 !
-  real :: s1d(GV%ke)      ! Original velocities [L T-1 ~> m s-1]
-  real :: f1d(GV%ke)      ! Final velocities [L T-1 ~> m s-1]
-  real :: c1d(GV%ke,3)    ! Interpolation coefficients
+  real :: v_col(GV%ke)    ! A column of velocities [L T-1 ~> m s-1], originally on the
+                          ! source but later on the target grid
   real :: h_src(GV%ke)    ! A column of source grid layer thicknesses [H ~> m or kg m-2]
   real :: h_tgt(GV%ke)    ! A column of target grid layer thicknesses [H ~> m or kg m-2]
   real :: dpthin ! A negligible layer thickness, used to avoid roundoff issues
                  ! or division by 0 [H ~> m or kg m-2]
-  real :: h_from_bot  ! The distance between the top of a layer and the seafloor [H ~> m or kg m-2]
   real :: onemm  ! one mm in pressure units [H ~> m or kg m-2]
-  character(len=256) :: mesg  ! A string for output messages
-  integer :: i, k, kk
+  integer :: i, k, nk
 
 !
 ! --- vertical momentum flux across moving interfaces (the s-dot term in the
 ! --- momentum equation) - required to locally conserve momentum when hybgen
 ! --- moves vertical coordinates.
 !
-  kk = GV%ke
+  nk = GV%ke
   onemm = 0.001*GV%m_to_H
   dpthin = 1.0e-6*GV%m_to_H
 
   do i=G%isc,G%iec ; if (G%mask2dCv(i,J)>0.) then
 
 ! ---     store one-dimensional arrays of -v- and -p- for the 'old' vertical grid
-    do k=1,kk
-      s1d(k)   = v(i,J,k)
+    do k=1,nk
+      v_col(k) = v(i,J,k)
       h_src(k) = dpv_orig(i,J,k)
       h_tgt(k) = dpv(i,J,k)
     enddo !k
-!
-! ---     remap -v- profiles from the 'old' vertical grid onto the
-! ---     'new' vertical grid.
-!
-    if     (CS%hybmap_vel == REMAPPING_PCM) then !PCM
-      call hybgen_pcm_remap(s1d, h_src, f1d, h_tgt, kk, kk, 1, dpthin)
-    elseif (CS%hybmap_vel == REMAPPING_PLM) then !PLM (as in 2.1.08)
-      call hybgen_plm_coefs(s1d, h_src, c1d, kk, 1, dpthin)
-      call hybgen_plm_remap(s1d, h_src, c1d, f1d, h_tgt, kk, kk, 1, dpthin)
-    else !WENO-like (even if scalar fields are PLM or PPM)
-      call hybgen_weno_coefs(s1d, h_src, c1d, kk, 1, dpthin)
-      call hybgen_weno_remap(s1d, h_src, c1d, f1d, h_tgt, kk, kk, 1, dpthin)
-    endif !hybmap_vel
 
-    do k=1,kk
-      v(i,J,k) = f1d(k)
-    enddo !k
+    ! --- Remap v profiles from the source vertical grid onto the new target grid.
+    call hybgen_remap_column(CS%hybmap_vel, nk, h_src, h_tgt, 1, v_col, dpthin)
 
-    h_from_bot = 0.0
-    do k=kk,1,-1
-      h_from_bot = h_from_bot + h_tgt(k)
-      if (h_from_bot > onemm) exit
-      ! Set the velocity to zero in thin, near-bottom layers.
-      if ((h_src(k) <= dpthin) .and. (h_from_bot <= onemm)) then
-        v(i,J,k) = 0.0
-      endif
+    ! The use of the source and target thicknesses here comes from the Hycom
+    ! implementation, but I do not understand it.  -RWH
+    call mask_near_bottom_vel(v_col, h_tgt, h_src, onemm, dpthin, nk)
+
+    do k=1,nk
+      v(i,J,k) = v_col(k)
     enddo !k
 
   endif ; enddo !iv
 !
 end subroutine hybgenbj_v
+
+!> Zero out velocities in a column in very thin layers near the seafloor
+subroutine mask_near_bottom_vel(vel, h, h_filt, h_BBL, h_thin, nk)
+  integer, intent(in)    :: nk      !< The number of layers in this column
+  real,    intent(inout) :: vel(nk) !< The velocity component being zeroed out [L T-1 ~> m s-1]
+  real,    intent(in)    :: h(nk)   !< The layer thicknesses at velocity points used to determine
+                                    !! the distance from the seafloor [H ~> m or kg m-2]
+  real,    intent(in)    :: h_filt(nk) !< The layer thicknesses at velocity points used to determine
+                                    !! where filtering should be applied [H ~> m or kg m-2]
+  real,    intent(in)    :: h_BBL   !< The thickness of the near-bottom region over which to apply
+                                    !! the filtering [H ~> m or kg m-2]
+  real,    intent(in)    :: h_thin  !< A layer thickness below which the filtering is applied [H ~> m or kg m-2]
+
+  ! Local variables
+  real :: h_from_bot  ! The distance between the top of a layer and the seafloor [H ~> m or kg m-2]
+  integer :: k
+
+  if ((h_BBL < 0.0) .or. (h_thin < 0.0)) return
+
+  h_from_bot = 0.0
+  do k=nk,1,-1
+    h_from_bot = h_from_bot + h(k)
+    if (h_from_bot > h_BBL) return
+    ! Set the velocity to zero in thin, near-bottom layers.
+    if (h_filt(k) <= h_thin) vel(k) = 0.0
+  enddo !k
+
+end subroutine mask_near_bottom_vel
 
 !> Do piecewise constant remapping for a set of scalars
 subroutine hybgen_pcm_remap(si, dpi, so, dpo, ki, ko, ks, thin)
@@ -486,8 +465,6 @@ subroutine hybgen_pcm_remap(si, dpi, so, dpo, ki, ko, ks, thin)
   do k= 1,ko  !output layers
     zt = zb
     zb = min(po(k+1),zx)
-!       write(mesg,*) 'k,zt,zb = ',k,zt,zb
-!       call MOM_mesg(mesg, all_print=.true.)
     lt=lb !top will always correspond to bottom of previous
           !find input layer containing bottom output interface
     do while (pi(lb+1) < zb .and. lb < ki)
@@ -692,8 +669,6 @@ subroutine hybgen_plm_remap(si, dpi, ci, so, dpo, ki, ko, ks, thin)
   do k= 1,ko  !output layers
     zt = zb
     zb = min(po(k+1),zx)
-!       write(mesg,*) 'k,zt,zb = ',k,zt,zb
-!       call MOM_mesg(mesg, all_print=.true.)
     lt = lb !top will always correspond to bottom of previous
             !find input layer containing bottom output interface
     do while ((pi(lb+1) < zb) .and. (lb < ki))
@@ -966,10 +941,8 @@ subroutine hybgen_ppm_remap(si, dpi, ci, so, dpo, ki, ko, ks, thin)
   do k= 1,ko  !output layers
     zt = zb
     zb = min(po(k+1),zx)
-!       write(mesg,*) 'k,zt,zb = ',k,zt,zb
-!       call MOM_mesg(mesg, all_print=.true.)
-    lt=lb !top will always correspond to bottom of previous
-          !find input layer containing bottom output interface
+    lt = lb !top will always correspond to bottom of previous
+            !find input layer containing bottom output interface
     do while (pi(lb+1) < zb .and. lb < ki)
       lb = lb+1
     enddo
@@ -1259,8 +1232,6 @@ subroutine hybgen_weno_remap(si, dpi, ci, so, dpo, ki, ko, ks, thin)
   do k= 1,ko  !output layers
     zt = zb
     zb = min(po(k+1),zx)
-!       write(mesg,*) 'k,zt,zb = ',k,zt,zb
-!       call MOM_mesg(mesg, all_print=.true.)
     lt = lb ! top will always correspond to bottom of previous
             ! find input layer containing bottom output interface
     do while (pi(lb+1) < zb .and. lb < ki)
