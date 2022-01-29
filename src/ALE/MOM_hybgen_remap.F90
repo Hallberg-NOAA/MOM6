@@ -1340,6 +1340,8 @@ subroutine dpudpv(dpu, dpv, dp, G, GV, OBC)
 
   ! Local variables
   real :: p(SZI_(G),SZJ_(G),SZK_(GV)+1) ! Interface positions relative to the surface [H ~> m or kg m-2]
+  real :: h_rsum(SZIB_(G))              ! The vertically running sum of thicknesses at velocity points [H ~> m or kg m-2]
+  real :: h_tot_vel(SZIB_(G))           ! The total thickness at velocity points [H ~> m or kg m-2]
   real :: dp_tot_uv                     ! The minimum total thickness at a velocity point [H ~> m or kg m-2]
   integer :: i, j, k, nk
 
@@ -1355,18 +1357,20 @@ subroutine dpudpv(dpu, dpv, dp, G, GV, OBC)
   enddo ; enddo ; enddo
 
   dpu(:,:,:) = 0.0
-
   do j=G%jsc,G%jec
+    do I=G%IscB,G%IecB
+      h_rsum(I) = 0.0
+      h_tot_vel(I) = min(p(i,j,nk+1), p(i+1,j,nk+1))
+    enddo
     do k=1,nk
       do I=G%IscB,G%IecB
         if (G%mask2dCu(I,j) > 0.) then
-          dp_tot_uv = min(p(i,j,nk+1), p(i+1,j,nk+1))
-          dpu(I,j,k) = max(0., &
-               min(dp_tot_uv, .5*(p(i,j,k+1)+p(i+1,j,k+1)))- &
-               min(dp_tot_uv, .5*(p(i,j,k  )+p(i+1,j,k  ))))
-          ! This variant does not restrict thicknesses using topography.
-          ! dpu(I,j,k) = 0.5*(p(i,j,k+1)+p(i+1,j,k+1)) - &
-          !              0.5*(p(i,j,k  )+p(i+1,j,k  ))
+          if ((h_rsum(I) + 0.5*(dp(i,j,k) + dp(i+1,j,k)) <= h_tot_vel(I)) ) then ! .or. (.not.Hybgen_dp_vel)) then
+            dpu(I,j,k) = 0.5*(dp(i,j,k) + dp(i+1,j,k))
+          else
+            dpu(I,j,k) = max(h_tot_vel(I) - h_rsum(I), 0.0)
+          endif
+          h_rsum(I) = h_rsum(I) + dpu(I,j,k)
           if (associated(OBC)) then ; if (OBC%segnum_u(I,j) /= 0) then
             if (OBC%segment(OBC%segnum_u(I,j))%direction == OBC_DIRECTION_E) then
               dpu(I,j,k) = dp(i,j,k)
@@ -1381,21 +1385,24 @@ subroutine dpudpv(dpu, dpv, dp, G, GV, OBC)
 
   dpv(:,:,:) = 0.0
   do J=G%JscB,G%JecB
+    do i=G%isc,G%iec
+      h_rsum(i) = 0.0
+      h_tot_vel(i) = min(p(i,j,nk+1), p(i,j+1,nk+1))
+    enddo
     do k=1,nk
       do i=G%isc,G%iec
         if (G%mask2dCv(i,J) > 0.) then
-          dp_tot_uv = min(p(i,j,nk+1), p(i,j+1,nk+1))
-          dpv(i,J,k) = max(0., &
-               min(dp_tot_uv, .5*(p(i,j,k+1)+p(i,j+1,k+1)))- &
-               min(dp_tot_uv, .5*(p(i,j,k  )+p(i,j+1,k  ))))
-          ! This variant does not restrict thicknesses using topography.
-          ! dpv(i,J,k) = 0.5*(p(i,j,k+1)+p(i,j+1,k+1)) - &
-          !              0.5*(p(i,j,k  )+p(i,j+1,k  ))
+          if ((h_rsum(i) + 0.5*(dp(i,j,k) + dp(i,j+1,k)) <= h_tot_vel(i)) ) then ! .or. (.not.Hybgen_dp_vel)) then
+            dpv(i,J,k) = 0.5*(dp(i,j,k) + dp(i,j+1,k))
+          else
+            dpv(i,J,k) = max(h_tot_vel(i) - h_rsum(i), 0.0)
+          endif
+          h_rsum(i) = h_rsum(i) + dpv(i,J,k)
           if (associated(OBC)) then ; if (OBC%segnum_v(i,J) /= 0) then
             if (OBC%segment(OBC%segnum_v(i,J))%direction == OBC_DIRECTION_N) then
-              dpu(I,j,k) = dp(i,j,k)
+              dpv(i,J,k) = dp(i,j,k)
             else ! (OBC%segment(n)%direction == OBC_DIRECTION_S)
-              dpu(I,j,k) = dp(i,j+1,k)
+              dpv(i,J,k) = dp(i,j+1,k)
             endif
           endif ; endif
         endif !iv
