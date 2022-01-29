@@ -119,8 +119,9 @@ subroutine hybgen_remap(G, GV, remap_CS, dp_orig, dp, Reg, OBC, u, v, PCM_cell)
   real :: dpv_orig(SZI_(G),SZJB_(G),SZK_(GV))  ! Original V-point thicknesses [H ~> m or kg m-2]
   real :: dpu(SZIB_(G),SZJ_(G),SZK_(GV))       ! Updated U-point layer thicknesses [H ~> m or kg m-2]
   real :: dpv(SZI_(G),SZJB_(G),SZK_(GV))       ! Updated v-point layer thicknesses [H ~> m or kg m-2]
+  real :: h_tot(SZI_(G),SZJ_(G))               ! Total thicknesses of the water column [H ~> m or kg m-2]
   character(len=256) :: mesg  ! A string for output messages
-  integer :: j, ntr
+  integer :: i, j, k, ntr
 
   ntr = 0 ; if (associated(Reg)) ntr = Reg%ntr
 
@@ -133,11 +134,22 @@ subroutine hybgen_remap(G, GV, remap_CS, dp_orig, dp, Reg, OBC, u, v, PCM_cell)
 ! --- moves vertical coordinates first, store old interface pressures in
 ! --- -pu-, -pv-
 
+  h_tot(:,:) = 0.0
+  do k=1,GV%ke ; do j=G%jsc-1,G%jec+1 ; do i=G%isc-1,G%iec+1
+    h_tot(i,j) = h_tot(i,j) + dp_orig(i,j,k)
+  enddo ; enddo ; enddo
+
   ! Find and store the previous thicknesses at velocity points.
-  call dpudpv(dpu_orig, dpv_orig, dp_orig, G, GV, OBC)
+  call dpudpv(dpu_orig, dpv_orig, dp_orig, h_tot, G, GV, OBC)
+
+  ! This is not supposed to do anything, but could change things at roundoff.
+  h_tot(:,:) = 0.0
+  do k=1,GV%ke ; do j=G%jsc-1,G%jec+1 ; do i=G%isc-1,G%iec+1
+    h_tot(i,j) = h_tot(i,j) + dp(i,j,k)
+  enddo ; enddo ; enddo
 
   ! --- update layer thickness at u- and v- points.
-  call dpudpv(dpu, dpv, dp, G, GV, OBC)
+  call dpudpv(dpu, dpv, dp, h_tot, G, GV, OBC)
 
   !$OMP parallel do default(shared)
   do j=G%jsc,G%jec
@@ -1301,85 +1313,96 @@ subroutine hybgen_weno_remap(si, dpi, ci, so, dpo, ki, ko, ks, thin)
 end subroutine hybgen_weno_remap
 
 !> Specify layer thicknesses at velocity points for remapping
-subroutine dpudpv(dpu, dpv, dp, G, GV, OBC)
-  type(ocean_grid_type),                        intent(in)  :: G  !< Ocean grid structure
-  type(verticalGrid_type),                      intent(in)  :: GV !< ocean vertical grid structure
+subroutine dpudpv(dpu, dpv, dp, h_tot, G, GV, OBC)
+  type(ocean_grid_type),                        intent(in)  :: G   !< Ocean grid structure
+  type(verticalGrid_type),                      intent(in)  :: GV  !< ocean vertical grid structure
   real, dimension(SZIB_(G),SZJ_(G),SZK_(GV)),   intent(out) :: dpu !< Thicknesses at u points [H ~> m or kg m-2]
   real, dimension(SZI_(G),SZJB_(G),SZK_(GV)),   intent(out) :: dpv !< Thicknesses at v points [H ~> m or kg m-2]
-  real, dimension(SZI_(G),SZJ_(G),SZK_(GV)+1),  intent(in)  :: dp  !< Interface thicknesses [H ~> m or kg m-2]
+  real, dimension(SZI_(G),SZJ_(G),SZK_(GV)),    intent(in)  :: dp  !< Layer thicknesses [H ~> m or kg m-2]
+  real, dimension(SZI_(G),SZJ_(G)),             intent(in)  :: h_tot !< Sum of thicknesses [H ~> m or kg m-2]
   type(ocean_OBC_type),                         pointer     :: OBC !< Open boundary structure
 
   ! Local variables
-  real :: p(SZI_(G),SZJ_(G),SZK_(GV)+1) ! Interface positions relative to the surface [H ~> m or kg m-2]
-  real :: h_rsum(SZIB_(G))              ! The vertically running sum of thicknesses at velocity points [H ~> m or kg m-2]
-  real :: h_tot_vel(SZIB_(G))           ! The total thickness at velocity points [H ~> m or kg m-2]
-  real :: dp_tot_uv                     ! The minimum total thickness at a velocity point [H ~> m or kg m-2]
+  real :: h_rsum(SZIB_(G))      ! The vertically running sum of thicknesses at velocity points [H ~> m or kg m-2]
+  real :: h_mask_vel(SZIB_(G))  ! The maximum permitted total thickness at velocity points [H ~> m or kg m-2]
+  logical :: Hybgen_mask_hvel   ! If true, apply partial-cell masking of the thicknesses at
+                                ! velocity points, like in Hycom.
   integer :: i, j, k, nk
 
   nk = GV%ke
+  Hybgen_mask_hvel = .true.
 
-  ! Calculate the interface positions from the layer thicknesses
-  ! --- p and dp have a valid 1-point halo
-  do j=G%jsc-1,G%jec+1 ; do i=G%isc-1,G%iec+1
-    p(i,j,1) = 0.0
-  enddo ; enddo
-  do k=1,nk ; do j=G%jsc-1,G%jec+1 ; do i=G%isc-1,G%iec+1
-    p(i,j,K+1) = p(i,j,K) + dp(i,j,k)
-  enddo ; enddo ; enddo
-
+  ! First simply interpolate tracer point thicknesses to velocity points, but with
+  ! special consideration of OBC points, as is done elsewhere in the MOM6 code.
   dpu(:,:,:) = 0.0
   do j=G%jsc,G%jec
-    do I=G%IscB,G%IecB
-      h_rsum(I) = 0.0
-      h_tot_vel(I) = min(p(i,j,nk+1), p(i+1,j,nk+1))
-    enddo
-    do k=1,nk
-      do I=G%IscB,G%IecB
-        if (G%mask2dCu(I,j) > 0.) then
-          if ((h_rsum(I) + 0.5*(dp(i,j,k) + dp(i+1,j,k)) <= h_tot_vel(I)) ) then ! .or. (.not.Hybgen_dp_vel)) then
-            dpu(I,j,k) = 0.5*(dp(i,j,k) + dp(i+1,j,k))
-          else
-            dpu(I,j,k) = max(h_tot_vel(I) - h_rsum(I), 0.0)
-          endif
-          h_rsum(I) = h_rsum(I) + dpu(I,j,k)
-          if (associated(OBC)) then ; if (OBC%segnum_u(I,j) /= 0) then
-            if (OBC%segment(OBC%segnum_u(I,j))%direction == OBC_DIRECTION_E) then
-              dpu(I,j,k) = dp(i,j,k)
-            else ! (OBC%segment(n)%direction == OBC_DIRECTION_W)
-              dpu(I,j,k) = dp(i+1,j,k)
-            endif
-          endif ; endif
-        endif !iu
-      enddo
-    enddo
-  enddo !j
+    do k=1,nk ; do I=G%IscB,G%IecB ; if (G%mask2dCu(I,j) > 0.) then
+      dpu(I,j,k) = 0.5*(dp(i,j,k) + dp(i+1,j,k))
+      if (associated(OBC)) then ; if (OBC%segnum_u(I,j) /= 0) then
+        if (OBC%segment(OBC%segnum_u(I,j))%direction == OBC_DIRECTION_E) then
+          dpu(I,j,k) = dp(i,j,k)
+        else ! (OBC%segment(n)%direction == OBC_DIRECTION_W)
+          dpu(I,j,k) = dp(i+1,j,k)
+        endif
+      endif ; endif
+    endif ; enddo ; enddo ! I- and k- loops.
+  enddo ! u-point j-loop
 
   dpv(:,:,:) = 0.0
   do J=G%JscB,G%JecB
-    do i=G%isc,G%iec
-      h_rsum(i) = 0.0
-      h_tot_vel(i) = min(p(i,j,nk+1), p(i,j+1,nk+1))
-    enddo
-    do k=1,nk
+    do k=1,nk ; do i=G%isc,G%iec ; if (G%mask2dCv(i,J) > 0.) then
+      dpv(i,J,k) = 0.5*(dp(i,j,k) + dp(i,j+1,k))
+      if (associated(OBC)) then ; if (OBC%segnum_v(i,J) /= 0) then
+        if (OBC%segment(OBC%segnum_v(i,J))%direction == OBC_DIRECTION_N) then
+          dpv(i,J,k) = dp(i,j,k)
+        else ! (OBC%segment(n)%direction == OBC_DIRECTION_S)
+          dpv(i,J,k) = dp(i,j+1,k)
+        endif
+      endif ; endif
+    endif ; enddo ; enddo ! i- and k- loops.
+  enddo ! v-point J-loop
+
+  if (Hybgen_mask_hvel) then
+    ! Apply partial-cell limits on the thicknesses near the bottom, as in Hycom.
+
+    do j=G%jsc,G%jec
+      do I=G%IscB,G%IecB
+        h_mask_vel(I) = min(h_tot(i,j), h_tot(i+1,j))
+        if (associated(OBC)) then ; if (OBC%segnum_u(I,j) /= 0) then
+          h_mask_vel(I) = max(h_tot(i,j), h_tot(i+1,j)) ! No masking is applied at OBC points.
+        endif ; endif
+        h_rsum(I) = 0.0
+      enddo
+      do k=1,nk ; do I=G%IscB,G%IecB ; if (G%mask2dCu(I,j) > 0.) then
+        if (h_rsum(I) + dpu(I,j,k) > h_mask_vel(I)) then
+          ! This thickness is reduced because it extends below the shallower neighboring bathymetry.
+          dpu(I,j,k) = max(h_mask_vel(I) - h_rsum(I), 0.0)
+          h_rsum(I) = h_rsum(I) + dpu(I,j,k) ! = h_mask_vel(I)
+        else
+          h_rsum(I) = h_rsum(I) + dpu(I,j,k)
+        endif
+      endif ; enddo ; enddo ! I- and k- loops.
+    enddo ! u-point j-loop
+
+    do J=G%JscB,G%JecB
       do i=G%isc,G%iec
-        if (G%mask2dCv(i,J) > 0.) then
-          if ((h_rsum(i) + 0.5*(dp(i,j,k) + dp(i,j+1,k)) <= h_tot_vel(i)) ) then ! .or. (.not.Hybgen_dp_vel)) then
-            dpv(i,J,k) = 0.5*(dp(i,j,k) + dp(i,j+1,k))
-          else
-            dpv(i,J,k) = max(h_tot_vel(i) - h_rsum(i), 0.0)
-          endif
+        h_mask_vel(i) = min(h_tot(i,j), h_tot(i,j+1))
+        if (associated(OBC)) then ; if (OBC%segnum_v(i,J) /= 0) then
+          h_mask_vel(i) = max(h_tot(i,j), h_tot(i,j+1)) ! No masking is applied at OBC points.
+        endif ; endif
+        h_rsum(i) = 0.0
+      enddo
+      do k=1,nk ; do i=G%isc,G%iec ; if (G%mask2dCv(i,J) > 0.) then
+        if (h_rsum(i) + dpv(i,J,k) > h_mask_vel(i)) then
+          ! This thickness is reduced because it extends below the shallower neighboring bathymetry.
+          dpv(i,J,k) = max(h_mask_vel(i) - h_rsum(i), 0.0)
+          h_rsum(i) = h_rsum(i) + dpv(i,J,k) ! = h_mask_vel(i)
+        else
           h_rsum(i) = h_rsum(i) + dpv(i,J,k)
-          if (associated(OBC)) then ; if (OBC%segnum_v(i,J) /= 0) then
-            if (OBC%segment(OBC%segnum_v(i,J))%direction == OBC_DIRECTION_N) then
-              dpv(i,J,k) = dp(i,j,k)
-            else ! (OBC%segment(n)%direction == OBC_DIRECTION_S)
-              dpv(i,J,k) = dp(i,j+1,k)
-            endif
-          endif ; endif
-        endif !iv
-      enddo !i
-    enddo
-  enddo !j
+        endif
+      endif ; enddo ; enddo ! i- and k- loops.
+    enddo ! v-point J-loop
+  endif
 
 end subroutine dpudpv
 
