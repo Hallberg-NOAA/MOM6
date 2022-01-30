@@ -21,8 +21,7 @@ use MOM_error_handler,    only : MOM_error, FATAL, WARNING
 use MOM_error_handler,    only : callTree_showQuery
 use MOM_error_handler,    only : callTree_enter, callTree_leave, callTree_waypoint
 use MOM_hybgen_unmix,     only : hybgen_unmix, init_hybgen_unmix, end_hybgen_unmix, hybgen_unmix_CS
-use MOM_hybgen_remap,     only : hybgen_remap, init_hybgen_remap, hybgen_remap_CS, mask_near_bottom_vel
-use MOM_hybgen_remap,     only : hybgen_remap_tracers, hybgen_remap_velocities
+use MOM_hybgen_remap,     only : init_hybgen_remap, hybgen_remap_CS, mask_near_bottom_vel
 use MOM_hybgen_remap,     only : hybgen_remap_column, get_hybgen_remap_params
 use MOM_hybgen_regrid,    only : hybgen_regrid_CS
 use MOM_file_parser,      only : get_param, param_file_type, log_param
@@ -826,23 +825,25 @@ subroutine remap_all_state_vars(CS_remapping, CS_ALE, G, GV, h_old, h_new, Reg, 
   ! Local variables
   real, dimension(SZI_(G),SZJ_(G)) :: h_tot  ! The vertically summed thicknesses [H ~> m or kg m-2]
   real :: h_mask_vel ! A depth below which the thicknesses at a velocity point are masked out [H ~> m or kg m-2]
-  integer                                     :: i, j, k, m
-  integer                                     :: nz, ntr
   real, dimension(GV%ke+1)                    :: dx
-  real, dimension(GV%ke)                      :: h1, u_column
-  real, dimension(GV%ke)                      :: tr_column  ! A column of updated tracer concentrations
-  real, dimension(SZI_(G), SZJ_(G), SZK_(GV)) :: work_conc
-  real, dimension(SZI_(G), SZJ_(G), SZK_(GV)) :: work_cont
-  real, dimension(SZI_(G), SZJ_(G))           :: work_2d
-  logical, dimension(GV%ke)                   :: PCM     ! If true, do PCM remapping from a cell.
-  real                                        :: Idt     ! The inverse of the timestep [T-1 ~> s-1]
-  real                                        :: ppt2mks
-  real, dimension(GV%ke)                      :: h2
-  real :: h_neglect, h_neglect_edge
-  real :: dpthin  !  A small thickness (nominally a micron) used by the Hybgen remapping schemes.
+  real :: tr_column(GV%ke)  ! A column of updated tracer concentrations
+  real, dimension(SZI_(G),SZJ_(G),SZK_(GV)) :: work_conc
+  real, dimension(SZI_(G),SZJ_(G),SZK_(GV)) :: work_cont
+  real, dimension(SZI_(G),SZJ_(G))          :: work_2d
+  logical :: PCM(GV%ke) ! If true, do PCM remapping from a cell.
+  real :: Idt           ! The inverse of the timestep [T-1 ~> s-1]
+  real :: u_src(GV%ke)  ! A column of u-velocities on the source grid [L T-1 ~> m s-1]
+  real :: u_tgt(GV%ke)  ! A column of u-velocities on the target grid [L T-1 ~> m s-1]
+  real :: v_src(GV%ke)  ! A column of v-velocities on the source grid [L T-1 ~> m s-1]
+  real :: v_tgt(GV%ke)  ! A column of v-velocities on the target grid [L T-1 ~> m s-1]
+  real :: h1(GV%ke)     ! A column of source grid layer thicknesses [H ~> m or kg m-2]
+  real :: h2(GV%ke)     ! A column of target grid layer thicknesses [H ~> m or kg m-2]
+  real :: h_neglect, h_neglect_edge ! Negligible thicknesses [H ~> m or kg m-2]
+  real :: dpthin ! A small thickness (nominally a micron) used by the Hybgen remapping schemes [H ~> m or kg m-2]
   integer :: hybgen_scheme, hybgen_vel_scheme  ! Flags indicating which scheme to use for remapping.
   logical                                     :: show_call_tree
   type(tracer_type), pointer                  :: Tr => NULL()
+  integer                                     :: i, j, k, m, nz, ntr
 
   show_call_tree = .false.
   if (present(debug)) show_call_tree = debug
@@ -865,7 +866,6 @@ subroutine remap_all_state_vars(CS_remapping, CS_ALE, G, GV, h_old, h_new, Reg, 
   if (show_call_tree) call callTree_enter("remap_all_state_vars(), MOM_ALE.F90")
 
   nz      = GV%ke
-  ppt2mks = 0.001
 
   ntr = 0 ; if (associated(Reg)) ntr = Reg%ntr
 
@@ -950,107 +950,117 @@ subroutine remap_all_state_vars(CS_remapping, CS_ALE, G, GV, h_old, h_new, Reg, 
 
   if (show_call_tree) call callTree_waypoint("tracers remapped (remap_all_state_vars)")
 
-  if (CS_ALE%partial_cell_vel_remap .and. (present(u) .or. present(v)) ) then
+!###  if (CS_ALE%partial_cell_vel_remap .and. (present(u) .or. present(v)) ) then
+  if (present(u) .or. present(v)) then
     h_tot(:,:) = 0.0
     do k=1,GV%ke ; do j=G%jsc-1,G%jec+1 ; do i=G%isc-1,G%iec+1
       h_tot(i,j) = h_tot(i,j) + h_old(i,j,k)
     enddo ; enddo ; enddo
   endif
 
-
-  if (CS_ALE%use_hybgen_remap) then
-    ! Use the hybgen alternate version of the velocity remapping code.
-    if (present(u) .and. present(v)) &
-      call hybgen_remap_velocities(G, GV, CS_ALE%hybgen_remapCS, h_old, h_new, OBC, u, v)
-  endif
-
   ! Remap u velocity component
-  if ( present(u) .and. .not.CS_ALE%use_hybgen_remap ) then
-    !$OMP parallel do default(shared) private(h1,h2,dx,u_column)
-    do j = G%jsc,G%jec ; do I = G%iscB,G%iecB ; if (G%mask2dCu(I,j)>0.) then
+  if ( present(u) ) then
+    ! Use the hybgen alternate version of the velocity remapping code.
+
+!    !$OMP parallel do default(shared)
+    do j=G%jsc,G%jec ; do I=G%IscB,G%IecB ; if (G%mask2dCu(I,j)>0.) then
       ! Build the start and final grids
-      h1(:) = 0.5 * ( h_old(i,j,:) + h_old(i+1,j,:) )
+      do k=1,nz
+        u_src(k) = u(I,j,k)
+        h1(k) = 0.5*(h_old(i,j,k) + h_old(i+1,j,k))
+        h2(k) = 0.5*(h_new(i,j,k) + h_new(i+1,j,k))
+      enddo
       if (CS_ALE%remap_uv_using_old_alg) then
         dx(:) = 0.5 * ( dxInterface(i,j,:) + dxInterface(i+1,j,:) )
         do k = 1, nz
           h2(k) = max( 0., h1(k) + ( dx(k+1) - dx(k) ) )
         enddo
-      else
-        h2(:) = 0.5 * ( h_new(i,j,:) + h_new(i+1,j,:) )
       endif
+
       if (CS_ALE%partial_cell_vel_remap) then
         h_mask_vel = min(h_tot(i,j), h_tot(i+1,j))
         call apply_partial_cell_mask(h1, h_mask_vel)
         call apply_partial_cell_mask(h2, h_mask_vel)
       endif
-      if (associated(OBC)) then
-        if (OBC%segnum_u(I,j) /= 0) then
-          if (OBC%segment(OBC%segnum_u(I,j))%direction == OBC_DIRECTION_E) then
-            h1(:) = h_old(i,j,:)
-            h2(:) = h_new(i,j,:)
-          else ! (OBC%segment(n)%direction == OBC_DIRECTION_W)
-            h1(:) = h_old(i+1,j,:)
-            h2(:) = h_new(i+1,j,:)
-          endif
+
+      if (associated(OBC)) then ; if (OBC%segnum_u(I,j) /= 0) then
+        if (OBC%segment(OBC%segnum_u(I,j))%direction == OBC_DIRECTION_E) then
+          do k=1,nz ; h1(k) = h_old(i,j,k) ; h2(k) = h_new(i,j,k) ; enddo
+        else ! (OBC%segment(n)%direction == OBC_DIRECTION_W)
+          do k=1,nz ; h1(k) = h_old(i+1,j,k) ; h2(k) = h_new(i+1,j,k) ; enddo
         endif
+      endif ; endif
+
+      ! --- Remap u profiles from the source vertical grid onto the new target grid.
+      if ( CS_ALE%use_hybgen_remap ) then
+        call hybgen_remap_column(hybgen_vel_scheme, 1, nz, h1, u_src, nz, h2, u_tgt, dpthin)
+      else
+        call remapping_core_h(CS_remapping, nz, h1, u(I,j,:), nz, h2, &
+                              u_tgt, h_neglect, h_neglect_edge)
       endif
-      call remapping_core_h(CS_remapping, nz, h1, u(I,j,:), nz, h2, &
-                            u_column, h_neglect, h_neglect_edge)
 
       if ((CS_ALE%BBL_h_vel_mask > 0.0) .and. (CS_ALE%h_vel_mask > 0.0)) then
         ! The use of the source and target thicknesses here comes from the Hycom implementation,
         ! but I do not understand it.  I think both should be the target thicknesses.  -RWH
-        call mask_near_bottom_vel(u_column, h1, h2, CS_ALE%BBL_h_vel_mask, CS_ALE%h_vel_mask, nz)
+        call mask_near_bottom_vel(u_tgt, h2, h1, CS_ALE%BBL_h_vel_mask, CS_ALE%h_vel_mask, nz)
       endif
 
-      u(I,j,:) = u_column(:)
-
+      do k=1,nz
+        u(I,j,k) = u_tgt(k)
+      enddo !k
     endif ; enddo ; enddo
   endif
 
   if (show_call_tree) call callTree_waypoint("u remapped (remap_all_state_vars)")
 
   ! Remap v velocity component
-  if ( present(v) .and. .not.CS_ALE%use_hybgen_remap ) then
-    !$OMP parallel do default(shared) private(h1,h2,dx,u_column)
-    do J = G%jscB,G%jecB ; do i = G%isc,G%iec ; if (G%mask2dCv(i,j)>0.) then
+  if ( present(v) ) then
+
+!    !$OMP parallel do default(shared)
+    do J=G%JscB,G%JecB ; do i=G%isc,G%iec ; if (G%mask2dCv(i,J)>0.) then
       ! Build the start and final grids
-      h1(:) = 0.5 * ( h_old(i,j,:) + h_old(i,j+1,:) )
+      do k=1,nz
+        v_src(k) = v(i,J,k)
+        h1(k) = 0.5*(h_old(i,j,k) + h_old(i,j+1,k))
+        h2(k) = 0.5*(h_new(i,j,k) + h_new(i,j+1,k))
+      enddo
       if (CS_ALE%remap_uv_using_old_alg) then
         dx(:) = 0.5 * ( dxInterface(i,j,:) + dxInterface(i,j+1,:) )
         do k = 1, nz
           h2(k) = max( 0., h1(k) + ( dx(k+1) - dx(k) ) )
         enddo
-      else
-        h2(:) = 0.5 * ( h_new(i,j,:) + h_new(i,j+1,:) )
       endif
       if (CS_ALE%partial_cell_vel_remap) then
+        ! Use the hybgen alternate version of the velocity remapping code.
         h_mask_vel = min(h_tot(i,j), h_tot(i,j+1))
         call apply_partial_cell_mask(h1, h_mask_vel)
         call apply_partial_cell_mask(h2, h_mask_vel)
       endif
-      if (associated(OBC)) then
-        if (OBC%segnum_v(i,J) .ne. 0) then
-          if (OBC%segment(OBC%segnum_v(i,J))%direction == OBC_DIRECTION_N) then
-            h1(:) = h_old(i,j,:)
-            h2(:) = h_new(i,j,:)
-          else ! (OBC%segment(n)%direction == OBC_DIRECTION_S)
-            h1(:) = h_old(i,j+1,:)
-            h2(:) = h_new(i,j+1,:)
-          endif
+      if (associated(OBC)) then ; if (OBC%segnum_v(i,J) /= 0) then
+        if (OBC%segment(OBC%segnum_v(i,J))%direction == OBC_DIRECTION_N) then
+          do k=1,nz ; h1(k) = h_old(i,j,k) ; h2(k) = h_new(i,j,k) ; enddo
+        else ! (OBC%segment(n)%direction == OBC_DIRECTION_S)
+          do k=1,nz ; h1(k) = h_old(i,j+1,k) ; h2(k) = h_new(i,j+1,k) ; enddo
         endif
+      endif ; endif
+
+      ! --- Remap v profiles from the source vertical grid onto the new target grid.
+      if ( CS_ALE%use_hybgen_remap ) then
+        call hybgen_remap_column(hybgen_vel_scheme, 1, nz, h1, v_src, nz, h2, v_tgt, dpthin)
+      else
+        call remapping_core_h(CS_remapping, nz, h1, v(i,J,:), nz, h2, &
+                              v_tgt, h_neglect, h_neglect_edge)
       endif
-      call remapping_core_h(CS_remapping, nz, h1, v(i,J,:), nz, h2, &
-                            u_column, h_neglect, h_neglect_edge)
 
       if ((CS_ALE%BBL_h_vel_mask > 0.0) .and. (CS_ALE%h_vel_mask > 0.0)) then
         ! The use of the source and target thicknesses here comes from the Hycom implementation,
         ! but I do not understand it.  I think both should be the target thicknesses. -RWH
-        call mask_near_bottom_vel(u_column, h1, h2, CS_ALE%BBL_h_vel_mask, CS_ALE%h_vel_mask, nz)
+        call mask_near_bottom_vel(v_tgt, h2, h1, CS_ALE%BBL_h_vel_mask, CS_ALE%h_vel_mask, nz)
       endif
 
-      v(i,J,:) = u_column(:)
-
+      do k=1,nz
+        v(i,J,k) = v_tgt(k)
+      enddo !k
     endif ; enddo ; enddo
   endif
 
