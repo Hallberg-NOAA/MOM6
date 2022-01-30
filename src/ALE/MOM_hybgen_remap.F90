@@ -46,7 +46,7 @@ integer, parameter  :: REMAPPING_PPM_H4     = 2 !< O(h^3) remapping scheme
 integer, parameter  :: REMAPPING_WENO       = 15 !< O(h^5) remapping scheme
 
 public hybgen_remap, init_hybgen_remap, mask_near_bottom_vel, hybgen_remap_column
-public hybgen_remap_tracers, hybgen_remap_velocities
+public hybgen_remap_tracers, hybgen_remap_velocities, get_hybgen_remap_params
 
 contains
 
@@ -95,6 +95,18 @@ integer function hybgen_remap_scheme_from_name(string, param_name)
                             trim(param_name)//" ("//trim(string)//").")
   end select
 end function hybgen_remap_scheme_from_name
+
+!> This subroutine can be used to retrieve the parameters for the hybgen_remap module
+subroutine get_hybgen_remap_params(CS, hybmap, hybmap_vel)
+  type(hybgen_remap_CS), intent(in)  :: CS     !< hybgen remapping control structure
+  integer,     optional, intent(out) :: hybmap !< A flag indicating the scheme to use for
+                                               !! hybgen remapping of tracers
+  integer,     optional, intent(out) :: hybmap_vel  !< A flag indicating the scheme to use
+                                               !! for hybgen remapping of velocities
+  if (present(hybmap))     hybmap     = CS%hybmap
+  if (present(hybmap_vel)) hybmap_vel = CS%hybmap_vel
+end subroutine get_hybgen_remap_params
+
 
 !> Hybgen_remap remaps the state variables, velocities and any tracers to a new
 !! vertical grid using the algorithms imported from the HYCOM ocean model.
@@ -197,7 +209,8 @@ subroutine hybgen_remap_tracers(G, GV, CS, Reg, ntracer, dp_orig, dp_new, PCM_ce
   ! Local variables
   real :: h_src(GV%ke)      ! A column of source grid layer thicknesses [H ~> m or kg m-2]
   real :: h_tgt(GV%ke)      ! A column of target grid layer thicknesses [H ~> m or kg m-2]
-  real :: tracer_i_j(GV%ke,max(ntracer,1))  !  Columns of each tracer [Conc]
+  real :: tr_src(GV%ke,max(ntracer,1))  !  Columns of each tracer on the source grid [Conc]
+  real :: tr_tgt(GV%ke,max(ntracer,1))  !  Columns of each tracer on the target grid [Conc]
   logical :: PCM_lay(GV%ke) ! If true for a layer, use PCM remapping for that layer
   real :: dpthin            ! A negligible layer thickness, used to avoid roundoff issues
                             ! or division by 0 [H ~> m or kg m-2]
@@ -218,59 +231,55 @@ subroutine hybgen_remap_tracers(G, GV, CS, Reg, ntracer, dp_orig, dp_new, PCM_ce
     enddo ; endif
     ! Note that temperature and salinity are among the tracers remapped here.
     do m=1,ntracer ; do k=1,nk
-      tracer_i_j(k,m) = Reg%Tr(m)%t(i,j,k)
+      tr_src(k,m) = Reg%Tr(m)%t(i,j,k)
     enddo ; enddo
 
     ! --- remap scalar field profiles from the source vertical grid
     ! --- grid onto the new target vertical grid.
-    call hybgen_remap_column(CS%hybmap, nk, h_src, h_tgt, ntracer, tracer_i_j, dpthin, PCM_lay)
+    call hybgen_remap_column(CS%hybmap, ntracer, nk, h_src, tr_src, nk, h_tgt, tr_tgt, dpthin, PCM_lay)
 
     ! Note that temperature and salinity are among the tracers remapped here.
     do m=1,ntracer ; do k=1,nk
-      Reg%Tr(m)%t(i,j,k) = tracer_i_j(k,m)
+      Reg%Tr(m)%t(i,j,k) = tr_tgt(k,m)
     enddo ; enddo
   endif ; enddo ; enddo !i & j
 
 end subroutine hybgen_remap_tracers
 
 !> Vertically remap a column of scalars (such as tracers or velocity components) to the new grid
-subroutine hybgen_remap_column(remap_scheme, nk, h_src, h_tgt, nfld, fld_col, dpthin, PCM_lay)
+subroutine hybgen_remap_column(remap_scheme, nfld, nks, h_src, fld_src, nkt, h_tgt, fld_tgt, dpthin, PCM_cell)
   integer,           intent(in)    :: remap_scheme !< A coded integer indicating the remapping scheme to use
-  integer,           intent(in)    :: nk           !< Number of layers in this column
-  real,              intent(in)    :: h_src(nk)    !< Source grid layer thicknesses [H ~> m or kg m-2]
-  real,              intent(in)    :: h_tgt(nk)    !< Target grid layer thicknesses [H ~> m or kg m-2]
   integer,           intent(in)    :: nfld         !< The number of fields to remap
-  real,              intent(inout) :: fld_col(nk,nfld) !< Columns of the fields in arbitrary units [A]
-                                                   !! that are input on the source grid and returned
-                                                   !! on the target grid.
+  integer,           intent(in)    :: nks          !< Number of layers in the source column
+  real,              intent(in)    :: h_src(nks)   !< Source grid layer thicknesses [H ~> m or kg m-2]
+  real,              intent(in)    :: fld_src(nks,nfld) !< Columns of the fields on the source grid
+                                                   !! in arbitrary units [A]
+  integer,           intent(in)    :: nkt          !< Number of layers in the target column
+  real,              intent(in)    :: h_tgt(nkt)    !< Target grid layer thicknesses [H ~> m or kg m-2]
+  real,              intent(out)   :: fld_tgt(nkt,nfld) !< Columns of the fields on the target grid
+                                                   !! in the same arbitrary units as fld_src [A]
   real,              intent(in)    :: dpthin       !< A negligibly small thickness for the purpose of cell
                                                    !! reconstructions [H ~> m or kg m-2].
-  logical, optional, intent(in)    :: PCM_lay(nk)  !< If true for a layer, use PCM remapping for that layer
+  logical, optional, intent(in)    :: PCM_cell(nks) !< If true for a layer, use PCM remapping for that layer
 
 ! --- -------------------------------------------------------------
 ! --- hybrid grid generator, single column(part A) - remap scalars.
 ! --- -------------------------------------------------------------
-  real :: fld_src(nk,nfld) ! Original fields on the source grid [A]
-  real :: c1d(nk,nfld,3)   ! Interpolation coefficients
-  integer :: k, kfld
-
-  do kfld=1,nfld ; do k=1,nk
-    fld_src(k,kfld) = fld_col(k,kfld)
-  enddo ; enddo
+  real :: c1d(nks,nfld,3)   ! Interpolation coefficients
 
   ! --- remap scalar field profiles from the source vertical grid
   ! --- grid onto the new target vertical grid.
   if     (remap_scheme == REMAPPING_PCM) then !PCM
-    call hybgen_pcm_remap(fld_src, h_src, fld_col, h_tgt, nk, nk, nfld, dpthin)
+    call hybgen_pcm_remap(fld_src, h_src, fld_tgt, h_tgt, nks, nkt, nfld, dpthin)
   elseif (remap_scheme == REMAPPING_PLM) then !PLM (as in 2.1.08)
-    call hybgen_plm_coefs(fld_src, h_src, c1d, nk, nfld, dpthin, PCM_lay)
-    call hybgen_plm_remap(fld_src, h_src, c1d, fld_col, h_tgt, nk, nk, nfld, dpthin)
+    call hybgen_plm_coefs(fld_src, h_src, c1d, nks, nfld, dpthin, PCM_cell)
+    call hybgen_plm_remap(fld_src, h_src, c1d, fld_tgt, h_tgt, nks, nkt, nfld, dpthin)
   elseif (remap_scheme == REMAPPING_PPM_H4) then !PPM
-    call hybgen_ppm_coefs(fld_src, h_src, c1d, nk, nfld, dpthin, PCM_lay)
-    call hybgen_ppm_remap(fld_src, h_src, c1d, fld_col, h_tgt, nk, nk, nfld, dpthin)
+    call hybgen_ppm_coefs(fld_src, h_src, c1d, nks, nfld, dpthin, PCM_cell)
+    call hybgen_ppm_remap(fld_src, h_src, c1d, fld_tgt, h_tgt, nks, nkt, nfld, dpthin)
   elseif (remap_scheme == REMAPPING_WENO) then !WENO-like
-    call hybgen_weno_coefs(fld_src, h_src, c1d, nk, nfld, dpthin, PCM_lay)
-    call hybgen_weno_remap(fld_src, h_src, c1d, fld_col, h_tgt, nk, nk, nfld, dpthin)
+    call hybgen_weno_coefs(fld_src, h_src, c1d, nks, nfld, dpthin, PCM_cell)
+    call hybgen_weno_remap(fld_src, h_src, c1d, fld_tgt, h_tgt, nks, nkt, nfld, dpthin)
   endif
 
 end subroutine hybgen_remap_column
@@ -292,8 +301,8 @@ subroutine hybgenbj_u(CS, G, GV, dpu, dpu_orig, u, j)
 ! --- hybrid grid generator, single j-row at u points (part B).
 ! --- --------------------------------------------
 !
-  real :: u_col(GV%ke)    ! A column of velocities [L T-1 ~> m s-1], originally on the
-                          ! source but later on the target grid
+  real :: u_src(GV%ke)    ! A column of velocities on the source grid [L T-1 ~> m s-1]
+  real :: u_tgt(GV%ke)    ! A column of velocities on the target grid [L T-1 ~> m s-1]
   real :: h_src(GV%ke)    ! A column of source grid layer thicknesses [H ~> m or kg m-2]
   real :: h_tgt(GV%ke)    ! A column of target grid layer thicknesses [H ~> m or kg m-2]
   real :: dpthin ! A negligible layer thickness, used to avoid roundoff issues
@@ -313,20 +322,20 @@ subroutine hybgenbj_u(CS, G, GV, dpu, dpu_orig, u, j)
 !
 ! ---     store one-dimensional arrays of -u- and -p- for the 'old' vertical grid
     do k=1,nk
-      u_col(k) = u(I,j,k)
+      u_src(k) = u(I,j,k)
       h_src(k) = dpu_orig(I,j,k)
       h_tgt(k) = dpu(I,j,k)
     enddo !k
 
     ! --- Remap u profiles from the source vertical grid onto the new target grid.
-    call hybgen_remap_column(CS%hybmap_vel, nk, h_src, h_tgt, 1, u_col, dpthin)
+    call hybgen_remap_column(CS%hybmap_vel, 1, nk, h_src, u_src, nk, h_tgt, u_tgt, dpthin)
 
     ! The use of the source and target thicknesses here comes from the Hycom
     ! implementation, but I do not understand it.  -RWH
-    call mask_near_bottom_vel(u_col, h_tgt, h_src, onemm, dpthin, nk)
+    call mask_near_bottom_vel(u_tgt, h_tgt, h_src, onemm, dpthin, nk)
 
     do k=1,nk
-      u(I,j,k) = u_col(k)
+      u(I,j,k) = u_tgt(k)
     enddo !k
 
   endif ; enddo !iu
@@ -350,8 +359,8 @@ subroutine hybgenbj_v(CS, G, GV, dpv, dpv_orig, v, j)
 ! --- hybrid grid generator, single j-row at v points (part B).
 ! --- --------------------------------------------
 !
-  real :: v_col(GV%ke)    ! A column of velocities [L T-1 ~> m s-1], originally on the
-                          ! source but later on the target grid
+  real :: v_src(GV%ke)    ! A column of velocities on the source grid [L T-1 ~> m s-1]
+  real :: v_tgt(GV%ke)    ! A column of velocities on the target grid [L T-1 ~> m s-1]
   real :: h_src(GV%ke)    ! A column of source grid layer thicknesses [H ~> m or kg m-2]
   real :: h_tgt(GV%ke)    ! A column of target grid layer thicknesses [H ~> m or kg m-2]
   real :: dpthin ! A negligible layer thickness, used to avoid roundoff issues
@@ -372,20 +381,20 @@ subroutine hybgenbj_v(CS, G, GV, dpv, dpv_orig, v, j)
 
 ! ---     store one-dimensional arrays of -v- and -p- for the 'old' vertical grid
     do k=1,nk
-      v_col(k) = v(i,J,k)
+      v_src(k) = v(i,J,k)
       h_src(k) = dpv_orig(i,J,k)
       h_tgt(k) = dpv(i,J,k)
     enddo !k
 
     ! --- Remap v profiles from the source vertical grid onto the new target grid.
-    call hybgen_remap_column(CS%hybmap_vel, nk, h_src, h_tgt, 1, v_col, dpthin)
+    call hybgen_remap_column(CS%hybmap_vel, 1, nk, h_src, v_src, nk, h_tgt, v_tgt, dpthin)
 
     ! The use of the source and target thicknesses here comes from the Hycom
     ! implementation, but I do not understand it.  -RWH
-    call mask_near_bottom_vel(v_col, h_tgt, h_src, onemm, dpthin, nk)
+    call mask_near_bottom_vel(v_tgt, h_tgt, h_src, onemm, dpthin, nk)
 
     do k=1,nk
-      v(i,J,k) = v_col(k)
+      v(i,J,k) = v_tgt(k)
     enddo !k
 
   endif ; enddo !iv
