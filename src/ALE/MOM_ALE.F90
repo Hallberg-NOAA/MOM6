@@ -23,6 +23,7 @@ use MOM_error_handler,    only : callTree_enter, callTree_leave, callTree_waypoi
 use MOM_hybgen_unmix,     only : hybgen_unmix, init_hybgen_unmix, end_hybgen_unmix, hybgen_unmix_CS
 use MOM_hybgen_remap,     only : hybgen_remap, init_hybgen_remap, hybgen_remap_CS, mask_near_bottom_vel
 use MOM_hybgen_remap,     only : hybgen_remap_tracers, hybgen_remap_velocities
+use MOM_hybgen_remap,     only : hybgen_remap_column, get_hybgen_remap_params
 use MOM_hybgen_regrid,    only : hybgen_regrid_CS
 use MOM_file_parser,      only : get_param, param_file_type, log_param
 use MOM_io,               only : vardesc, var_desc, fieldtype, SINGLE_FILE
@@ -204,9 +205,9 @@ subroutine ALE_init( param_file, GV, US, max_depth, CS)
 
   call get_param(param_file, mdl, "USE_HYBGEN_REMAP", CS%use_hybgen_remap, &
               "If true, use hybgen code for remapping.", default=.false.)
-if (CS%use_hybgen_remap) then
-  call init_hybgen_remap(CS%hybgen_remapCS, GV, US, param_file)
-else
+  if (CS%use_hybgen_remap) &
+    call init_hybgen_remap(CS%hybgen_remapCS, GV, US, param_file)
+
   ! Initialize and configure remapping
   call get_param(param_file, mdl, "REMAPPING_SCHEME", string, &
                  "This sets the reconstruction scheme used "//&
@@ -241,11 +242,11 @@ else
                              check_remapping=check_remapping, &
                              force_bounds_in_subcell=force_bounds_in_subcell, &
                              answers_2018=CS%answers_2018)
-endif
+
   call get_param(param_file, mdl, "PARTIAL_CELL_VELOCITY_REMAP", CS%partial_cell_vel_remap, &
                  "If true, use partial cell thicknesses at velocity points that are masked out "//&
                  "where they extend below the shallower of the neighboring bathymetry for "//&
-                 "remapping velocity.", default=.false.)
+                 "remapping velocity.", default=CS%use_hybgen_remap)
 
   call get_param(param_file, mdl, "REMAP_AFTER_INITIALIZATION", CS%remap_after_initialization, &
                  "If true, applies regridding and remapping immediately after "//&
@@ -829,6 +830,7 @@ subroutine remap_all_state_vars(CS_remapping, CS_ALE, G, GV, h_old, h_new, Reg, 
   integer                                     :: nz, ntr
   real, dimension(GV%ke+1)                    :: dx
   real, dimension(GV%ke)                      :: h1, u_column
+  real, dimension(GV%ke)                      :: tr_column  ! A column of updated tracer concentrations
   real, dimension(SZI_(G), SZJ_(G), SZK_(GV)) :: work_conc
   real, dimension(SZI_(G), SZJ_(G), SZK_(GV)) :: work_cont
   real, dimension(SZI_(G), SZJ_(G))           :: work_2d
@@ -837,6 +839,8 @@ subroutine remap_all_state_vars(CS_remapping, CS_ALE, G, GV, h_old, h_new, Reg, 
   real                                        :: ppt2mks
   real, dimension(GV%ke)                      :: h2
   real :: h_neglect, h_neglect_edge
+  real :: dpthin  !  A small thickness (nominally a micron) used by the Hybgen remapping schemes.
+  integer :: hybgen_scheme, hybgen_vel_scheme  ! Flags indicating which scheme to use for remapping.
   logical                                     :: show_call_tree
   type(tracer_type), pointer                  :: Tr => NULL()
 
@@ -871,13 +875,15 @@ subroutine remap_all_state_vars(CS_remapping, CS_ALE, G, GV, h_old, h_new, Reg, 
     work_cont(:,:,:) = 0.0
   endif
 
+  if (CS_ALE%use_hybgen_remap) then
+    call get_hybgen_remap_params(CS_ALE%hybgen_remapCS, hybmap=hybgen_scheme, hybmap_vel=hybgen_vel_scheme)
+    dpthin = 1.0e-6*GV%m_to_H
+  endif
+
   ! Remap all registered tracers, including temperature and salinity.
-  if (ntr>0) then ; if (CS_ALE%use_hybgen_remap) then
-    ! Use the hybgen alternate version of the tracer remapping code.
-    call hybgen_remap_tracers(G, GV, CS_ALE%hybgen_remapCS, Reg, ntr, h_old, h_new, PCM_cell)
-  else
+  if (ntr>0) then
     if (show_call_tree) call callTree_waypoint("remapping tracers (remap_all_state_vars)")
-    !$OMP parallel do default(shared) private(h1,h2,u_column,Tr)
+    !$OMP parallel do default(shared) private(h1,h2,tr_column,Tr)
     do m=1,ntr ! For each tracer
       Tr => Reg%Tr(m)
       do j = G%jsc,G%jec ; do i = G%isc,G%iec ; if (G%mask2dT(i,j)>0.) then
@@ -886,28 +892,38 @@ subroutine remap_all_state_vars(CS_remapping, CS_ALE, G, GV, h_old, h_new, Reg, 
         h2(:) = h_new(i,j,:)
         if (present(PCM_cell)) then
           PCM(:) = PCM_cell(i,j,:)
-          call remapping_core_h(CS_remapping, nz, h1, Tr%t(i,j,:), nz, h2, &
-                                u_column, h_neglect, h_neglect_edge, PCM_cell=PCM)
+          if (CS_ALE%use_hybgen_remap) then
+            ! Use the hybgen alternate version of the tracer remapping code.
+            call hybgen_remap_column(hybgen_scheme, 1, nz, h1, Tr%t(i,j,:), nz, h2, &
+                                     tr_column, dpthin, PCM_cell=PCM)
+          else
+            call remapping_core_h(CS_remapping, nz, h1, Tr%t(i,j,:), nz, h2, &
+                                  tr_column, h_neglect, h_neglect_edge, PCM_cell=PCM)
+          endif
+        elseif (CS_ALE%use_hybgen_remap) then
+          ! Use the hybgen alternate version of the tracer remapping code.
+          call hybgen_remap_column(hybgen_scheme, 1, nz, h1, Tr%t(i,j,:), nz, h2, &
+                                   tr_column, dpthin)
         else
           call remapping_core_h(CS_remapping, nz, h1, Tr%t(i,j,:), nz, h2, &
-                                u_column, h_neglect, h_neglect_edge)
+                                tr_column, h_neglect, h_neglect_edge)
         endif
 
         ! Intermediate steps for tendency of tracer concentration and tracer content.
         if (present(dt)) then
           if (Tr%id_remap_conc > 0) then
             do k=1,GV%ke
-              work_conc(i,j,k) = (u_column(k) - Tr%t(i,j,k)) * Idt
+              work_conc(i,j,k) = (tr_column(k) - Tr%t(i,j,k)) * Idt
             enddo
           endif
           if (Tr%id_remap_cont > 0 .or. Tr%id_remap_cont_2d > 0) then
             do k=1,GV%ke
-              work_cont(i,j,k) = (u_column(k)*h2(k) - Tr%t(i,j,k)*h1(k)) * Idt
+              work_cont(i,j,k) = (tr_column(k)*h2(k) - Tr%t(i,j,k)*h1(k)) * Idt
             enddo
           endif
         endif
         ! update tracer concentration
-        Tr%t(i,j,:) = u_column(:)
+        Tr%t(i,j,:) = tr_column(:)
       endif ; enddo ; enddo
 
       ! tendency diagnostics.
@@ -930,7 +946,7 @@ subroutine remap_all_state_vars(CS_remapping, CS_ALE, G, GV, h_old, h_new, Reg, 
       endif
     enddo ! m=1,ntr
 
-  endif ; endif  ! endif for ntr > 0
+  endif  ! endif for ntr > 0
 
   if (show_call_tree) call callTree_waypoint("tracers remapped (remap_all_state_vars)")
 
