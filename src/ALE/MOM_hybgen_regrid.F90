@@ -37,9 +37,6 @@ type, public :: hybgen_regrid_CS ; private
   real :: dp00i    !< Deep isopycnal spacing minimum thickness [H ~> m or kg m-2]
   real :: qhybrlx  !< Fractional relaxation within a regridding step [nondim]
 
-  !> Reference density for anomalies [R ~> kg m-3]
-  real :: thbase
-
   real, allocatable, dimension(:) ::  &
     dp0k, & !< minimum deep    z-layer separation [H ~> m or kg m-2]
     ds0k    !< minimum shallow z-layer separation [H ~> m or kg m-2]
@@ -142,9 +139,6 @@ subroutine init_hybgen_regrid(CS, GV, US, param_file)
 
   do k=1,CS%nk ;  CS%target_density(k) = GV%Rlay(k) ; enddo
 
-  ! reference density for anomalies [R ~> kg m-3]
-  CS%thbase = 1000.0*US%kg_m3_to_R
-
   ! Determine the depth range over which to use a sigma (terrain-following) coordinate.
   ! --- terrain following starts at depth dpns and ends at depth dsns
   if (CS%nsigma == 0) then
@@ -175,7 +169,7 @@ end subroutine end_hybgen_regrid
 
 !> This subroutine can be used to retrieve the parameters for the hybgen regrid module
 subroutine get_hybgen_regrid_params(CS, nk, ref_pressure, hybiso, nhybrid, nsigma, dp00i, qhybrlx, &
-                                    thbase, dp0k, ds0k, dpns, dsns, min_dilate, max_dilate, &
+                                    dp0k, ds0k, dpns, dsns, min_dilate, max_dilate, &
                                     thkbot, topiso_const, target_density)
   type(hybgen_regrid_CS),  pointer    :: CS !< Coordinate regridding control structure
   integer, optional, intent(out) :: nk  !< Number of layers on the target grid
@@ -185,7 +179,6 @@ subroutine get_hybgen_regrid_params(CS, nk, ref_pressure, hybiso, nhybrid, nsigm
   integer, optional, intent(out) :: nsigma  !< Number of sigma levels used by HYBGEN (nhybrid-nsigma z-levels)
   real,    optional, intent(out) :: dp00i   !< Deep isopycnal spacing minimum thickness (m)
   real,    optional, intent(out) :: qhybrlx !< Fractional relaxation amount per timestep, 0 < qyhbrlx <= 1 [nondim]
-  real,    optional, intent(out) :: thbase  !< Reference density for anomalies [R ~> kg m-3]
   real,    optional, intent(out) :: dp0k(:) !< minimum deep    z-layer separation [H ~> m or kg m-2]
   real,    optional, intent(out) :: ds0k(:) !< minimum shallow z-layer separation [H ~> m or kg m-2]
   real,    optional, intent(out) :: dpns    !< depth to start terrain following [H ~> m or kg m-2]
@@ -211,7 +204,6 @@ subroutine get_hybgen_regrid_params(CS, nk, ref_pressure, hybiso, nhybrid, nsigm
   if (present(nsigma))  nsigma = CS%nsigma
   if (present(dp00i))   dp00i = CS%dp00i
   if (present(qhybrlx)) qhybrlx = CS%qhybrlx
-  if (present(thbase))  thbase = CS%thbase
   if (present(dp0k)) then
     if (size(dp0k) < CS%nk) call MOM_error(FATAL, "get_hybgen_regrid_params: "//&
                                     "The dp0k argument is not allocated with enough space.")
@@ -426,7 +418,7 @@ subroutine hybgen_regrid(G, GV, US, dp, tv, CS, dzInterface, PCM_cell)
     enddo !k
 
     ! Determine the new layer thicknesses.
-    call hybgen_column_regrid(CS, kdm, CS%nhybrid, CS%thbase, CS%thkbot, CS%onem, &
+    call hybgen_column_regrid(CS, kdm, CS%nhybrid, CS%thkbot, CS%onem, &
                               1.0e-11*US%kg_m3_to_R, theta_i_j, fixlay, qhrlx, dp0ij, &
                               dp0cum, th3d_i_j, dp_i_j, dz_int)
 
@@ -604,13 +596,12 @@ real function cushn(delp, dp0)
 end function cushn
 
 !> Create a new grid for a column of water using the Hybgen algorithm.
-subroutine hybgen_column_regrid(CS, kdm, nhybrd, thbase, thkbot, onem, epsil, theta_i_j, &
+subroutine hybgen_column_regrid(CS, kdm, nhybrd, thkbot, onem, epsil, theta_i_j, &
                                 fixlay, qhrlx, dp0ij, dp0cum, th3d_i_j, h_in, dp_int)
 !
   type(hybgen_regrid_CS), intent(in)    :: CS  !< hybgen regridding control structure
   integer, intent(in)    :: kdm            !< number of layers
   integer, intent(in)    :: nhybrd         !< number of hybrid layers (typically kdm)
-  real,    intent(in)    :: thbase         !< reference density [R ~> kg m-3]
   real,    intent(in)    :: thkbot         !< thickness of bottom boundary layer [H ~> m or kg m-2]
   real,    intent(in)    :: onem           !< one m in pressure units [H ~> m or kg m-2]
   real,    intent(in)    :: epsil          !< small nonzero density to prevent division by zero [R ~> kg m-3]

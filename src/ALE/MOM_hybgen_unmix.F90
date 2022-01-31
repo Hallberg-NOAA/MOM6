@@ -43,7 +43,6 @@ type, public :: hybgen_unmix_CS ; private
   ! real, dimension(:,:), allocatable :: topiso
 
   real :: ref_pressure !< Reference pressure for density calculations [R L2 T-2 ~> Pa]
-  real :: thbase  !< Reference density for anomalies [R ~> kg m-3]
   real, allocatable, dimension(:) :: target_density !< Nominal density of interfaces [R ~> kg m-3]
 
 end type hybgen_unmix_CS
@@ -78,9 +77,6 @@ subroutine init_hybgen_unmix(CS, GV, US, param_file, hybgen_regridCS)
                 dp00i=CS%dp00i, topiso_const=CS%topiso_const, qhybrlx=CS%qhybrlx, &
                 hybiso=CS%hybiso, min_dilate=CS%min_dilate, max_dilate=CS%max_dilate, &
                 target_density=CS%target_density)
-
-  ! reference density for anomalies [R ~> kg m-3]
-  CS%thbase = 1000.0*US%kg_m3_to_R
 
   ! Determine the depth range over which to use a sigma (terrain-following) coordinate.
   ! --- terrain following starts at depth dpns and ends at depth dsns
@@ -147,8 +143,8 @@ subroutine hybgen_unmix(G, GV, US, CS, tv, Reg, ntracer, dp)
   real :: theta_i_j(GV%ke)  ! Target potential density [R ~> kg m-3]
   real ::  temp_i_j(GV%ke)  ! A column of potential temperature [degC]
   real ::  saln_i_j(GV%ke)  ! A column of salinity [ppt]
-  real ::  th3d_i_j(GV%ke)  ! A column of coordinate potential density
-  real ::    dp_i_j(GV%ke)  ! A column of layer thicknesses
+  real ::  th3d_i_j(GV%ke)  ! A column of coordinate potential density [R ~> kg m-3]
+  real ::    dp_i_j(GV%ke)  ! A column of layer thicknesses [H ~> m or kg m-2]
   real :: p_col(GV%ke)      ! A column of reference pressures [R L2 T-2 ~> Pa]
   real :: tracer_i_j(GV%ke,max(ntracer,1))  ! Columns of each tracer [Conc]
   real :: h_tot             ! Total thickness of the water column [H ~> m or kg m-2]
@@ -290,7 +286,7 @@ subroutine hybgenaij_unmix(CS, kdm, theta_i_j, temp_i_j, saln_i_j, th3d_i_j, eqn
     temp_i_j(k-1) = temp_i_j(k-1) - q*(temp_i_j(k-1) - temp_i_j(k))
     saln_i_j(k-1) = saln_i_j(k-1) - q*(saln_i_j(k-1) - saln_i_j(k))
     call calculate_density(temp_i_j(k-1), saln_i_j(k-1), CS%ref_pressure, &
-                           th3d_i_j(k-1), eqn_of_state, CS%thbase)
+                           th3d_i_j(k-1), eqn_of_state)
 
     do ktr= 1,ntracr
       trac_i_j(k-1,ktr) = trac_i_j(k-1,ktr) - &
@@ -319,8 +315,7 @@ subroutine hybgenaij_unmix(CS, kdm, theta_i_j, temp_i_j, saln_i_j, th3d_i_j, eqn
       temp_i_j(k-1) = temp_i_j(k-1) - q*(temp_i_j(k-1) - temp_i_j(k))
       saln_i_j(k-1) = saln_i_j(k-1) - q*(saln_i_j(k-1) - saln_i_j(k))
       call calculate_density(temp_i_j(k-1), saln_i_j(k-1), CS%ref_pressure, &
-                             th3d_i_j(k-1), eqn_of_state, CS%thbase)
-        ! th3d_i_j(k-1) = sig(temp_i_j(k-1),saln_i_j(k-1))-CS%thbase
+                             th3d_i_j(k-1), eqn_of_state)
 
       temp_i_j(k) = s1d(k-1,1)
       saln_i_j(k) = s1d(k-1,2)
@@ -340,9 +335,8 @@ subroutine hybgenaij_unmix(CS, kdm, theta_i_j, temp_i_j, saln_i_j, th3d_i_j, eqn
 
       temp_i_j(k) = temp_i_j(k) + q*(temp_i_j(k-1) - temp_i_j(k))
       saln_i_j(k) = saln_i_j(k) + q*(saln_i_j(k-1) - saln_i_j(k))
-      ! th3d_i_j(k) = sig(temp_i_j(k),saln_i_j(k))-CS%thbase
       call calculate_density(temp_i_j(k), saln_i_j(k), CS%ref_pressure, &
-                             th3d_i_j(k), eqn_of_state, CS%thbase)
+                             th3d_i_j(k), eqn_of_state)
 
       temp_i_j(k-1) = s1d(k,1)
       saln_i_j(k-1) = s1d(k,2)
@@ -415,9 +409,8 @@ subroutine hybgenaij_unmix(CS, kdm, theta_i_j, temp_i_j, saln_i_j, th3d_i_j, eqn
 
     temp_i_j(k) = temp_i_j(k) + (q/(1.0-q)) * (temp_i_j(k) - temp_i_j(k-1))
     saln_i_j(k) = saln_i_j(k) + (q/(1.0-q)) * (saln_i_j(k) - saln_i_j(k-1))
-    ! th3d_i_j(k) = sig(temp_i_j(k),saln_i_j(k))-CS%thbase
     call calculate_density(temp_i_j(k), saln_i_j(k), CS%ref_pressure, &
-                           th3d_i_j(k), eqn_of_state, CS%thbase)
+                           th3d_i_j(k), eqn_of_state)
 
     if ((ntracr > 0) .and. (p_hat /= 0.0)) then
 ! ---     fraction of new upper layer from old lower layer
@@ -448,13 +441,13 @@ subroutine hybgenaij_unmix(CS, kdm, theta_i_j, temp_i_j, saln_i_j, th3d_i_j, eqn
       ! ! --- fill with saln from above
       ! th3d_i_j(k) = max(theta_i_j(k), th3d_i_j(k-1))
       ! saln_i_j(k) = saln_i_j(k-1)
-      ! temp_i_j(k) = Tofsig(th3d_i_j(k), temp_i_j(k), saln_i_j(k), CS%ref_pressure, eqn_of_state, CS%thbase)
-      ! saln_i_j(k) = Sofsig(th3d_i_j(k), temp_i_j(k), saln_i_j(k), CS%ref_pressure, eqn_of_state, CS%thbase)
+      ! temp_i_j(k) = Tofsig(th3d_i_j(k), temp_i_j(k), saln_i_j(k), CS%ref_pressure, eqn_of_state)
+      ! saln_i_j(k) = Sofsig(th3d_i_j(k), temp_i_j(k), saln_i_j(k), CS%ref_pressure, eqn_of_state)
 
       ! --- fill with temperature from above
       th3d_i_j(k) = max(theta_i_j(k), th3d_i_j(k-1))
       temp_i_j(k) = temp_i_j(k-1)
-      saln_i_j(k) = Sofsig(th3d_i_j(k), temp_i_j(k), saln_i_j(k), CS%ref_pressure, eqn_of_state, CS%thbase)
+      saln_i_j(k) = Sofsig(th3d_i_j(k), temp_i_j(k), saln_i_j(k), CS%ref_pressure, eqn_of_state)
     endif
     do ktr= 1,ntracr
       trac_i_j(k,ktr) = trac_i_j(k-1,ktr)
@@ -464,15 +457,14 @@ subroutine hybgenaij_unmix(CS, kdm, theta_i_j, temp_i_j, saln_i_j, th3d_i_j, eqn
 end subroutine hybgenaij_unmix
 
 
-!> Determine the potential temperature that is consistent with a given density anomaly,
+!> Determine the potential temperature that is consistent with a given density,
 !! salinity and reference pressure, using Newton's method.
-function Tofsig(sigma, T_input, salin, ref_pres, eqn_of_state, sigma_ref)
-  real, intent(in) :: sigma     !< The density anomaly [R ~> kg m-3]
+function Tofsig(sigma, T_input, salin, ref_pres, eqn_of_state)
+  real, intent(in) :: sigma     !< The density to match [R ~> kg m-3]
   real, intent(in) :: T_input   !< An input first guess at the temperature [degC]
   real, intent(in) :: salin     !< Salinity [ppt]
   real, intent(in) :: ref_pres  !< The reference pressure for sigma [R L2 T-2 ~> Pa]
   type(EOS_type), intent(in) :: eqn_of_state !< Equation of state structure
-  real, intent(in) :: sigma_ref  !< The difference between sigma and density [R ~> kg m-3]
   real :: tofsig !< The potential temperature that is consistent with sigma and salin [degC]
 
   real :: T_guess   ! A guess at the potential temperature [degC]
@@ -484,25 +476,24 @@ function Tofsig(sigma, T_input, salin, ref_pres, eqn_of_state, sigma_ref)
   call MOM_error(FATAL, "Tofsig still needs to be written with error bounds.")
   T_guess = T_input
   max_itt = 5
-  call calculate_density(T_guess, salin, ref_pres, sigma_guess, eqn_of_state, sigma_ref)
+  call calculate_density(T_guess, salin, ref_pres, sigma_guess, eqn_of_state)
   do itt=1,max_itt
     call calculate_density_derivs(T_guess, salin, ref_pres, dRho_dT, dRho_dS, eqn_of_state)
     if (abs(sigma_guess - sigma) < 1e-15*dRho_dT*T_guess) exit
     T_guess = T_guess + (sigma - sigma_guess) / dRho_dT
-    call calculate_density(T_guess, salin, ref_pres, sigma_guess, eqn_of_state, sigma_ref)
+    call calculate_density(T_guess, salin, ref_pres, sigma_guess, eqn_of_state)
   enddo
   tofsig = T_guess
 end function Tofsig
 
-!> Determine the salinity that is consistent with a given density anomaly,
+!> Determine the salinity that is consistent with a given density,
 !! potential temperature and reference pressure, using Newton's method.
-function Sofsig(sigma, Temp, S_input, ref_pres, eqn_of_state, sigma_ref)
-  real, intent(in) :: sigma     !< The density anomaly [R ~> kg m-3]
+function Sofsig(sigma, Temp, S_input, ref_pres, eqn_of_state)
+  real, intent(in) :: sigma     !< The density to match [R ~> kg m-3]
   real, intent(in) :: Temp      !< Potential temperature [degC]
   real, intent(in) :: S_input   !< An input first guess at the salinity [ppt]
   real, intent(in) :: ref_pres  !< The reference pressure for sigma [R L2 T-2 ~> Pa]
   type(EOS_type), intent(in) :: eqn_of_state !< Equation of state structure
-  real, intent(in) :: sigma_ref  !< The difference between sigma and density [R ~> kg m-3]
   real :: Sofsig !< The salinity that is consistent with sigma and temp [ppt]
 
   real :: S_guess   ! A guess at the salinity [ppt]
@@ -514,12 +505,12 @@ function Sofsig(sigma, Temp, S_input, ref_pres, eqn_of_state, sigma_ref)
   ! call MOM_error(FATAL, "Sofsig still needs to be written with error bounds.")
   S_guess = S_input
   max_itt = 5
-  call calculate_density(Temp, S_guess, ref_pres, sigma_guess, eqn_of_state, sigma_ref)
+  call calculate_density(Temp, S_guess, ref_pres, sigma_guess, eqn_of_state)
   do itt=1,max_itt
     call calculate_density_derivs(Temp, S_guess, ref_pres, dRho_dT, dRho_dS, eqn_of_state)
     if (abs(sigma_guess - sigma) < 1e-15*dRho_dS*S_guess) exit
     S_guess = S_guess + (sigma - sigma_guess) / dRho_dS
-    call calculate_density(Temp, S_guess, ref_pres, sigma_guess, eqn_of_state, sigma_ref)
+    call calculate_density(Temp, S_guess, ref_pres, sigma_guess, eqn_of_state)
   enddo
   Sofsig = S_guess
 end function Sofsig
