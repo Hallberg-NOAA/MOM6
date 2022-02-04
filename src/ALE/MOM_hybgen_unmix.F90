@@ -140,11 +140,11 @@ subroutine hybgen_unmix(G, GV, US, CS, tv, Reg, ntracer, dp)
   real :: dp0ij( GV%ke)     ! minimum layer thickness
   real :: dp0cum(GV%ke+1)   ! minimum interface depth
 
-  real :: theta_i_j(GV%ke)  ! Target potential density [R ~> kg m-3]
-  real ::  temp_i_j(GV%ke)  ! A column of potential temperature [degC]
-  real ::  saln_i_j(GV%ke)  ! A column of salinity [ppt]
-  real ::  th3d_i_j(GV%ke)  ! A column of coordinate potential density [R ~> kg m-3]
-  real ::    dp_i_j(GV%ke)  ! A column of layer thicknesses [H ~> m or kg m-2]
+  real :: Rcv_tgt(GV%ke)    ! Target potential density [R ~> kg m-3]
+  real :: temp_i_j(GV%ke)   ! A column of potential temperature [degC]
+  real :: saln_i_j(GV%ke)   ! A column of salinity [ppt]
+  real :: Rcv(GV%ke)        ! A column of coordinate potential density [R ~> kg m-3]
+  real :: dp_i_j(GV%ke)     ! A column of layer thicknesses [H ~> m or kg m-2]
   real :: p_col(GV%ke)      ! A column of reference pressures [R L2 T-2 ~> Pa]
   real :: tracer_i_j(GV%ke,max(ntracer,1))  ! Columns of each tracer [Conc]
   real :: h_tot             ! Total thickness of the water column [H ~> m or kg m-2]
@@ -169,8 +169,8 @@ subroutine hybgen_unmix(G, GV, US, CS, tv, Reg, ntracer, dp)
 
     h_tot = 0.0
     do k=1,kdm
-      ! theta_i_j(k) = theta(i,j,k)  ! If a 3-d target density were set up in theta, use that here.
-      theta_i_j(k) = CS%target_density(k)  ! MOM6 does not yet support 3-d target densities.
+      ! Rcv_tgt(k) = theta(i,j,k)  ! If a 3-d target density were set up in theta, use that here.
+      Rcv_tgt(k) = CS%target_density(k)  ! MOM6 does not yet support 3-d target densities.
       dp_i_j(k) = dp(i,j,k)
       h_tot = h_tot + dp_i_j(k)
       temp_i_j(k) = tv%T(i,j,k)
@@ -178,7 +178,7 @@ subroutine hybgen_unmix(G, GV, US, CS, tv, Reg, ntracer, dp)
     enddo
 
     ! This sets the potential density from T and S.
-    call calculate_density(temp_i_j, saln_i_j, p_col, th3d_i_j, tv%eqn_of_state)
+    call calculate_density(temp_i_j, saln_i_j, p_col, Rcv, tv%eqn_of_state)
 
     do m=1,ntracer ; do k=1,kdm
       tracer_i_j(k,m) = Reg%Tr(m)%t(i,j,k)
@@ -202,7 +202,7 @@ subroutine hybgen_unmix(G, GV, US, CS, tv, Reg, ntracer, dp)
                             dp_i_j, fixlay, qhrlx, dp0ij, dp0cum)
 
     ! Do any unmixing of the column that is needed to move the layer properties toward their targets.
-    call hybgenaij_unmix(CS, kdm, theta_i_j, temp_i_j, saln_i_j, th3d_i_j, tv%eqn_of_state, &
+    call hybgenaij_unmix(CS, kdm, Rcv_tgt, temp_i_j, saln_i_j, Rcv, tv%eqn_of_state, &
                          ntracer, tracer_i_j, trcflg, fixlay, qhrlx, &
                          dp_i_j, terrain_following, dpthin, 1.0e-11*US%kg_m3_to_R)
 
@@ -220,17 +220,17 @@ end subroutine hybgen_unmix
 
 
 !> Unmix the properties in the lowest layer if it is too light.
-subroutine hybgenaij_unmix(CS, kdm, theta_i_j, temp_i_j, saln_i_j, th3d_i_j, eqn_of_state, &
+subroutine hybgenaij_unmix(CS, kdm, Rcv_tgt, temp_i_j, saln_i_j, Rcv, eqn_of_state, &
                            ntracr, trac_i_j, trcflg, fixlay, qhrlx, dp_i_j, &
                            terrain_following, dpthin, epsil)
   type(hybgen_unmix_CS), intent(in) :: CS  !< hybgen unmixing control structure
   integer,        intent(in)    :: kdm           !< The number of layers
   integer,        intent(in)    :: fixlay        !< deepest fixed coordinate layer
   real,           intent(in)    :: qhrlx( kdm+1) !< relaxation coefficient [s-1]
-  real,           intent(in)    :: theta_i_j(kdm) !< Target density [R ~> kg m-3]
+  real,           intent(in)    :: Rcv_tgt(kdm)  !< Target potential density [R ~> kg m-3]
   real,           intent(inout) :: temp_i_j(kdm) !< A column of potential temperature [degC]
   real,           intent(inout) :: saln_i_j(kdm) !< A column of salinity [ppt]
-  real,           intent(inout) :: th3d_i_j(kdm) !< Coordinate potential density [R ~> kg m-3]
+  real,           intent(inout) :: Rcv(kdm)      !< Coordinate potential density [R ~> kg m-3]
   type(EOS_type), intent(in)    :: eqn_of_state  !< Equation of state structure
   integer,        intent(in)    :: ntracr        !< The number of registered passive tracers
   real,           intent(inout) :: trac_i_j(kdm, max(ntracr,1)) !< Columns of the passive tracers [Conc]
@@ -271,8 +271,8 @@ subroutine hybgenaij_unmix(CS, kdm, theta_i_j, temp_i_j, saln_i_j, th3d_i_j, eqn
 !
   if ( ((k > fixlay+1) .and. (.not.terrain_following)) .and. & ! layer not fixed depth
        (dp_i_j(k-1) >= dpthin)              .and. & ! layer above not too thin
-       (theta_i_j(k)-epsil > th3d_i_j(k))   .and. & ! layer is lighter than its target
-       ((th3d_i_j(k-1) > th3d_i_j(k)) .and. (th3d_i_j(ka) > th3d_i_j(k))) ) then
+       (Rcv_tgt(k)-epsil > Rcv(k))   .and. & ! layer is lighter than its target
+       ((Rcv(k-1) > Rcv(k)) .and. (Rcv(ka) > Rcv(k))) ) then
 !
 ! ---   water in the deepest inflated layer with significant thickness
 ! ---   (kp) is too light, and it is lighter than the two layers above.
@@ -286,7 +286,7 @@ subroutine hybgenaij_unmix(CS, kdm, theta_i_j, temp_i_j, saln_i_j, th3d_i_j, eqn
     temp_i_j(k-1) = temp_i_j(k-1) - q*(temp_i_j(k-1) - temp_i_j(k))
     saln_i_j(k-1) = saln_i_j(k-1) - q*(saln_i_j(k-1) - saln_i_j(k))
     call calculate_density(temp_i_j(k-1), saln_i_j(k-1), CS%ref_pressure, &
-                           th3d_i_j(k-1), eqn_of_state)
+                           Rcv(k-1), eqn_of_state)
 
     do ktr= 1,ntracr
       trac_i_j(k-1,ktr) = trac_i_j(k-1,ktr) - &
@@ -298,8 +298,8 @@ subroutine hybgenaij_unmix(CS, kdm, theta_i_j, temp_i_j, saln_i_j, th3d_i_j, eqn
     kp = k-1
   elseif ( ((k > fixlay+1) .and. (.not.terrain_following)) .and. & ! layer not fixed depth
            (dp_i_j(k-1) >= dpthin)              .and. & ! layer above not too thin
-           (theta_i_j(k)-epsil > th3d_i_j(k))   .and. & ! layer is lighter than its target
-           (th3d_i_j(k-1) > th3d_i_j(k)) ) then
+           (Rcv_tgt(k)-epsil > Rcv(k))   .and. & ! layer is lighter than its target
+           (Rcv(k-1) > Rcv(k)) ) then
 ! ---   water in the deepest inflated layer with significant thickness
 ! ---   (kp) is too light, and it is lighter than the layer above, but not the layer two above.
 ! ---
@@ -309,17 +309,17 @@ subroutine hybgenaij_unmix(CS, kdm, theta_i_j, temp_i_j, saln_i_j, th3d_i_j, eqn
 !---      note the double negative in T=T-q*(T-T'), equiv. to T=T+q*(T'-T)
       s1d(k-1,1) = temp_i_j(k-1)
       s1d(k-1,2) = saln_i_j(k-1)
-      s1d(k-1,3) = th3d_i_j(k-1)
+      s1d(k-1,3) = Rcv(k-1)
       q = dp_i_j(k) / dp_i_j(k-1)  !<=1.0
 
       temp_i_j(k-1) = temp_i_j(k-1) - q*(temp_i_j(k-1) - temp_i_j(k))
       saln_i_j(k-1) = saln_i_j(k-1) - q*(saln_i_j(k-1) - saln_i_j(k))
       call calculate_density(temp_i_j(k-1), saln_i_j(k-1), CS%ref_pressure, &
-                             th3d_i_j(k-1), eqn_of_state)
+                             Rcv(k-1), eqn_of_state)
 
       temp_i_j(k) = s1d(k-1,1)
       saln_i_j(k) = s1d(k-1,2)
-      th3d_i_j(k) = s1d(k-1,3)
+      Rcv(k) = s1d(k-1,3)
       do ktr= 1,ntracr
         s1d(k-1,2+ktr)    = trac_i_j(k-1,ktr)
         trac_i_j(k-1,ktr) = trac_i_j(k-1,ktr) - &
@@ -330,17 +330,17 @@ subroutine hybgenaij_unmix(CS, kdm, theta_i_j, temp_i_j, saln_i_j, th3d_i_j, eqn
 ! ---     bottom layer is thicker, take entire layer above
       s1d(k,1) = temp_i_j(k)
       s1d(k,2) = saln_i_j(k)
-      s1d(k,3) = th3d_i_j(k)
+      s1d(k,3) = Rcv(k)
       q = dp_i_j(k-1) / dp_i_j(k)  !<1.0
 
       temp_i_j(k) = temp_i_j(k) + q*(temp_i_j(k-1) - temp_i_j(k))
       saln_i_j(k) = saln_i_j(k) + q*(saln_i_j(k-1) - saln_i_j(k))
       call calculate_density(temp_i_j(k), saln_i_j(k), CS%ref_pressure, &
-                             th3d_i_j(k), eqn_of_state)
+                             Rcv(k), eqn_of_state)
 
       temp_i_j(k-1) = s1d(k,1)
       saln_i_j(k-1) = s1d(k,2)
-      th3d_i_j(k-1) = s1d(k,3)
+      Rcv(k-1) = s1d(k,3)
       do ktr= 1,ntracr
         s1d(k,2+ktr)      = trac_i_j(k,ktr)
         trac_i_j(k,  ktr) = trac_i_j(k,ktr) + &
@@ -356,10 +356,10 @@ subroutine hybgenaij_unmix(CS, kdm, theta_i_j, temp_i_j, saln_i_j, th3d_i_j, eqn
   if ( lunmix .and.  & !usually .true.
        ((k > fixlay+1) .and. (.not.terrain_following)) .and. & ! layer not fixed depth
        (dp_i_j(k-1) >= dpthin)      .and. & ! layer above not too thin
-       (theta_i_j(k)-epsil > th3d_i_j(k))   .and. & ! layer is lighter than its target
-       (theta_i_j(k-1) < th3d_i_j(k))       .and. & ! layer is denser than the target above
-       (abs(theta_i_j(k-1) - th3d_i_j(k-1)) < CS%hybiso) .and. & ! layer above is near its target
-       (th3d_i_j(k) - th3d_i_j(k-1) > 0.001*(theta_i_j(k) - theta_i_j(k-1))) ) then
+       (Rcv_tgt(k)-epsil > Rcv(k))   .and. & ! layer is lighter than its target
+       (Rcv_tgt(k-1) < Rcv(k))       .and. & ! layer is denser than the target above
+       (abs(Rcv_tgt(k-1) - Rcv(k-1)) < CS%hybiso) .and. & ! layer above is near its target
+       (Rcv(k) - Rcv(k-1) > 0.001*(Rcv_tgt(k) - Rcv_tgt(k-1))) ) then
 !
 ! ---   water in the deepest inflated layer with significant thickness (kp) is too
 ! ---   light but denser than the layer above, with the layer above near-isopycnal
@@ -369,12 +369,12 @@ subroutine hybgenaij_unmix(CS, kdm, theta_i_j, temp_i_j, saln_i_j, th3d_i_j, eqn
 ! ---   To prevent "runaway" T or S, the result satisfies either
 ! ---     abs(T.k - T.k-1) <= abs(T.k-N - T.k-1) or
 ! ---     abs(S.k - S.k-1) <= abs(S.k-N - S.k-1) where
-! ---     th3d.k-1 - th3d.k-N is at least theta(k-1) - theta(k-2)
+! ---     Rcv.k-1 - Rcv.k-N is at least Rcv_tgt(k-1) - Rcv_tgt(k-2)
 ! ---   It is also limited to a 50% change in layer thickness.
 
     ka = 1
     do ktr=k-2,2,-1
-      if ( th3d_i_j(k-1) - th3d_i_j(ktr) >= theta_i_j(k-1) - theta_i_j(k-2) ) then
+      if ( Rcv(k-1) - Rcv(ktr) >= Rcv_tgt(k-1) - Rcv_tgt(k-2) ) then
         ka = ktr  !usually k-2
         exit
       endif
@@ -387,11 +387,11 @@ subroutine hybgenaij_unmix(CS, kdm, theta_i_j, temp_i_j, saln_i_j, th3d_i_j, eqn
 ! ---   sanity check on deltm and delsm
     q = min(temp_i_j(ka), temp_i_j(k-1), temp_i_j(k))
     if   (q > 6.0) then
-      deltm = min( deltm,  6.0*(theta_i_j(k)-theta_i_j(k-1)) )
+      deltm = min( deltm,  6.0*(Rcv_tgt(k)-Rcv_tgt(k-1)) )
     else  !(q <= 6.0)
-      deltm = min( deltm, 10.0*(theta_i_j(k)-theta_i_j(k-1)) )
+      deltm = min( deltm, 10.0*(Rcv_tgt(k)-Rcv_tgt(k-1)) )
     endif
-    delsm = min( delsm, 1.3*(theta_i_j(k)-theta_i_j(k-1)) )
+    delsm = min( delsm, 1.3*(Rcv_tgt(k)-Rcv_tgt(k-1)) )
     qts = 0.0
     if (delt > 1.0d-11) then  ! The hard-coded limit here is copied over from cb_arrays.F90
       qts = max(qts, (min(deltm, 2.0*delt)-delt)/delt)  ! qts<=1.0
@@ -399,7 +399,7 @@ subroutine hybgenaij_unmix(CS, kdm, theta_i_j, temp_i_j, saln_i_j, th3d_i_j, eqn
     if (dels > 1.0d-11) then  ! The hard-coded limit here is copied over from cb_arrays.F90
       qts = max(qts, (min(delsm, 2.0*dels)-dels)/dels)  ! qts<=1.0
     endif
-    q = (theta_i_j(k)-th3d_i_j(k)) / (theta_i_j(k)-th3d_i_j(k-1))
+    q = (Rcv_tgt(k)-Rcv(k)) / (Rcv_tgt(k)-Rcv(k-1))
     q = min(q, qts/(1.0+qts))  ! upper sublayer <= 50% of total
     q = qhrlx(k)*q
 ! ---   qhrlx is relaxation coefficient (inverse baroclinic time steps)
@@ -410,7 +410,7 @@ subroutine hybgenaij_unmix(CS, kdm, theta_i_j, temp_i_j, saln_i_j, th3d_i_j, eqn
     temp_i_j(k) = temp_i_j(k) + (q/(1.0-q)) * (temp_i_j(k) - temp_i_j(k-1))
     saln_i_j(k) = saln_i_j(k) + (q/(1.0-q)) * (saln_i_j(k) - saln_i_j(k-1))
     call calculate_density(temp_i_j(k), saln_i_j(k), CS%ref_pressure, &
-                           th3d_i_j(k), eqn_of_state)
+                           Rcv(k), eqn_of_state)
 
     if ((ntracr > 0) .and. (p_hat /= 0.0)) then
 ! ---     fraction of new upper layer from old lower layer
@@ -432,22 +432,22 @@ subroutine hybgenaij_unmix(CS, kdm, theta_i_j, temp_i_j, saln_i_j, th3d_i_j, eqn
   do k=kp+1,kk
     if (k <= CS%nhybrid) then
       ! --- fill thin and massless layers on sea floor with fluid from above
-      th3d_i_j(k) = th3d_i_j(k-1)
+      Rcv(k) = Rcv(k-1)
       saln_i_j(k) = saln_i_j(k-1)
       temp_i_j(k) = temp_i_j(k-1)
-    elseif (th3d_i_j(k) /= theta_i_j(k)) then
+    elseif (Rcv(k) /= Rcv_tgt(k)) then
       ! ! This is the code used in Hycom, but TofSig is a much more dangerous function
       ! ! than SofSig because of the nonlinearities of the equation of state.
       ! ! --- fill with saln from above
-      ! th3d_i_j(k) = max(theta_i_j(k), th3d_i_j(k-1))
+      ! Rcv(k) = max(Rcv_tgt(k), Rcv(k-1))
       ! saln_i_j(k) = saln_i_j(k-1)
-      ! temp_i_j(k) = Tofsig(th3d_i_j(k), temp_i_j(k), saln_i_j(k), CS%ref_pressure, eqn_of_state)
-      ! saln_i_j(k) = Sofsig(th3d_i_j(k), temp_i_j(k), saln_i_j(k), CS%ref_pressure, eqn_of_state)
+      ! temp_i_j(k) = Tofsig(Rcv(k), temp_i_j(k), saln_i_j(k), CS%ref_pressure, eqn_of_state)
+      ! saln_i_j(k) = Sofsig(Rcv(k), temp_i_j(k), saln_i_j(k), CS%ref_pressure, eqn_of_state)
 
       ! --- fill with temperature from above
-      th3d_i_j(k) = max(theta_i_j(k), th3d_i_j(k-1))
+      Rcv(k) = max(Rcv_tgt(k), Rcv(k-1))
       temp_i_j(k) = temp_i_j(k-1)
-      saln_i_j(k) = Sofsig(th3d_i_j(k), temp_i_j(k), saln_i_j(k), CS%ref_pressure, eqn_of_state)
+      saln_i_j(k) = Sofsig(Rcv(k), temp_i_j(k), saln_i_j(k), CS%ref_pressure, eqn_of_state)
     endif
     do ktr= 1,ntracr
       trac_i_j(k,ktr) = trac_i_j(k-1,ktr)

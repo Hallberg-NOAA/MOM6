@@ -296,16 +296,16 @@ subroutine hybgen_regrid(G, GV, US, dp, tv, CS, dzInterface, PCM_cell)
   real :: p_col(GV%ke)      ! A column of reference pressures [R L2 T-2 ~> Pa]
   real :: temp_in(GV%ke)    ! A column of input potential temperatures [degC]
   real :: saln_in(GV%ke)    ! A column of input layer salinities [ppt]
-  real :: th3d_in(GV%ke)    ! An input column of coordinate potential density [R ~> kg m-3]
+  real :: Rcv_in(GV%ke)     ! An input column of coordinate potential density [R ~> kg m-3]
   real :: dp_in(GV%ke)      ! The input column of layer thicknesses [H ~> m or kg m-2]
   logical :: PCM_lay(GV%ke) ! If true for a layer, use PCM remapping for that layer
 
   ! These arrays are on the target grid.
-  real :: theta_i_j(CS%nk)  ! Target potential density [R ~> kg m-3]
-  real :: th3d_i_j(CS%nk)   ! Initial values of coordinate potential density on the target grid [R ~> kg m-3]
+  real :: Rcv_tgt(CS%nk)    ! Target potential density [R ~> kg m-3]
+  real :: Rcv(CS%nk)        ! Initial values of coordinate potential density on the target grid [R ~> kg m-3]
   real :: dp_i_j(CS%nk)     ! A column of layer thicknesses [H ~> m or kg m-2]
   real :: dz_int(CS%nk+1)   ! The change in interface height due to remapping [H ~> m or kg m-2]
-  real :: th3d_integral     ! Integrated coordinate potential density in a layer [R H ~> kg m-2 or kg2 m-5]
+  real :: Rcv_integral      ! Integrated coordinate potential density in a layer [R H ~> kg m-2 or kg2 m-5]
 
   real :: qhrlx(CS%nk+1)    ! Fractional relaxation within a timestep (between 0 and 1) [nondim]
   real :: dp0ij(CS%nk)      ! minimum layer thickness [H ~> m or kg m-2]
@@ -339,7 +339,7 @@ subroutine hybgen_regrid(G, GV, US, dp, tv, CS, dzInterface, PCM_cell)
     enddo
 
     ! This sets the input column's coordinate potential density from T and S.
-    call calculate_density(temp_in, saln_in, p_col, th3d_in, tv%eqn_of_state)
+    call calculate_density(temp_in, saln_in, p_col, Rcv_in, tv%eqn_of_state)
 
     ! Set the initial properties on the new grid from the old grid.
     nk_in = GV%ke
@@ -353,13 +353,13 @@ subroutine hybgen_regrid(G, GV, US, dp, tv, CS, dzInterface, PCM_cell)
       ! Simply copy over the common layers.  This is the usual case.
       do k=1,min(CS%nk,GV%ke)
         dp_i_j(k) = dp_in(k)
-        th3d_i_j(k) = th3d_in(k)
+        Rcv(k) = Rcv_in(k)
       enddo
       if (CS%nk > GV%ke) then
         ! Pad out the input column with additional massless layers with the bottom properties.
         ! This case only occurs during initialization or perhaps when writing diagnostics.
         do k=GV%ke+1,CS%nk
-          th3d_i_j(k) = th3d_in(GV%ke)
+          Rcv(k) = Rcv_in(GV%ke)
           dp_i_j(k) = 0.0
         enddo
       endif
@@ -370,24 +370,24 @@ subroutine hybgen_regrid(G, GV, US, dp, tv, CS, dzInterface, PCM_cell)
       ! This case was not handled by the original Hycom code in hybgen.F90.
       do k=0,CS%nk ; k_end(k) = (k * nk_in) / CS%nk ; enddo
       do k=1,CS%nk
-        dp_i_j(k) = 0.0 ; th3d_integral = 0.0
+        dp_i_j(k) = 0.0 ; Rcv_integral = 0.0
         do k2=k_end(k-1)+1,k_end(k)
           dp_i_j(k) = dp_i_j(k) + dp_in(k2)
-          th3d_integral = th3d_integral + dp_in(k2)*th3d_in(k2)
+          Rcv_integral = Rcv_integral + dp_in(k2)*Rcv_in(k2)
         enddo
         if (dp_i_j(k) > GV%H_subroundoff) then
           ! Take the volume-weighted average properties.
-          th3d_i_j(k) = th3d_integral / dp_i_j(k)
+          Rcv(k) = Rcv_integral / dp_i_j(k)
         else ! Take the properties of the topmost source layer that contributes.
-          th3d_i_j(k) = th3d_in(k_end(k-1)+1)
+          Rcv(k) = Rcv_in(k_end(k-1)+1)
         endif
       enddo
     endif
 
     ! Set the target densities for the new layers.
     do k=1,CS%nk
-      ! theta_i_j(k) = theta(i,j,k)  ! If a 3-d target density were set up in theta, use that here.
-      theta_i_j(k) = CS%target_density(k)  ! MOM6 does not yet support 3-d target densities.
+      ! Rcv_tgt(k) = theta(i,j,k)  ! If a 3-d target density were set up in theta, use that here.
+      Rcv_tgt(k) = CS%target_density(k)  ! MOM6 does not yet support 3-d target densities.
     enddo
 
     ! The following block of code is used to trigger z* stretching of the targets heights.
@@ -411,7 +411,7 @@ subroutine hybgen_regrid(G, GV, US, dp, tv, CS, dzInterface, PCM_cell)
         ! --- thin or isopycnal source layers are remapped with PCM.
         PCM_lay(k) = (k > fixlay) .and. &
             ((k > CS%nhybrid) .or. (dp_i_j(k) <= dpthin) .or. &
-             (abs(th3d_i_j(k)-theta_i_j(k)) < CS%hybiso))
+             (abs(Rcv(k)-Rcv_tgt(k)) < CS%hybiso))
       else ! hybiso==0.0, so purely isopycnal layers use PCM
         PCM_lay(k) = (k > CS%nhybrid)
       endif ! hybiso
@@ -419,8 +419,8 @@ subroutine hybgen_regrid(G, GV, US, dp, tv, CS, dzInterface, PCM_cell)
 
     ! Determine the new layer thicknesses.
     call hybgen_column_regrid(CS, kdm, CS%nhybrid, CS%thkbot, CS%onem, &
-                              1.0e-11*US%kg_m3_to_R, theta_i_j, fixlay, qhrlx, dp0ij, &
-                              dp0cum, th3d_i_j, dp_i_j, dz_int)
+                              1.0e-11*US%kg_m3_to_R, Rcv_tgt, fixlay, qhrlx, dp0ij, &
+                              dp0cum, Rcv, dp_i_j, dz_int)
 
     ! Store the output from hybgenaij_regrid in 3-d arrays.
     if (present(PCM_cell)) then ; do k=1,GV%ke
@@ -596,8 +596,8 @@ real function cushn(delp, dp0)
 end function cushn
 
 !> Create a new grid for a column of water using the Hybgen algorithm.
-subroutine hybgen_column_regrid(CS, kdm, nhybrd, thkbot, onem, epsil, theta_i_j, &
-                                fixlay, qhrlx, dp0ij, dp0cum, th3d_i_j, h_in, dp_int)
+subroutine hybgen_column_regrid(CS, kdm, nhybrd, thkbot, onem, epsil, Rcv_tgt, &
+                                fixlay, qhrlx, dp0ij, dp0cum, Rcv, h_in, dp_int)
 !
   type(hybgen_regrid_CS), intent(in)    :: CS  !< hybgen regridding control structure
   integer, intent(in)    :: kdm            !< number of layers
@@ -605,12 +605,12 @@ subroutine hybgen_column_regrid(CS, kdm, nhybrd, thkbot, onem, epsil, theta_i_j,
   real,    intent(in)    :: thkbot         !< thickness of bottom boundary layer [H ~> m or kg m-2]
   real,    intent(in)    :: onem           !< one m in pressure units [H ~> m or kg m-2]
   real,    intent(in)    :: epsil          !< small nonzero density to prevent division by zero [R ~> kg m-3]
-  real,    intent(in)    :: theta_i_j(kdm) !< theta(i,j,:) target density [R ~> kg m-3]
+  real,    intent(in)    :: Rcv_tgt(kdm)   !< Target potential density [R ~> kg m-3]
   integer, intent(in)    :: fixlay         !< deepest fixed coordinate layer
   real,    intent(in)    :: qhrlx( kdm+1)  !< relaxation coefficient per timestep [nondim]
   real,    intent(in)    :: dp0ij( kdm)    !< minimum layer thickness [H ~> m or kg m-2]
   real,    intent(in)    :: dp0cum(kdm+1)  !< minimum interface depth [H ~> m or kg m-2]
-  real,    intent(in)    :: th3d_i_j(kdm)  !< Coordinate potential density [R ~> kg m-3]
+  real,    intent(in)    :: Rcv(kdm)       !< Coordinate potential density [R ~> kg m-3]
   real,    intent(in)    :: h_in(kdm)      !< Layer thicknesses [H ~> m or kg m-2]
   real,    intent(out)   :: dp_int(kdm+1)  !< The change in interface positions [H ~> m or kg m-2]
 
@@ -705,24 +705,24 @@ subroutine hybgen_column_regrid(CS, kdm, nhybrd, thkbot, onem, epsil, theta_i_j,
     else
 ! ---     do not maintain constant thickness, k > fixlay
 
-      if ((th3d_i_j(k) > theta_i_j(k)+epsil) .and.  (k > fixlay+1)) then
+      if ((Rcv(k) > Rcv_tgt(k)+epsil) .and.  (k > fixlay+1)) then
 ! ---       water in layer k is too dense
 ! ---       try to dilute with water from layer k-1
 ! ---       do not move interface if k = fixlay + 1
 
-        if (th3d_i_j(k-1) >= theta_i_j(k-1) .or. &
+        if (Rcv(k-1) >= Rcv_tgt(k-1) .or. &
             p_i_j(k) <= dp0cum(k)+onem .or. &
             h_i_j(k) <= h_i_j(k-1)) then
 ! ---         if layer k-1 is too light, thicken the thinner of the two,
 ! ---         i.e. skip this layer if it is thicker.
 
-          if     ((theta_i_j(k)-th3d_i_j(k-1)) <= epsil) then
+          if     ((Rcv_tgt(k)-Rcv(k-1)) <= epsil) then
 !               layer k-1 much too dense, take entire layer
             h_hat0 = 0.0  ! This line was not in the Hycom version of hybgen.F90.
             h_hat = dp0ij(k-1) - h_i_j(k-1)
           else
-            q_frac = (theta_i_j(k)-th3d_i_j(k)) / &
-                     (theta_i_j(k)-th3d_i_j(k-1))    ! -1 <= q_frac < 0
+            q_frac = (Rcv_tgt(k)-Rcv(k)) / &
+                     (Rcv_tgt(k)-Rcv(k-1))    ! -1 <= q_frac < 0
             h_hat0 = q_frac*h_i_j(k)  ! -h_i_j(k-1) <= h_hat0 < 0
             if (k == fixlay+2) then
 ! ---             treat layer k-1 as fixed.
@@ -801,25 +801,25 @@ subroutine hybgen_column_regrid(CS, kdm, nhybrd, thkbot, onem, epsil, theta_i_j,
 
         endif  !too-dense adjustment
 !
-      elseif (th3d_i_j(k) < theta_i_j(k)-epsil) then   ! layer too light
+      elseif (Rcv(k) < Rcv_tgt(k)-epsil) then   ! layer too light
 !
 ! ---       water in layer k is too light
 ! ---       try to dilute with water from layer k+1
 ! ---       do not entrain if layer k touches bottom
 !
         if (p_i_j(k+1) < p_i_j(kdm+1)) then  ! k<kdm
-          if (th3d_i_j(k+1) <= theta_i_j(k+1) .or. &
+          if (Rcv(k+1) <= Rcv_tgt(k+1) .or. &
               p_i_j(k+1) <= dp0cum(k+1)+onem  .or. &
               h_i_j(k) < h_i_j(k+1)) then
 ! ---           if layer k+1 is too dense, thicken the thinner of the
 ! ---           two, i.e. skip this layer (never get here) if it is not
 ! ---           thinner than the other.
 
-            if     ((th3d_i_j(k+1)-theta_i_j(k)) <= epsil) then
+            if     ((Rcv(k+1)-Rcv_tgt(k)) <= epsil) then
 !                 layer k-1 too light, take entire layer
               h_hat = h_i_j(k+1)
             else
-              q_frac = (theta_i_j(k) - th3d_i_j(k)) / (th3d_i_j(k+1)-theta_i_j(k)) ! 0 < q_frac <= 1
+              q_frac = (Rcv_tgt(k) - Rcv(k)) / (Rcv(k+1)-Rcv_tgt(k)) ! 0 < q_frac <= 1
               h_hat = q_frac*h_i_j(k)
             endif
 !
