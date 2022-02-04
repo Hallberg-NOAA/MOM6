@@ -29,9 +29,7 @@ type, public :: hybgen_regrid_CS ; private
 
   !> Hybgen uses PCM if layer is within hybiso of target density [R ~> kg m-3]
   real :: hybiso
-  !> Number of hybrid levels used by HYBGEN (0=all isopycnal)
-  integer :: nhybrid
-  !> Number of sigma levels used by HYBGEN (nhybrid-nsigma z-levels)
+  !> Number of sigma levels used by HYBGEN
   integer :: nsigma
 
   real :: dp00i    !< Deep isopycnal spacing minimum thickness [H ~> m or kg m-2]
@@ -94,9 +92,6 @@ subroutine init_hybgen_regrid(CS, GV, US, param_file)
                  "This is only used if USE_EOS and ENABLE_THERMODYNAMICS are true.", &
                  units="Pa", default=2.0e7, scale=US%kg_m3_to_R*US%m_s_to_L_T**2)
 
-  call get_param(param_file, mdl, "HYBGEN_N_HYBRID", CS%nhybrid, &
-                 "The number of hybrid layers with Hybgen regridding, or 0 to use all "//&
-                 "isopycnal layers.", default=0)
   call get_param(param_file, mdl, "HYBGEN_N_SIGMA", CS%nsigma, &
                  "The number of sigma-coordinate (terrain-following) layers with Hybgen regridding.", &
                  default=0)
@@ -168,15 +163,14 @@ subroutine end_hybgen_regrid(CS)
 end subroutine end_hybgen_regrid
 
 !> This subroutine can be used to retrieve the parameters for the hybgen regrid module
-subroutine get_hybgen_regrid_params(CS, nk, ref_pressure, hybiso, nhybrid, nsigma, dp00i, qhybrlx, &
+subroutine get_hybgen_regrid_params(CS, nk, ref_pressure, hybiso, nsigma, dp00i, qhybrlx, &
                                     dp0k, ds0k, dpns, dsns, min_dilate, max_dilate, &
                                     thkbot, topiso_const, target_density)
   type(hybgen_regrid_CS),  pointer    :: CS !< Coordinate regridding control structure
   integer, optional, intent(out) :: nk  !< Number of layers on the target grid
   real,    optional, intent(out) :: ref_pressure !< Reference pressure for density calculations [R L2 T-2 ~> Pa]
   real,    optional, intent(out) :: hybiso  !< Hybgen uses PCM if layer is within hybiso of target density [R ~> kg m-3]
-  integer, optional, intent(out) :: nhybrid !< Number of hybrid levels used by HYBGEN (0=all isopycnal)
-  integer, optional, intent(out) :: nsigma  !< Number of sigma levels used by HYBGEN (nhybrid-nsigma z-levels)
+  integer, optional, intent(out) :: nsigma  !< Number of sigma levels used by HYBGEN
   real,    optional, intent(out) :: dp00i   !< Deep isopycnal spacing minimum thickness (m)
   real,    optional, intent(out) :: qhybrlx !< Fractional relaxation amount per timestep, 0 < qyhbrlx <= 1 [nondim]
   real,    optional, intent(out) :: dp0k(:) !< minimum deep    z-layer separation [H ~> m or kg m-2]
@@ -200,7 +194,6 @@ subroutine get_hybgen_regrid_params(CS, nk, ref_pressure, hybiso, nhybrid, nsigm
   if (present(nk))      nk = CS%nk
   if (present(ref_pressure)) ref_pressure = CS%ref_pressure
   if (present(hybiso))  hybiso = CS%hybiso
-  if (present(nhybrid)) nhybrid = CS%nhybrid
   if (present(nsigma))  nsigma = CS%nsigma
   if (present(dp00i))   dp00i = CS%dp00i
   if (present(qhybrlx)) qhybrlx = CS%qhybrlx
@@ -256,10 +249,9 @@ subroutine hybgen_regrid(G, GV, US, dp, tv, CS, dzInterface, PCM_cell)
 !
 ! From blkdat.input (units may have changed from m to pressure):
 !
-! --- 'nhybrd' = number of hybrid levels (0=all isopycnal)
-! --- 'nsigma' = number of sigma  levels (nhybrd-nsigma z-levels)
+! --- 'nsigma' = number of sigma  levels
 ! --- 'dp0k  ' = layer k deep    z-level spacing minimum thickness (m)
-! ---              k=1,kdm; dp0k must be zero for k>nhybrd
+! ---              k=1,kdm
 ! --- 'ds0k  ' = layer k shallow z-level spacing minimum thickness (m)
 ! ---              k=1,nsigma
 ! --- 'dp00i'  = deep isopycnal spacing minimum thickness (m)
@@ -401,7 +393,7 @@ subroutine hybgen_regrid(G, GV, US, dp, tv, CS, dzInterface, PCM_cell)
     endif
 
     ! Convert the regridding parameters into specific constraints for this column.
-    call hybgen_column_init(kdm, CS%nhybrid, CS%nsigma, CS%dp0k, CS%ds0k, CS%dp00i, &
+    call hybgen_column_init(kdm, CS%nsigma, CS%dp0k, CS%ds0k, CS%dp00i, &
                             CS%topiso_const, CS%qhybrlx, CS%dpns, CS%dsns, h_tot, dilate, &
                             dp_i_j, fixlay, qhrlx, dp0ij, dp0cum)
 
@@ -410,15 +402,14 @@ subroutine hybgen_regrid(G, GV, US, dp, tv, CS, dzInterface, PCM_cell)
       if (CS%hybiso > 0.0) then
         ! --- thin or isopycnal source layers are remapped with PCM.
         PCM_lay(k) = (k > fixlay) .and. &
-            ((k > CS%nhybrid) .or. (dp_i_j(k) <= dpthin) .or. &
-             (abs(Rcv(k)-Rcv_tgt(k)) < CS%hybiso))
+            ((dp_i_j(k) <= dpthin) .or. (abs(Rcv(k)-Rcv_tgt(k)) < CS%hybiso))
       else ! hybiso==0.0, so purely isopycnal layers use PCM
-        PCM_lay(k) = (k > CS%nhybrid)
+        PCM_lay(k) = .false.
       endif ! hybiso
     enddo !k
 
     ! Determine the new layer thicknesses.
-    call hybgen_column_regrid(CS, kdm, CS%nhybrid, CS%thkbot, CS%onem, &
+    call hybgen_column_regrid(CS, kdm, CS%thkbot, CS%onem, &
                               1.0e-11*US%kg_m3_to_R, Rcv_tgt, fixlay, qhrlx, dp0ij, &
                               dp0cum, Rcv, dp_i_j, dz_int)
 
@@ -443,12 +434,11 @@ end subroutine hybgen_regrid
 
 !> Initialize some of the variables that are used for regridding or unmixing, including the
 !! stretched contraits on where the new interfaces can be.
-subroutine hybgen_column_init(kdm, nhybrd, nsigma, dp0k, ds0k, dp00i, topiso_i_j, &
+subroutine hybgen_column_init(kdm, nsigma, dp0k, ds0k, dp00i, topiso_i_j, &
                           qhybrlx, dpns, dsns, h_tot, dilate, dp_i_j, &
                           fixlay, qhrlx, dp0ij, dp0cum)
   integer, intent(in)    :: kdm          !< The number of layers in the new grid
-  integer, intent(in)    :: nhybrd       !< The number of hybrid layers (typically kdm)
-  integer, intent(in)    :: nsigma       !< The number of sigma  levels (nhybrd-nsigma z-levels)
+  integer, intent(in)    :: nsigma       !< The number of sigma  levels
   real,    intent(in)    :: dp0k(kdm)    !< Layer deep z-level spacing minimum thicknesses [H ~> m or kg m-2]
   real,    intent(in)    :: ds0k(nsigma) !< Layer shallow z-level spacing minimum thicknesses [H ~> m or kg m-2]
   real,    intent(in)    :: dp00i        !< Deep isopycnal spacing minimum thickness [H ~> m or kg m-2]
@@ -547,9 +537,9 @@ subroutine hybgen_column_init(kdm, nhybrd, nsigma, dp0k, ds0k, dp00i, topiso_i_j
 
 ! --- identify the current fixed coordinate layers
   fixlay = 1  !layer 1 always fixed
-  do k=2,nhybrd
+  do k=2,kdm
     if (dp0cum(k) >= dilate * topiso_i_j) then
-      exit  !layers k to nhybrd might be isopycnal
+      exit  !layers k to kdm might be isopycnal
     endif
 ! ---   top of layer is above topiso, i.e. always fixed coordinate layer
     qhrlx(k+1) = 1.0  !no relaxation in fixed layers
@@ -557,13 +547,13 @@ subroutine hybgen_column_init(kdm, nhybrd, nsigma, dp0k, ds0k, dp00i, topiso_i_j
   enddo !k
 
   fixall = fixlay
-  do k=fixall+1,nhybrd
+  do k=fixall+1,kdm
     if (p_i_j(k+1) > dp0cum(k+1)+0.1*dp0ij(k)) then
       if ( (fixlay > fixall) .and. (p_i_j(k) > dp0cum(k)) ) then
         ! --- The previous layer should remain fixed.
         fixlay = fixlay-1
       endif
-      exit  !layers k to nhybrd might be isopycnal
+      exit  !layers k to kdm might be isopycnal
     endif
 ! ---   sometimes fixed coordinate layer
     qhrlx(k) = 1.0  !no relaxation in fixed layers
@@ -596,12 +586,11 @@ real function cushn(delp, dp0)
 end function cushn
 
 !> Create a new grid for a column of water using the Hybgen algorithm.
-subroutine hybgen_column_regrid(CS, kdm, nhybrd, thkbot, onem, epsil, Rcv_tgt, &
+subroutine hybgen_column_regrid(CS, kdm, thkbot, onem, epsil, Rcv_tgt, &
                                 fixlay, qhrlx, dp0ij, dp0cum, Rcv, h_in, dp_int)
 !
   type(hybgen_regrid_CS), intent(in)    :: CS  !< hybgen regridding control structure
   integer, intent(in)    :: kdm            !< number of layers
-  integer, intent(in)    :: nhybrd         !< number of hybrid layers (typically kdm)
   real,    intent(in)    :: thkbot         !< thickness of bottom boundary layer [H ~> m or kg m-2]
   real,    intent(in)    :: onem           !< one m in pressure units [H ~> m or kg m-2]
   real,    intent(in)    :: epsil          !< small nonzero density to prevent division by zero [R ~> kg m-3]
@@ -677,7 +666,7 @@ subroutine hybgen_column_regrid(CS, kdm, nhybrd, thkbot, onem, epsil, Rcv_tgt, &
     enddo
   endif
 
-  do k=2,nhybrd
+  do k=2,kdm
 
     if (k <= fixlay) then
 ! ---     maintain constant thickness, k <= fixlay
