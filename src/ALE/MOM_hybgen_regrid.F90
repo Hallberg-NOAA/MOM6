@@ -681,11 +681,17 @@ subroutine hybgen_column_regrid(CS, nk, thkbot, onem, epsil, Rcv_tgt, &
   enddo
 
   ! Remap the non-fixed layers.
-  do k=fixlay+1,nk
 
-! ---     do not maintain constant thickness, k > fixlay
+  ! In the Hycom version, this loop was fused the loop correcting water that is
+  ! too light, and it ran down the water column, but if there are a set of layers
+  ! that are very dense, that structure can lead to all of the water being remapped
+  ! into a single thick layer.  Splitting the loops and running the loop upwards
+  ! (as is done here avoids that catastrophic problem for layers that are far from
+  ! their targets.  However, this code is still prone to a thin-thick-thin null mode.
+  do k=nk,fixlay+2,-1
+    !  This is how the Hycom code would do this loop: do k=fixlay+1,nk ; if (k>fixlay+1) then
 
-    if ((Rcv(k) > Rcv_tgt(k) + epsil) .and.  (k > fixlay+1)) then
+    if ((Rcv(k) > Rcv_tgt(k) + epsil)) then
 ! ---       water in layer k is too dense
 ! ---       try to dilute with water from layer k-1
 ! ---       do not move interface if k = fixlay + 1
@@ -698,7 +704,7 @@ subroutine hybgen_column_regrid(CS, nk, thkbot, onem, epsil, Rcv_tgt, &
 
         if ((Rcv_tgt(k) - Rcv(k-1)) <= epsil) then
           ! layer k-1 is far too dense, take the entire layer
-          ! Because this code is working downward, if this branch is repeated in a series
+          ! If this code is working downward and this branch is repeated in a series
           ! of successive layers, it can accumulate into a very thick homogenous layers.
           h_hat0 = 0.0  ! This line was not in the Hycom version of hybgen.F90.
           h_hat = dp0ij(k-1) - h_col(k-1)
@@ -792,8 +798,13 @@ subroutine hybgen_column_regrid(CS, nk, thkbot, onem, epsil, Rcv_tgt, &
         endif !entrain
 
       endif  !too-dense adjustment
+    endif
+    
+    ! In the original Hycom version, there is not a break between these two loops.
+  enddo
 
-    elseif (Rcv(k) < Rcv_tgt(k) - epsil) then   ! layer too light
+  do k=fixlay+1,nk
+    if (Rcv(k) < Rcv_tgt(k) - epsil) then   ! layer too light
 !
 ! ---       water in layer k is too light
 ! ---       try to dilute with water from layer k+1
@@ -821,7 +832,7 @@ subroutine hybgen_column_regrid(CS, nk, thkbot, onem, epsil, Rcv_tgt, &
 ! ---           much as possible. otherwise, permit layers to collapse
 ! ---           to zero thickness at the bottom.
           if (p_int(min(k+3,nk+1)) < p_int(nk+1)) then
-            if (p_int(nk+1) - p_int(k) >  dp0ij(k) + dp0ij(k+1)) then
+            if (p_int(nk+1) - p_int(k) > dp0ij(k) + dp0ij(k+1)) then
               h_hat = h_col(k+1) - cushn(h_col(k+1) - h_hat, dp0ij(k+1))
             endif
             ! Try to bring layer layer k up to its minimum thickness.
@@ -845,7 +856,7 @@ subroutine hybgen_column_regrid(CS, nk, thkbot, onem, epsil, Rcv_tgt, &
         endif !too-light adjustment
       endif !above bottom
     endif !too dense or too light
-!
+
 ! ---     if layer above is still too thin, move interface down.
     dh_cor = min(qhrlx(k-1) * min(dp0ij(k-1) - h_col(k-1), p_int(nk+1) - p_int(k)), h_col(k))
     if (dh_cor > 0.0) then
@@ -855,7 +866,7 @@ subroutine hybgen_column_regrid(CS, nk, thkbot, onem, epsil, Rcv_tgt, &
       p_int(k) = p_int(k) + dh_cor
     endif
 
-  enddo !k  Hybrid vertical coordinate relocation
+  enddo !k  Hybrid vertical coordinate relocation moving interface downward
 
   ! Verify that everything is consistent.  This block should be removed or
   ! commented out after the code is verified to work.
