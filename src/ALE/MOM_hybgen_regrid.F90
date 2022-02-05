@@ -621,7 +621,7 @@ subroutine hybgen_column_regrid(CS, kdm, thkbot, onem, epsil, Rcv_tgt, &
   real :: h1_tgt ! A target thickness for the top layer [H ~> m or kg m-2]
   real :: tenm   ! ten m  in pressure units [H ~> m or kg m-2]
   real :: onemm  ! one mm in pressure units [H ~> m or kg m-2]
-  integer k, ka, ktr
+  integer :: k
   character(len=256) :: mesg  ! A string for output messages
 
   ! This line needs to be consistent with the parameters set in cushn().
@@ -645,53 +645,32 @@ subroutine hybgen_column_regrid(CS, kdm, thkbot, onem, epsil, Rcv_tgt, &
 ! --- try to restore isopycnic conditions by moving layer interfaces
 ! --- qhrlx(k) are relaxation coefficients (inverse baroclinic time steps)
 
-  if (fixlay >= 1) then
-! ---   maintain constant thickness in layer k = 1, entraining from layers below as necessary.
-    k = 1
-    h1_tgt = min(dp0ij(k), p_i_j(kdm+1))
-    dp_rem = h1_tgt - h_i_j(1)
-    h_i_j(1) = h1_tgt
-    p_i_j(2) = h1_tgt
-    do K=2,kdm
-      dp_int(K) = dp_rem
-      if (dp_rem <= h_i_j(k)) then
-        h_i_j(k) = h_i_j(k) - dp_rem
-        dp_rem = 0.0
-        exit  ! usually get here quickly
-      else
-        dp_rem = dp_rem - h_i_j(k)
-        h_i_j(k) = 0.0
-        p_i_j(K+1) = h1_tgt
-      endif
-    enddo
-  endif
+  ! --- maintain prescribed thickness in layer k <= fixlay
+  do k=1,min(kdm-1,fixlay)
+    p_new = min(dp0cum(k+1), p_i_j(kdm+1)) ! This could be positive or negative.
+    dh_cor = p_new - p_i_j(K+1)
+    h_i_j(k)    = h_i_j(k)    + dh_cor
+    h_i_j(k+1)  = h_i_j(k+1)  - dh_cor
+    dp_int(K+1) = dp_int(K+1) + dh_cor
+    p_i_j(K+1) = p_new
+  enddo
 
-  do k=2,kdm
-
-    if (k <= fixlay) then
-! ---     maintain constant thickness, k <= fixlay
-      if (k < kdm) then  !p.kdm+1 not changed
-        p_new = min(dp0cum(k+1), p_i_j(kdm+1))
-        h_i_j(k)   = h_i_j(k)   + (p_new - p_i_j(K+1))
-        h_i_j(k+1) = h_i_j(k+1) - (p_new - p_i_j(K+1))
-        dp_int(K+1) = dp_int(K+1) + (p_new - p_i_j(K+1))
-        p_i_j(k+1) = p_new
-        if (k == fixlay) then
-! ---         enforce interface order (may not be necessary).
-          do ka=k+2,kdm
-            if (p_i_j(Ka) >= p_i_j(K+1)) then
-              exit  ! usually get here quickly
-            else
-              h_i_j(ka-1) = h_i_j(ka-1) + (p_i_j(K+1) - p_i_j(Ka))
-              h_i_j(ka)   = h_i_j(ka)   - (p_i_j(K+1) - p_i_j(Ka))
-              dp_int(Ka) = dp_int(Ka) + (p_i_j(K+1) - p_i_j(Ka))
-              p_i_j(Ka) = p_i_j(K+1)
-            endif
-          enddo !ka
-        endif !k == fixlay
-      endif !k < kdm
-
+  ! ---  Eliminate negative thicknesses below the fixed layers, entraining from below as necessary.
+  do k=fixlay+1,kdm-1
+    if (h_i_j(k) >= 0.0) then
+      exit  ! usually get here quickly
     else
+      dh_cor = -h_i_j(k)  ! This is positive.
+      h_i_j(k)    = h_i_j(k) + dh_cor
+      h_i_j(k+1)  = h_i_j(k+1)  - dh_cor
+      dp_int(k+1) = dp_int(k+1) + dh_cor
+      p_i_j(k+1) = p_i_j(fixlay+1)
+    endif
+  enddo
+
+  ! Remap the non-fixed layers.
+  do k=fixlay+1,kdm
+
 ! ---     do not maintain constant thickness, k > fixlay
 
       if ((Rcv(k) > Rcv_tgt(k)+epsil) .and.  (k > fixlay+1)) then
@@ -705,19 +684,21 @@ subroutine hybgen_column_regrid(CS, kdm, thkbot, onem, epsil, Rcv_tgt, &
 ! ---         if layer k-1 is too light, thicken the thinner of the two,
 ! ---         i.e. skip this layer if it is thicker.
 
-          if     ((Rcv_tgt(k)-Rcv(k-1)) <= epsil) then
-!               layer k-1 much too dense, take entire layer
+          if ((Rcv_tgt(k)-Rcv(k-1)) <= epsil) then
+            ! layer k-1 is far too dense, take the entire layer
+            ! Because this code is working downward, if this branch is repeated in a series
+            ! of successive layers, it can accumulate into a very thick homogenous layers.
             h_hat0 = 0.0  ! This line was not in the Hycom version of hybgen.F90.
             h_hat = dp0ij(k-1) - h_i_j(k-1)
           else
-            q_frac = (Rcv_tgt(k)-Rcv(k)) / &
-                     (Rcv_tgt(k)-Rcv(k-1))    ! -1 <= q_frac < 0
+            ! Entrain enough from the layer above to bring layer k to its target density.
+            q_frac = (Rcv_tgt(k)-Rcv(k)) / (Rcv_tgt(k)-Rcv(k-1))    ! -1 <= q_frac < 0
             h_hat0 = q_frac*h_i_j(k)  ! -h_i_j(k-1) <= h_hat0 < 0
             if (k == fixlay+2) then
-! ---             treat layer k-1 as fixed.
+              ! --- treat layer k-1 as fixed.
               h_hat = max(h_hat0, dp0ij(k-1) - h_i_j(k-1))
             else
-! ---             maintain minimum thickess of layer k-1.
+              ! --- maintain minimum thickess of layer k-1.
               h_hat = cushn(h_hat0 + h_i_j(k-1), dp0ij(k-1)) - h_i_j(k-1)
             endif !fixlay+2:else
           end if
@@ -729,10 +710,10 @@ subroutine hybgen_column_regrid(CS, kdm, thkbot, onem, epsil, Rcv_tgt, &
 ! ---         necessary) upward
           if (k <= fixlay+2) then
 ! ---           do nothing.
-          else if ((h_hat >= 0.0) .and. &
-                   p_i_j(k-1) > dp0cum(k-1)+tenm .and. &
-                  (p_i_j(kdm+1)-p_i_j(k-1) < thkbot .or. &
-                   h_i_j(k-2) > qqmx*dp0ij(k-2))) then ! k > 2
+          elseif ( (h_hat >= 0.0) .and. &
+                   (p_i_j(k-1) > dp0cum(k-1)+tenm) .and. &
+                   ( (p_i_j(kdm+1)-p_i_j(k-1) < thkbot) .or. &
+                     (h_i_j(k-2) > qqmx*dp0ij(k-2)) ) ) then
             if (k == fixlay+3) then
 ! ---             treat layer k-2 as fixed.
               h_hat2 = max(h_hat0 - h_hat, dp0ij(k-2) - h_i_j(k-2))
@@ -805,7 +786,9 @@ subroutine hybgen_column_regrid(CS, kdm, thkbot, onem, epsil, Rcv_tgt, &
 ! ---           thinner than the other.
 
             if     ((Rcv(k+1)-Rcv_tgt(k)) <= epsil) then
-!                 layer k-1 too light, take entire layer
+              ! layer k+1 is far too light, take the entire layer
+              ! Because this code is working downward, this flux does not accumulate across
+              ! successive layers.
               h_hat = h_i_j(k+1)
             else
               q_frac = (Rcv_tgt(k) - Rcv(k)) / (Rcv(k+1)-Rcv_tgt(k)) ! 0 < q_frac <= 1
@@ -848,9 +831,7 @@ subroutine hybgen_column_regrid(CS, kdm, thkbot, onem, epsil, Rcv_tgt, &
         p_i_j(k) = p_i_j(k) + dh_cor
       endif
 
-    endif !k <= fixlay:else
-
-  enddo !k  vertical coordinate relocation
+  enddo !k  Hybrid vertical coordinate relocation
 
   ! Verify that everything is consistent.  This block should be removed or
   ! commented out after the code is verified to work.
@@ -859,6 +840,11 @@ subroutine hybgen_column_regrid(CS, kdm, thkbot, onem, epsil, Rcv_tgt, &
       write(mesg, '("k ",i4," h ",es13.4," h_in ",es13.4, " dp ",2es13.4," err ",es13.4)') &
           k, h_i_j(k), h_in(k), dp_int(K), dp_int(K+1), (h_i_j(k) - h_in(k)) + (dp_int(K) - dp_int(K+1))
       call MOM_error(FATAL, "Mismatched thickness changes in hybgen_regrid: "//trim(mesg))
+    endif
+    if (h_i_j(k) < -1.0e-15*max(p_i_j(kdm+1), onem)) then
+      write(mesg, '("k ",i4," h ",es13.4," h_in ",es13.4, " dp ",2es13.4, " fixlay ",i4)') &
+          k, h_i_j(k), h_in(k), dp_int(K), dp_int(K+1), fixlay
+      call MOM_error(FATAL, "Significantly negative final thickness in hybgen_regrid: "//trim(mesg))
     endif
   enddo
   do K=1,kdm+1
