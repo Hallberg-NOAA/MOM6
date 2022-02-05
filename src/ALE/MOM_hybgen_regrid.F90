@@ -251,14 +251,14 @@ subroutine hybgen_regrid(G, GV, US, dp, tv, CS, dzInterface, PCM_cell)
 !
 ! --- 'nsigma' = number of sigma  levels
 ! --- 'dp0k  ' = layer k deep    z-level spacing minimum thickness (m)
-! ---              k=1,kdm
+! ---              k=1,nk
 ! --- 'ds0k  ' = layer k shallow z-level spacing minimum thickness (m)
 ! ---              k=1,nsigma
 ! --- 'dp00i'  = deep isopycnal spacing minimum thickness (m)
 ! --- 'isotop' = shallowest depth for isopycnal layers     (m)
 !                now in topiso(:,:)
 ! --- 'sigma ' = isopycnal layer target densities (sigma units)
-! ---            now in theta(:,:,1:kdm)
+! ---            now in theta(:,:,1:nk)
 !
 ! --- the above specifies a vertical coord. that is isopycnal or:
 ! ---  near surface z in    deep water, based on dp0k
@@ -281,7 +281,7 @@ subroutine hybgen_regrid(G, GV, US, dp, tv, CS, dzInterface, PCM_cell)
 ! --- for fixed depth targets to be:
 ! ---  z-only set nsigma=0,
 ! ---  sigma-z (shallow-deep) use a very small ds0k(:),
-! ---  sigma-only set nsigma=kdm, dp0k large, and ds0k small.
+! ---  sigma-only set nsigma=nk, dp0k large, and ds0k small.
 !
 
   ! These arrays work with the input column
@@ -295,7 +295,7 @@ subroutine hybgen_regrid(G, GV, US, dp, tv, CS, dzInterface, PCM_cell)
   ! These arrays are on the target grid.
   real :: Rcv_tgt(CS%nk)    ! Target potential density [R ~> kg m-3]
   real :: Rcv(CS%nk)        ! Initial values of coordinate potential density on the target grid [R ~> kg m-3]
-  real :: dp_i_j(CS%nk)     ! A column of layer thicknesses [H ~> m or kg m-2]
+  real :: h_col(CS%nk)      ! A column of layer thicknesses [H ~> m or kg m-2]
   real :: dz_int(CS%nk+1)   ! The change in interface height due to remapping [H ~> m or kg m-2]
   real :: Rcv_integral      ! Integrated coordinate potential density in a layer [R H ~> kg m-2 or kg2 m-5]
 
@@ -312,9 +312,9 @@ subroutine hybgen_regrid(G, GV, US, dp, tv, CS, dzInterface, PCM_cell)
                             ! each target layer, in the unusual case where the the input grid is
                             ! larger than the new grid.  This situation only occurs during certain
                             ! types of initialization or when generating output diagnostics.
-  integer :: i, j, k, kdm, m, k2, nk_in
+  integer :: i, j, k, nk, m, k2, nk_in
 
-  kdm = CS%nk
+  nk = CS%nk
 
   p_col(:) = CS%ref_pressure
   dpthin = 1.0e-6*CS%onem
@@ -344,7 +344,7 @@ subroutine hybgen_regrid(G, GV, US, dp, tv, CS, dzInterface, PCM_cell)
     if (CS%nk >= nk_in) then
       ! Simply copy over the common layers.  This is the usual case.
       do k=1,min(CS%nk,GV%ke)
-        dp_i_j(k) = dp_in(k)
+        h_col(k) = dp_in(k)
         Rcv(k) = Rcv_in(k)
       enddo
       if (CS%nk > GV%ke) then
@@ -352,7 +352,7 @@ subroutine hybgen_regrid(G, GV, US, dp, tv, CS, dzInterface, PCM_cell)
         ! This case only occurs during initialization or perhaps when writing diagnostics.
         do k=GV%ke+1,CS%nk
           Rcv(k) = Rcv_in(GV%ke)
-          dp_i_j(k) = 0.0
+          h_col(k) = 0.0
         enddo
       endif
     else ! (CS%nk < nk_in)
@@ -362,16 +362,16 @@ subroutine hybgen_regrid(G, GV, US, dp, tv, CS, dzInterface, PCM_cell)
       ! This case was not handled by the original Hycom code in hybgen.F90.
       do k=0,CS%nk ; k_end(k) = (k * nk_in) / CS%nk ; enddo
       do k=1,CS%nk
-        dp_i_j(k) = 0.0 ; Rcv_integral = 0.0
-        do k2=k_end(k-1)+1,k_end(k)
-          dp_i_j(k) = dp_i_j(k) + dp_in(k2)
+        h_col(k) = 0.0 ; Rcv_integral = 0.0
+        do k2=k_end(k-1) + 1,k_end(k)
+          h_col(k) = h_col(k) + dp_in(k2)
           Rcv_integral = Rcv_integral + dp_in(k2)*Rcv_in(k2)
         enddo
-        if (dp_i_j(k) > GV%H_subroundoff) then
+        if (h_col(k) > GV%H_subroundoff) then
           ! Take the volume-weighted average properties.
-          Rcv(k) = Rcv_integral / dp_i_j(k)
+          Rcv(k) = Rcv_integral / h_col(k)
         else ! Take the properties of the topmost source layer that contributes.
-          Rcv(k) = Rcv_in(k_end(k-1)+1)
+          Rcv(k) = Rcv_in(k_end(k-1) + 1)
         endif
       enddo
     endif
@@ -383,7 +383,7 @@ subroutine hybgen_regrid(G, GV, US, dp, tv, CS, dzInterface, PCM_cell)
     enddo
 
     ! The following block of code is used to trigger z* stretching of the targets heights.
-    nominalDepth = (G%bathyT(i,j)+G%Z_ref)*GV%Z_to_H
+    nominalDepth = (G%bathyT(i,j) + G%Z_ref)*GV%Z_to_H
     if (h_tot <= CS%min_dilate*nominalDepth) then
       dilate = CS%min_dilate
     elseif (h_tot >= CS%max_dilate*nominalDepth) then
@@ -393,32 +393,32 @@ subroutine hybgen_regrid(G, GV, US, dp, tv, CS, dzInterface, PCM_cell)
     endif
 
     ! Convert the regridding parameters into specific constraints for this column.
-    call hybgen_column_init(kdm, CS%nsigma, CS%dp0k, CS%ds0k, CS%dp00i, &
+    call hybgen_column_init(nk, CS%nsigma, CS%dp0k, CS%ds0k, CS%dp00i, &
                             CS%topiso_const, CS%qhybrlx, CS%dpns, CS%dsns, h_tot, dilate, &
-                            dp_i_j, fixlay, qhrlx, dp0ij, dp0cum)
+                            h_col, fixlay, qhrlx, dp0ij, dp0cum)
 
     ! Determine whether to require the use of PCM remapping from each source layer.
     do k=1,GV%ke
       if (CS%hybiso > 0.0) then
         ! --- thin or isopycnal source layers are remapped with PCM.
         PCM_lay(k) = (k > fixlay) .and. &
-            ((dp_i_j(k) <= dpthin) .or. (abs(Rcv(k)-Rcv_tgt(k)) < CS%hybiso))
+            ((h_col(k) <= dpthin) .or. (abs(Rcv(k) - Rcv_tgt(k)) < CS%hybiso))
       else ! hybiso==0.0, so purely isopycnal layers use PCM
         PCM_lay(k) = .false.
       endif ! hybiso
     enddo !k
 
     ! Determine the new layer thicknesses.
-    call hybgen_column_regrid(CS, kdm, CS%thkbot, CS%onem, &
+    call hybgen_column_regrid(CS, nk, CS%thkbot, CS%onem, &
                               1.0e-11*US%kg_m3_to_R, Rcv_tgt, fixlay, qhrlx, dp0ij, &
-                              dp0cum, Rcv, dp_i_j, dz_int)
+                              dp0cum, Rcv, h_col, dz_int)
 
     ! Store the output from hybgenaij_regrid in 3-d arrays.
     if (present(PCM_cell)) then ; do k=1,GV%ke
       PCM_cell(i,j,k) = PCM_lay(k)
     enddo ; endif
 
-    do K=1,kdm+1
+    do K=1,nk+1
       ! Note that dzInterface uses the opposite sign convention from the change in p.
       dzInterface(i,j,K) = -dz_int(K)
     enddo
@@ -434,12 +434,12 @@ end subroutine hybgen_regrid
 
 !> Initialize some of the variables that are used for regridding or unmixing, including the
 !! stretched contraits on where the new interfaces can be.
-subroutine hybgen_column_init(kdm, nsigma, dp0k, ds0k, dp00i, topiso_i_j, &
-                          qhybrlx, dpns, dsns, h_tot, dilate, dp_i_j, &
+subroutine hybgen_column_init(nk, nsigma, dp0k, ds0k, dp00i, topiso_i_j, &
+                          qhybrlx, dpns, dsns, h_tot, dilate, h_col, &
                           fixlay, qhrlx, dp0ij, dp0cum)
-  integer, intent(in)    :: kdm          !< The number of layers in the new grid
+  integer, intent(in)    :: nk           !< The number of layers in the new grid
   integer, intent(in)    :: nsigma       !< The number of sigma  levels
-  real,    intent(in)    :: dp0k(kdm)    !< Layer deep z-level spacing minimum thicknesses [H ~> m or kg m-2]
+  real,    intent(in)    :: dp0k(nk)     !< Layer deep z-level spacing minimum thicknesses [H ~> m or kg m-2]
   real,    intent(in)    :: ds0k(nsigma) !< Layer shallow z-level spacing minimum thicknesses [H ~> m or kg m-2]
   real,    intent(in)    :: dp00i        !< Deep isopycnal spacing minimum thickness [H ~> m or kg m-2]
   real,    intent(in)    :: topiso_i_j   !< Shallowest depth for isopycnal layers [H ~> m or kg m-2]
@@ -447,13 +447,13 @@ subroutine hybgen_column_init(kdm, nsigma, dp0k, ds0k, dp00i, topiso_i_j, &
   real,    intent(in)    :: h_tot        !< The sum of the initial layer thicknesses [H ~> m or kg m-2]
   real,    intent(in)    :: dilate       !< A factor by which to dilate the target positions
                                          !! from z to z* [nondim]
-  real,    intent(in)    :: dp_i_j(kdm)  !< Initial layer thicknesses [H ~> m or kg m-2]
+  real,    intent(in)    :: h_col(nk)    !< Initial layer thicknesses [H ~> m or kg m-2]
   real,    intent(in)    :: dpns         !< Vertical sum of dp0k [H ~> m or kg m-2]
   real,    intent(in)    :: dsns         !< Vertical sum of ds0k [H ~> m or kg m-2]
   integer, intent(out)   :: fixlay       !< Deepest fixed coordinate layer
-  real,    intent(out)   :: qhrlx( kdm+1) !< Fractional relaxation within a timestep (between 0 and 1) [nondim]
-  real,    intent(out)   :: dp0ij( kdm)   !< minimum layer thickness [H ~> m or kg m-2]
-  real,    intent(out)   :: dp0cum(kdm+1) !< minimum interface depth [H ~> m or kg m-2]
+  real,    intent(out)   :: qhrlx(nk+1)  !< Fractional relaxation within a timestep (between 0 and 1) [nondim]
+  real,    intent(out)   :: dp0ij(nk)    !< minimum layer thickness [H ~> m or kg m-2]
+  real,    intent(out)   :: dp0cum(nk+1) !< minimum interface depth [H ~> m or kg m-2]
 !
 ! --- --------------------------------------------------------------
 ! --- hybrid grid generator, single column(part A) - initialization.
@@ -463,7 +463,7 @@ subroutine hybgen_column_init(kdm, nsigma, dp0k, ds0k, dp00i, topiso_i_j, &
   real :: hybrlx  ! The relaxation rate in the hybrid region [timestep-1]?
   real :: qdep    ! Total water column thickness as a fraction of dp0k (vs ds0k) [nondim]
   real :: q       ! A portion of the thickness that contributes to the new cell [H ~> m or kg m-2]
-  real :: p_i_j(kdm+1)  ! Interface depths [H ~> m or kg m-2]
+  real :: p_int(nk+1)  ! Interface depths [H ~> m or kg m-2]
   integer :: k, fixall
 
 ! --- dpns = sum(dp0k(k),k=1,nsigma)
@@ -481,37 +481,37 @@ subroutine hybgen_column_init(kdm, nsigma, dp0k, ds0k, dp00i, topiso_i_j, &
 
   if (qdep < 1.0) then
     ! ---  terrain following or shallow fixed coordinates, qhrlx=1 and ignore dp00
-    p_i_j( 1) = 0.0
+    p_int( 1) = 0.0
     dp0cum(1) = 0.0
     qhrlx( 1) = 1.0
     dp0ij( 1) = dilate * (qdep*dp0k(1) + (1.0-qdep)*ds0k(1))
 
     dp0cum(2) = dp0cum(1) + dp0ij(1)
     qhrlx( 2) = 1.0
-    p_i_j( 2) = p_i_j(1)+dp_i_j(1)
-    do k=2,kdm
+    p_int( 2) = p_int(1) + h_col(1)
+    do k=2,nk
       qhrlx( k+1) = 1.0
       dp0ij( k)   = dilate * (qdep*dp0k(k) + (1.0-qdep)*ds0k(k))
       dp0cum(k+1) = dp0cum(k) + dp0ij(k)
-      p_i_j( k+1) = p_i_j(k)+dp_i_j(k)
+      p_int( k+1) = p_int(k) + h_col(k)
     enddo !k
   else
     ! ---  not terrain following
-    p_i_j( 1) = 0.0
+    p_int( 1) = 0.0
     dp0cum(1) = 0.0
     qhrlx( 1) = 1.0 !no relaxation in top layer
     dp0ij( 1) = dilate * dp0k(1)
 
     dp0cum(2) = dp0cum(1) + dp0ij(1)
     qhrlx( 2) = 1.0 !no relaxation in top layer
-    p_i_j( 2) = p_i_j(1)+dp_i_j(1)
-    do k=2,kdm
-      if ((dp0k(k) <= dp00i) .or. (dilate * dp0k(k) >= p_i_j(k)-dp0cum(k))) then
+    p_int( 2) = p_int(1) + h_col(1)
+    do k=2,nk
+      if ((dp0k(k) <= dp00i) .or. (dilate * dp0k(k) >= p_int(k) - dp0cum(k))) then
         ! This layer is in fixed surface coordinates.
         dp0ij(k) = dp0k(k)
         qhrlx(k+1) = 1.0 ! 1 at  dp0k
       else
-        q = dp0k(k) * (dilate * dp0k(k) / ( p_i_j(k)-dp0cum(k)) ) ! A fraction between 0 and 1 of dp0 to use here.
+        q = dp0k(k) * (dilate * dp0k(k) / ( p_int(k) - dp0cum(k)) ) ! A fraction between 0 and 1 of dp0 to use here.
         if (dp00i >= q) then
           ! This layer is much deeper than the fixed surface coordinates.
           dp0ij(k) = dp00i
@@ -521,25 +521,25 @@ subroutine hybgen_column_init(kdm, nsigma, dp0k, ds0k, dp00i, topiso_i_j, &
           ! In this case dp00i < q < dp0k.
           dp0ij(k) = dilate * q
           qhrlx(k+1) = qhybrlx * (dp0k(k) - dp00i) / &
-                       ((dp0k(k)-q) + (q-dp00i)*qhybrlx)  !1 at  dp0k, qhybrlx at dp00i
+                       ((dp0k(k) - q) + (q - dp00i)*qhybrlx)  !1 at  dp0k, qhybrlx at dp00i
         endif
 
         ! The old equivalent code is:
         ! hybrlx = 1.0 / qhybrlx
-        ! q = max( dp00i, dp0k(k) * (dp0k(k) / max(dp0k( k), p_i_j(k)-dp0cum(k)) ) )
-        ! qts = 1.0 - (q-dp00i) / (dp0k(k)-dp00i)  !0 at q = dp0k, 1 at q=dp00i
+        ! q = max( dp00i, dp0k(k) * (dp0k(k) / max(dp0k( k), p_int(k) - dp0cum(k)) ) )
+        ! qts = 1.0 - (q-dp00i) / (dp0k(k) - dp00i)  !0 at q = dp0k, 1 at q=dp00i
         ! qhrlx( k+1) = 1.0 / (1.0 + qts*(hybrlx-1.0))  !1 at dp0k, qhybrlx at dp00i
       endif
       dp0cum(k+1) = dp0cum(k) + dp0ij(k)
-      p_i_j( k+1) = p_i_j(k) + dp_i_j(k)
+      p_int(k+1) = p_int(k) + h_col(k)
     enddo !k
   endif !qdep<1:else
 
 ! --- identify the current fixed coordinate layers
   fixlay = 1  !layer 1 always fixed
-  do k=2,kdm
+  do k=2,nk
     if (dp0cum(k) >= dilate * topiso_i_j) then
-      exit  !layers k to kdm might be isopycnal
+      exit  !layers k to nk might be isopycnal
     endif
 ! ---   top of layer is above topiso, i.e. always fixed coordinate layer
     qhrlx(k+1) = 1.0  !no relaxation in fixed layers
@@ -547,13 +547,13 @@ subroutine hybgen_column_init(kdm, nsigma, dp0k, ds0k, dp00i, topiso_i_j, &
   enddo !k
 
   fixall = fixlay
-  do k=fixall+1,kdm
-    if (p_i_j(k+1) > dp0cum(k+1)+0.1*dp0ij(k)) then
-      if ( (fixlay > fixall) .and. (p_i_j(k) > dp0cum(k)) ) then
+  do k=fixall+1,nk
+    if (p_int(k+1) > dp0cum(k+1) + 0.1*dp0ij(k)) then
+      if ( (fixlay > fixall) .and. (p_int(k) > dp0cum(k)) ) then
         ! --- The previous layer should remain fixed.
         fixlay = fixlay-1
       endif
-      exit  !layers k to kdm might be isopycnal
+      exit  !layers k to nk might be isopycnal
     endif
 ! ---   sometimes fixed coordinate layer
     qhrlx(k) = 1.0  !no relaxation in fixed layers
@@ -565,8 +565,8 @@ end subroutine hybgen_column_init
 !> The cushion function from Bleck & Benjamin, 1992, which returns a smoothly varying
 !! but limited value that goes between dp0 and delp
 real function cushn(delp, dp0)
-  real, intent(in) :: delp  ! A thickness change
-  real, intent(in) :: dp0   ! A thickness change
+  real, intent(in) :: delp  ! A thickness change [H ~> m or kg m-2]
+  real, intent(in) :: dp0   ! A non-negative reference thickness [H ~> m or kg m-2]
 
   real :: qq  ! A limited ratio of delp/dp0 [nondim]
 
@@ -574,43 +574,54 @@ real function cushn(delp, dp0)
   real, parameter :: qqmn=-4.0, qqmx=2.0  ! shifted range for cushn [nondim]
 ! real, parameter :: qqmn=-2.0, qqmx=4.0  ! traditional range for cushn [nondim]
 ! real, parameter :: qqmn=-4.0, qqmx=6.0  ! somewhat wider range for cushn [nondim]
-  real, parameter :: cusha = qqmn**2*(qqmx-1.0)/(qqmx-qqmn)**2
-  real, parameter :: cushb=1.0/qqmn
+  ! These are derivative nondimensional parameters.
+  real, parameter :: cusha = qqmn**2 * (qqmx-1.0) / (qqmx-qqmn)**2
+  real, parameter :: I_qqmn = 1.0 / qqmn
+  real, parameter :: qq_scale = (qqmx-1.0) / (qqmx-qqmn)**2
+  real, parameter :: I_qqmx = 1.0 / qqmx
 
   ! --- if delp >= qqmx*dp0 >>  dp0, cushn returns delp.
   ! --- if delp <= qqmn*dp0 << -dp0, cushn returns dp0.
 
   qq = max(qqmn, min(qqmx, delp/dp0))
-  cushn = dp0 * (1.0 + cusha * (1.0-cushb*qq)**2) * max(1.0, delp/(dp0*qqmx))
+  cushn = dp0 * (1.0 + cusha * (1.0-I_qqmn*qq)**2) * max(1.0, delp/(dp0*qqmx))
+
+  ! This is mathematically equivalent, has one fewer divide, and works as intended even if dp0 = 0.
+  ! if (delp >= qqmx*dp0) then
+  !   cushn = delp
+  ! elseif (delp < qqmn*dp0) then
+  !   cushn = max(dp0, delp * I_qqmx)
+  ! else
+  !   cushn = max(dp0, delp * I_qqmx) * (1.0 + qq_scale * ((delp / dp0) - qqmn)**2)
+  ! endif
 
 end function cushn
 
 !> Create a new grid for a column of water using the Hybgen algorithm.
-subroutine hybgen_column_regrid(CS, kdm, thkbot, onem, epsil, Rcv_tgt, &
+subroutine hybgen_column_regrid(CS, nk, thkbot, onem, epsil, Rcv_tgt, &
                                 fixlay, qhrlx, dp0ij, dp0cum, Rcv, h_in, dp_int)
 !
   type(hybgen_regrid_CS), intent(in)    :: CS  !< hybgen regridding control structure
-  integer, intent(in)    :: kdm            !< number of layers
-  real,    intent(in)    :: thkbot         !< thickness of bottom boundary layer [H ~> m or kg m-2]
-  real,    intent(in)    :: onem           !< one m in pressure units [H ~> m or kg m-2]
-  real,    intent(in)    :: epsil          !< small nonzero density to prevent division by zero [R ~> kg m-3]
-  real,    intent(in)    :: Rcv_tgt(kdm)   !< Target potential density [R ~> kg m-3]
-  integer, intent(in)    :: fixlay         !< deepest fixed coordinate layer
-  real,    intent(in)    :: qhrlx( kdm+1)  !< relaxation coefficient per timestep [nondim]
-  real,    intent(in)    :: dp0ij( kdm)    !< minimum layer thickness [H ~> m or kg m-2]
-  real,    intent(in)    :: dp0cum(kdm+1)  !< minimum interface depth [H ~> m or kg m-2]
-  real,    intent(in)    :: Rcv(kdm)       !< Coordinate potential density [R ~> kg m-3]
-  real,    intent(in)    :: h_in(kdm)      !< Layer thicknesses [H ~> m or kg m-2]
-  real,    intent(out)   :: dp_int(kdm+1)  !< The change in interface positions [H ~> m or kg m-2]
+  integer, intent(in)    :: nk            !< number of layers
+  real,    intent(in)    :: thkbot        !< thickness of bottom boundary layer [H ~> m or kg m-2]
+  real,    intent(in)    :: onem          !< one m in pressure units [H ~> m or kg m-2]
+  real,    intent(in)    :: epsil         !< small nonzero density to prevent division by zero [R ~> kg m-3]
+  real,    intent(in)    :: Rcv_tgt(nk)   !< Target potential density [R ~> kg m-3]
+  integer, intent(in)    :: fixlay        !< deepest fixed coordinate layer
+  real,    intent(in)    :: qhrlx( nk+1)  !< relaxation coefficient per timestep [nondim]
+  real,    intent(in)    :: dp0ij( nk)    !< minimum layer thickness [H ~> m or kg m-2]
+  real,    intent(in)    :: dp0cum(nk+1)  !< minimum interface depth [H ~> m or kg m-2]
+  real,    intent(in)    :: Rcv(nk)       !< Coordinate potential density [R ~> kg m-3]
+  real,    intent(in)    :: h_in(nk)      !< Layer thicknesses [H ~> m or kg m-2]
+  real,    intent(out)   :: dp_int(nk+1)  !< The change in interface positions [H ~> m or kg m-2]
 
 ! --- ------------------------------------------------------
 ! --- hybrid grid generator, single column(part A) - regrid.
 ! --- ------------------------------------------------------
   real :: p_new  ! A new interface position [H ~> m or kg m-2]
-  real :: pres_in(kdm+1) ! layer interface positions [H ~> m or kg m-2]
-  real :: p_i_j(kdm+1)  ! layer interface positions [H ~> m or kg m-2]
-  real :: h_i_j(kdm)    ! Updated layer thicknesses [H ~> m or kg m-2]
-  real :: dp_rem        ! Remaining water to move [H ~> m or kg m-2]
+  real :: pres_in(nk+1) ! layer interface positions [H ~> m or kg m-2]
+  real :: p_int(nk+1)   ! layer interface positions [H ~> m or kg m-2]
+  real :: h_col(nk)     ! Updated layer thicknesses [H ~> m or kg m-2]
   real :: q_frac ! A fraction of a layer to entrain [nondim]
   real :: h_hat3 ! Thickness movement upward across the interface between layers k-2 and k-3 [H ~> m or kg m-2]
   real :: h_hat2 ! Thickness movement upward across the interface between layers k-1 and k-2 [H ~> m or kg m-2]
@@ -632,223 +643,235 @@ subroutine hybgen_column_regrid(CS, kdm, thkbot, onem, epsil, Rcv_tgt, &
   tenm = 10.0*onem
   onemm = 0.001*onem
 
-  do K=1,kdm+1 ; dp_int(K) = 0.0 ; enddo
+  do K=1,nk+1 ; dp_int(K) = 0.0 ; enddo
 
-  p_i_j(1) = 0.0
-  do k=1,kdm
-    h_i_j(k) = h_in(k)
-    p_i_j(K+1) = p_i_j(K) + h_i_j(k)
+  p_int(1) = 0.0
+  do k=1,nk
+    h_col(k) = h_in(k)
+    p_int(K+1) = p_int(K) + h_col(k)
   enddo
   ! This is here just for debugging:
-  do K=1,kdm+1 ; pres_in(K) = p_i_j(K) ; enddo
+  do K=1,nk+1 ; pres_in(K) = p_int(K) ; enddo
 
 ! --- try to restore isopycnic conditions by moving layer interfaces
 ! --- qhrlx(k) are relaxation coefficients (inverse baroclinic time steps)
 
   ! --- maintain prescribed thickness in layer k <= fixlay
-  do k=1,min(kdm-1,fixlay)
-    p_new = min(dp0cum(k+1), p_i_j(kdm+1)) ! This could be positive or negative.
-    dh_cor = p_new - p_i_j(K+1)
-    h_i_j(k)    = h_i_j(k)    + dh_cor
-    h_i_j(k+1)  = h_i_j(k+1)  - dh_cor
+  do k=1,min(nk-1,fixlay)
+    p_new = min(dp0cum(k+1), p_int(nk+1)) ! This could be positive or negative.
+    dh_cor = p_new - p_int(K+1)
+    h_col(k)    = h_col(k)    + dh_cor
+    h_col(k+1)  = h_col(k+1)  - dh_cor
     dp_int(K+1) = dp_int(K+1) + dh_cor
-    p_i_j(K+1) = p_new
+    p_int(K+1) = p_new
   enddo
 
   ! ---  Eliminate negative thicknesses below the fixed layers, entraining from below as necessary.
-  do k=fixlay+1,kdm-1
-    if (h_i_j(k) >= 0.0) then
+  do k=fixlay+1,nk-1
+    if (h_col(k) >= 0.0) then
       exit  ! usually get here quickly
     else
-      dh_cor = -h_i_j(k)  ! This is positive.
-      h_i_j(k)    = h_i_j(k) + dh_cor
-      h_i_j(k+1)  = h_i_j(k+1)  - dh_cor
+      dh_cor = -h_col(k)  ! This is positive.
+      h_col(k)    = h_col(k) + dh_cor
+      h_col(k+1)  = h_col(k+1)  - dh_cor
       dp_int(k+1) = dp_int(k+1) + dh_cor
-      p_i_j(k+1) = p_i_j(fixlay+1)
+      p_int(k+1) = p_int(fixlay+1)
     endif
   enddo
 
   ! Remap the non-fixed layers.
-  do k=fixlay+1,kdm
+  do k=fixlay+1,nk
 
 ! ---     do not maintain constant thickness, k > fixlay
 
-      if ((Rcv(k) > Rcv_tgt(k)+epsil) .and.  (k > fixlay+1)) then
+    if ((Rcv(k) > Rcv_tgt(k) + epsil) .and.  (k > fixlay+1)) then
 ! ---       water in layer k is too dense
 ! ---       try to dilute with water from layer k-1
 ! ---       do not move interface if k = fixlay + 1
 
-        if (Rcv(k-1) >= Rcv_tgt(k-1) .or. &
-            p_i_j(k) <= dp0cum(k)+onem .or. &
-            h_i_j(k) <= h_i_j(k-1)) then
-! ---         if layer k-1 is too light, thicken the thinner of the two,
-! ---         i.e. skip this layer if it is thicker.
+      if ((Rcv(k-1) >= Rcv_tgt(k-1)) .or. &
+          (p_int(k) <= dp0cum(k) + onem) .or. &
+          (h_col(k) <= h_col(k-1))) then
+        ! If layer k-1 is too light, there is a conflict in the direction the
+        ! inteface between them should move, so thicken the thinner of the two.
 
-          if ((Rcv_tgt(k)-Rcv(k-1)) <= epsil) then
-            ! layer k-1 is far too dense, take the entire layer
-            ! Because this code is working downward, if this branch is repeated in a series
-            ! of successive layers, it can accumulate into a very thick homogenous layers.
-            h_hat0 = 0.0  ! This line was not in the Hycom version of hybgen.F90.
-            h_hat = dp0ij(k-1) - h_i_j(k-1)
+        if ((Rcv_tgt(k) - Rcv(k-1)) <= epsil) then
+          ! layer k-1 is far too dense, take the entire layer
+          ! Because this code is working downward, if this branch is repeated in a series
+          ! of successive layers, it can accumulate into a very thick homogenous layers.
+          h_hat0 = 0.0  ! This line was not in the Hycom version of hybgen.F90.
+          h_hat = dp0ij(k-1) - h_col(k-1)
+        else
+          ! Entrain enough from the layer above to bring layer k to its target density.
+          q_frac = (Rcv_tgt(k) - Rcv(k)) / (Rcv_tgt(k) - Rcv(k-1))    ! -1 <= q_frac < 0
+          h_hat0 = q_frac*h_col(k)  ! -h_col(k-1) <= h_hat0 < 0
+          if (k == fixlay+2) then
+            ! Treat layer k-1 as fixed.
+            h_hat = max(h_hat0, dp0ij(k-1) - h_col(k-1))
           else
-            ! Entrain enough from the layer above to bring layer k to its target density.
-            q_frac = (Rcv_tgt(k)-Rcv(k)) / (Rcv_tgt(k)-Rcv(k-1))    ! -1 <= q_frac < 0
-            h_hat0 = q_frac*h_i_j(k)  ! -h_i_j(k-1) <= h_hat0 < 0
-            if (k == fixlay+2) then
-              ! --- treat layer k-1 as fixed.
-              h_hat = max(h_hat0, dp0ij(k-1) - h_i_j(k-1))
-            else
-              ! --- maintain minimum thickess of layer k-1.
-              h_hat = cushn(h_hat0 + h_i_j(k-1), dp0ij(k-1)) - h_i_j(k-1)
-            endif !fixlay+2:else
-          end if
-          ! h_hat is negative, so this check is unnecessary.
-          h_hat = min(h_hat, p_i_j(kdm+1) - p_i_j(k))
+            ! Maintain the minimum thickess of layer k-1.
+            h_hat = cushn(h_hat0 + h_col(k-1), dp0ij(k-1)) - h_col(k-1)
+          endif !fixlay+2:else
+        endif
+        ! h_hat is usually negative, so this check may be unnecessary if the values of
+        ! dp0ij are limited to not be below the seafloor?
+        h_hat = min(h_hat, p_int(nk+1) - p_int(k))
 
-! ---         if isopycnic conditions cannot be achieved because of a blocking
-! ---         layer in the interior ocean, move interface k-1 (and k-2 if
-! ---         necessary) upward
-          if (k <= fixlay+2) then
-! ---           do nothing.
-          elseif ( (h_hat >= 0.0) .and. &
-                   (p_i_j(k-1) > dp0cum(k-1)+tenm) .and. &
-                   ( (p_i_j(kdm+1)-p_i_j(k-1) < thkbot) .or. &
-                     (h_i_j(k-2) > qqmx*dp0ij(k-2)) ) ) then
+        ! If isopycnic conditions cannot be achieved because of a blocking
+        ! layer (thinner than its minimum thickness) in the interior ocean,
+        ! move interface k-1 (and k-2 if necessary) upward
+        ! Only work on layers that are sufficiently far from the fixed near-surface layers.
+        if ((h_hat >= 0.0) .and. (k > fixlay+2) .and. (p_int(k-1) > dp0cum(k-1) + tenm)) then
+
+          ! Only act if interface k-1 is near the bottom or layer k-2 could donate water.
+          if ( (p_int(nk+1) - p_int(k-1) < thkbot) .or. &
+               (h_col(k-2) > qqmx*dp0ij(k-2)) ) then
+            ! Determine how much water layer k-2 could supply without becoming too thin.
             if (k == fixlay+3) then
 ! ---             treat layer k-2 as fixed.
-              h_hat2 = max(h_hat0 - h_hat, dp0ij(k-2) - h_i_j(k-2))
+              h_hat2 = max(h_hat0 - h_hat, dp0ij(k-2) - h_col(k-2))
             else
 ! ---             maintain minimum thickness of layer k-2.
-              h_hat2 = cushn(h_i_j(k-2) + (h_hat0 - h_hat), dp0ij(k-2)) - h_i_j(k-2)
+              h_hat2 = cushn(h_col(k-2) + (h_hat0 - h_hat), dp0ij(k-2)) - h_col(k-2)
             endif !fixlay+3:else
+
             if (h_hat2 < -onemm) then
-              dh_cor = qhrlx(k-1) * max(h_hat2, -h_hat - h_i_j(k-1))
-              h_i_j(k-2)  = h_i_j(k-2) + dh_cor
-              h_i_j(k-1)  = h_i_j(k-1) - dh_cor
+              dh_cor = qhrlx(k-1) * max(h_hat2, -h_hat - h_col(k-1))
+              h_col(k-2)  = h_col(k-2) + dh_cor
+              h_col(k-1)  = h_col(k-1) - dh_cor
               dp_int(k-1) = dp_int(k-1) + dh_cor
-              p_i_j(k-1)  = p_i_j(k-1) + dh_cor
-              h_hat = cushn(h_hat0 + h_i_j(k-1), dp0ij(k-1)) - h_i_j(k-1)
+              p_int(k-1)  = p_int(k-1) + dh_cor
+              ! Recalculate how much layer k-1 could donate to layer k.
+              h_hat = cushn(h_hat0 + h_col(k-1), dp0ij(k-1)) - h_col(k-1)
             elseif (k <= fixlay+3) then
 ! ---             do nothing.
-            elseif (p_i_j(k-2) > dp0cum(k-2)+tenm .and. &
-                   (p_i_j(kdm+1)-p_i_j(k-2) < thkbot .or. &
-                    h_i_j(k-3) > qqmx*dp0ij(k-3))) then
+            elseif (p_int(k-2) > dp0cum(k-2) + tenm .and. &
+                   (p_int(nk+1) - p_int(k-2) < thkbot .or. &
+                    h_col(k-3) > qqmx*dp0ij(k-3))) then
+
+              ! Determine how much water layer k-3 could supply without becoming too thin.
               if (k == fixlay+4) then
 ! ---               treat layer k-3 as fixed.
-                h_hat3 = max(h_hat0 - h_hat, dp0ij(k-3) - h_i_j(k-3))
+                h_hat3 = max(h_hat0 - h_hat, dp0ij(k-3) - h_col(k-3))
               else
 ! ---               maintain minimum thickess of layer k-3.
-                h_hat3 = cushn(h_i_j(k-3) + (h_hat0 - h_hat), dp0ij(k-3)) - h_i_j(k-3)
+                h_hat3 = cushn(h_col(k-3) + (h_hat0 - h_hat), dp0ij(k-3)) - h_col(k-3)
               endif !fixlay+4:else
               if (h_hat3 < -onemm) then
-                dh_cor = qhrlx(k-2) * max(h_hat3, -h_i_j(k-2))
-                h_i_j(k-3) = h_i_j(k-3) + dh_cor
-                h_i_j(k-2) = h_i_j(k-2) - dh_cor
+                ! Water is moved from layer k-3 to k-2, but do not dilute layer k-2 too much.
+                dh_cor = qhrlx(k-2) * max(h_hat3, -h_col(k-2))
+                h_col(k-3) = h_col(k-3) + dh_cor
+                h_col(k-2) = h_col(k-2) - dh_cor
                 dp_int(k-2) = dp_int(k-2) + dh_cor
-                p_i_j(k-2) = p_i_j(k-2) + dh_cor
+                p_int(k-2) = p_int(k-2) + dh_cor
 
-                h_hat2 = cushn(h_i_j(k-2) + (h_hat0 - h_hat), dp0ij(k-2)) - h_i_j(k-2)
+                ! Now layer k-2 might be able donate to layer k-1.
+                h_hat2 = cushn(h_col(k-2) + (h_hat0 - h_hat), dp0ij(k-2)) - h_col(k-2)
                 if (h_hat2 < -onemm) then
-                  dh_cor = qhrlx(k-1) * (max(h_hat2, -h_hat - h_i_j(k-1)) )
-                  h_i_j(k-2) = h_i_j(k-2) + dh_cor
-                  h_i_j(k-1) = h_i_j(k-1) - dh_cor
+                  dh_cor = qhrlx(k-1) * (max(h_hat2, -h_hat - h_col(k-1)) )
+                  h_col(k-2) = h_col(k-2) + dh_cor
+                  h_col(k-1) = h_col(k-1) - dh_cor
                   dp_int(k-1) = dp_int(k-1) + dh_cor
-                  p_i_j(k-1) = p_i_j(k-1) + dh_cor
-                  h_hat = cushn(h_hat0 + h_i_j(k-1), dp0ij(k-1)) - h_i_j(k-1)
+                  p_int(k-1) = p_int(k-1) + dh_cor
+                  ! Recalculate how much layer k-1 could donate to layer k.
+                  h_hat = cushn(h_hat0 + h_col(k-1), dp0ij(k-1)) - h_col(k-1)
                 endif !h_hat2
               endif !h_hat3
             endif !h_hat2:blocking
-          endif !blocking
-!
-          if (h_hat < 0.0) then
-! ---           entrain layer k-1 water into layer k, move interface up.
-            dh_cor = qhrlx(k) * h_hat
-            h_i_j(k-1) = h_i_j(k-1) + dh_cor
-            h_i_j(k)   = h_i_j(k)   - dh_cor
-            dp_int(k) = dp_int(k) + dh_cor
-            p_i_j(k) = p_i_j(k) + dh_cor
-          endif !entrain
+          endif ! Layer k-2 could move.
+        endif ! blocking, i.e., h_hat >= 0, and far enough from the fixed layers to permit a change.
 
-        endif  !too-dense adjustment
-!
-      elseif (Rcv(k) < Rcv_tgt(k)-epsil) then   ! layer too light
+        if (h_hat < 0.0) then
+          ! entrain layer k-1 water into layer k, move interface up.
+          dh_cor = qhrlx(k) * h_hat
+          h_col(k-1) = h_col(k-1) + dh_cor
+          h_col(k)   = h_col(k)   - dh_cor
+          dp_int(k) = dp_int(k) + dh_cor
+          p_int(k) = p_int(k) + dh_cor
+        endif !entrain
+
+      endif  !too-dense adjustment
+
+    elseif (Rcv(k) < Rcv_tgt(k) - epsil) then   ! layer too light
 !
 ! ---       water in layer k is too light
 ! ---       try to dilute with water from layer k+1
-! ---       do not entrain if layer k touches bottom
+! ---       Entrainment is not possible if layer k touches the bottom.
 !
-        if (p_i_j(k+1) < p_i_j(kdm+1)) then  ! k<kdm
-          if (Rcv(k+1) <= Rcv_tgt(k+1) .or. &
-              p_i_j(k+1) <= dp0cum(k+1)+onem  .or. &
-              h_i_j(k) < h_i_j(k+1)) then
-! ---           if layer k+1 is too dense, thicken the thinner of the
-! ---           two, i.e. skip this layer (never get here) if it is not
-! ---           thinner than the other.
+      if (p_int(k+1) < p_int(nk+1)) then  ! k<nk
+        if ((Rcv(k+1) <= Rcv_tgt(k+1)) .or. &
+            (p_int(k+1) <= dp0cum(k+1) + onem) .or. &
+            (h_col(k) < h_col(k+1))) then
+          ! If layer k+1 is too dense, there is a conflict in the direction the
+          ! inteface between them should move, so thicken the thinner of the two.
 
-            if     ((Rcv(k+1)-Rcv_tgt(k)) <= epsil) then
-              ! layer k+1 is far too light, take the entire layer
-              ! Because this code is working downward, this flux does not accumulate across
-              ! successive layers.
-              h_hat = h_i_j(k+1)
-            else
-              q_frac = (Rcv_tgt(k) - Rcv(k)) / (Rcv(k+1)-Rcv_tgt(k)) ! 0 < q_frac <= 1
-              h_hat = q_frac*h_i_j(k)
-            endif
+          if     ((Rcv(k+1) - Rcv_tgt(k)) <= epsil) then
+            ! layer k+1 is far too light, so take the entire layer
+            ! Because this code is working downward, this flux does not accumulate across
+            ! successive layers.
+            h_hat = h_col(k+1)
+          else
+            q_frac = (Rcv_tgt(k) - Rcv(k)) / (Rcv(k+1) - Rcv_tgt(k)) ! 0 < q_frac <= 1
+            h_hat = q_frac*h_col(k)
+          endif
 !
 ! ---           if layer k+1, or layer k+2, does not touch the bottom
 ! ---           then maintain minimum thicknesses of layers k and k+1 as
 ! ---           much as possible. otherwise, permit layers to collapse
 ! ---           to zero thickness at the bottom.
-            if (p_i_j(min(k+3,kdm+1)) < p_i_j(kdm+1)) then
-              if (p_i_j(kdm+1)-p_i_j(k) >  dp0ij(k)+dp0ij(k+1)) then
-                h_hat = h_i_j(k+1) - cushn(h_i_j(k+1)-h_hat, dp0ij(k+1))
-              endif
-              h_hat = max(h_hat, dp0ij(k) - h_i_j(k))
-              h_hat = min(h_hat, max(0.5*h_i_j(k+1), h_i_j(k+1)-dp0ij(k+1)) )
-            else
-              h_hat = min(h_i_j(k+1), h_hat)
-            endif !p.k+2<p.kdm+1
+          if (p_int(min(k+3,nk+1)) < p_int(nk+1)) then
+            if (p_int(nk+1) - p_int(k) >  dp0ij(k) + dp0ij(k+1)) then
+              h_hat = h_col(k+1) - cushn(h_col(k+1) - h_hat, dp0ij(k+1))
+            endif
+            ! Try to bring layer layer k up to its minimum thickness.
+            h_hat = max(h_hat, dp0ij(k) - h_col(k))
+            ! Do not drive layer k+1 below its minimum thickness or take more than half of it.
+            h_hat = min(h_hat, max(0.5*h_col(k+1), h_col(k+1) - dp0ij(k+1)) )
+          else
+            ! Layers that touch the bottom can lose their entire contents.
+            h_hat = min(h_col(k+1), h_hat)
+          endif !p.k+2<p.nk+1
 
-            if (h_hat > 0.0) then
+          if (h_hat > 0.0) then
 ! ---             entrain layer k+1 water into layer k.
-              dh_cor = qhrlx(k+1) * h_hat
-              h_i_j(k)   = h_i_j(k)   + dh_cor
-              h_i_j(k+1) = h_i_j(k+1) - dh_cor
-              dp_int(k+1) = dp_int(k+1) + dh_cor
-              p_i_j(k+1) = p_i_j(k+1) + dh_cor
-            endif !entrain
+            dh_cor = qhrlx(k+1) * h_hat
+            h_col(k)   = h_col(k)   + dh_cor
+            h_col(k+1) = h_col(k+1) - dh_cor
+            dp_int(k+1) = dp_int(k+1) + dh_cor
+            p_int(k+1) = p_int(k+1) + dh_cor
+          endif !entrain
 
-          endif !too-light adjustment
-        endif !above bottom
-      endif !too dense or too light
+        endif !too-light adjustment
+      endif !above bottom
+    endif !too dense or too light
 !
 ! ---     if layer above is still too thin, move interface down.
-      dh_cor = min(qhrlx(k-1) * min(dp0ij(k-1) - h_i_j(k-1), p_i_j(kdm+1) - p_i_j(k)), h_i_j(k))
-      if (dh_cor > 0.0) then
-        h_i_j(k-1) = h_i_j(k-1) + dh_cor
-        h_i_j(k)   = h_i_j(k)   - dh_cor
-        dp_int(k) = dp_int(k) + dh_cor
-        p_i_j(k) = p_i_j(k) + dh_cor
-      endif
+    dh_cor = min(qhrlx(k-1) * min(dp0ij(k-1) - h_col(k-1), p_int(nk+1) - p_int(k)), h_col(k))
+    if (dh_cor > 0.0) then
+      h_col(k-1) = h_col(k-1) + dh_cor
+      h_col(k)   = h_col(k)   - dh_cor
+      dp_int(k) = dp_int(k) + dh_cor
+      p_int(k) = p_int(k) + dh_cor
+    endif
 
   enddo !k  Hybrid vertical coordinate relocation
 
   ! Verify that everything is consistent.  This block should be removed or
   ! commented out after the code is verified to work.
-  do k=1,kdm
-    if (abs((h_i_j(k) - h_in(k)) + (dp_int(K) - dp_int(K+1))) > 1.0e-13*max(p_i_j(kdm+1), onem)) then
+  do k=1,nk
+    if (abs((h_col(k) - h_in(k)) + (dp_int(K) - dp_int(K+1))) > 1.0e-13*max(p_int(nk+1), onem)) then
       write(mesg, '("k ",i4," h ",es13.4," h_in ",es13.4, " dp ",2es13.4," err ",es13.4)') &
-          k, h_i_j(k), h_in(k), dp_int(K), dp_int(K+1), (h_i_j(k) - h_in(k)) + (dp_int(K) - dp_int(K+1))
+          k, h_col(k), h_in(k), dp_int(K), dp_int(K+1), (h_col(k) - h_in(k)) + (dp_int(K) - dp_int(K+1))
       call MOM_error(FATAL, "Mismatched thickness changes in hybgen_regrid: "//trim(mesg))
     endif
-    if (h_i_j(k) < -1.0e-15*max(p_i_j(kdm+1), onem)) then
+    if (h_col(k) < -1.0e-15*max(p_int(nk+1), onem)) then
       write(mesg, '("k ",i4," h ",es13.4," h_in ",es13.4, " dp ",2es13.4, " fixlay ",i4)') &
-          k, h_i_j(k), h_in(k), dp_int(K), dp_int(K+1), fixlay
+          k, h_col(k), h_in(k), dp_int(K), dp_int(K+1), fixlay
       call MOM_error(FATAL, "Significantly negative final thickness in hybgen_regrid: "//trim(mesg))
     endif
   enddo
-  do K=1,kdm+1
-    if (abs(dp_int(K) - (p_i_j(K) - pres_in(K))) > 1.0e-13*max(p_i_j(kdm+1), onem)) then
+  do K=1,nk+1
+    if (abs(dp_int(K) - (p_int(K) - pres_in(K))) > 1.0e-13*max(p_int(nk+1), onem)) then
       call MOM_error(FATAL, "Mismatched interface height changes in hybgen_regrid.")
     endif
   enddo
