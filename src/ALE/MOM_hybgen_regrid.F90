@@ -575,25 +575,26 @@ real function cushn(delp, dp0)
 ! real, parameter :: qqmn=-2.0, qqmx=4.0  ! traditional range for cushn [nondim]
 ! real, parameter :: qqmn=-4.0, qqmx=6.0  ! somewhat wider range for cushn [nondim]
   ! These are derivative nondimensional parameters.
-  real, parameter :: cusha = qqmn**2 * (qqmx-1.0) / (qqmx-qqmn)**2
-  real, parameter :: I_qqmn = 1.0 / qqmn
+  ! real, parameter :: cusha = qqmn**2 * (qqmx-1.0) / (qqmx-qqmn)**2
+  ! real, parameter :: I_qqmn = 1.0 / qqmn
   real, parameter :: qq_scale = (qqmx-1.0) / (qqmx-qqmn)**2
   real, parameter :: I_qqmx = 1.0 / qqmx
 
   ! --- if delp >= qqmx*dp0 >>  dp0, cushn returns delp.
   ! --- if delp <= qqmn*dp0 << -dp0, cushn returns dp0.
 
-  qq = max(qqmn, min(qqmx, delp/dp0))
-  cushn = dp0 * (1.0 + cusha * (1.0-I_qqmn*qq)**2) * max(1.0, delp/(dp0*qqmx))
+  ! This is the original version from Hycom.
+  ! qq = max(qqmn, min(qqmx, delp/dp0))
+  ! cushn = dp0 * (1.0 + cusha * (1.0-I_qqmn*qq)**2) * max(1.0, delp/(dp0*qqmx))
 
   ! This is mathematically equivalent, has one fewer divide, and works as intended even if dp0 = 0.
-  ! if (delp >= qqmx*dp0) then
-  !   cushn = delp
-  ! elseif (delp < qqmn*dp0) then
-  !   cushn = max(dp0, delp * I_qqmx)
-  ! else
-  !   cushn = max(dp0, delp * I_qqmx) * (1.0 + qq_scale * ((delp / dp0) - qqmn)**2)
-  ! endif
+  if (delp >= qqmx*dp0) then
+    cushn = delp
+  elseif (delp < qqmn*dp0) then
+    cushn = max(dp0, delp * I_qqmx)
+  else
+    cushn = max(dp0, delp * I_qqmx) * (1.0 + qq_scale * ((delp / dp0) - qqmn)**2)
+  endif
 
 end function cushn
 
