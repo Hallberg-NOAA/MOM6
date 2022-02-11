@@ -21,7 +21,7 @@ use MOM_error_handler,    only : MOM_error, FATAL, WARNING
 use MOM_error_handler,    only : callTree_showQuery
 use MOM_error_handler,    only : callTree_enter, callTree_leave, callTree_waypoint
 use MOM_hybgen_unmix,     only : hybgen_unmix, init_hybgen_unmix, end_hybgen_unmix, hybgen_unmix_CS
-use MOM_hybgen_remap,     only : init_hybgen_remap, hybgen_remap_CS, mask_near_bottom_vel
+use MOM_hybgen_remap,     only : init_hybgen_remap, hybgen_remap_CS
 use MOM_hybgen_remap,     only : hybgen_remap_column, get_hybgen_remap_params
 use MOM_hybgen_regrid,    only : hybgen_regrid_CS
 use MOM_file_parser,      only : get_param, param_file_type, log_param
@@ -1000,9 +1000,7 @@ subroutine remap_all_state_vars(CS_remapping, CS_ALE, G, GV, h_old, h_new, Reg, 
       endif
 
       if ((CS_ALE%BBL_h_vel_mask > 0.0) .and. (CS_ALE%h_vel_mask > 0.0)) then
-        ! The use of the source and target thicknesses here comes from the Hycom implementation,
-        ! but I do not understand it.  I think both should be the target thicknesses.  -RWH
-        call mask_near_bottom_vel(u_tgt, h2, h1, CS_ALE%BBL_h_vel_mask, CS_ALE%h_vel_mask, nz)
+        call mask_near_bottom_vel(u_tgt, h2, CS_ALE%BBL_h_vel_mask, CS_ALE%h_vel_mask, nz)
       endif
 
       do k=1,nz
@@ -1053,9 +1051,7 @@ subroutine remap_all_state_vars(CS_remapping, CS_ALE, G, GV, h_old, h_new, Reg, 
       endif
 
       if ((CS_ALE%BBL_h_vel_mask > 0.0) .and. (CS_ALE%h_vel_mask > 0.0)) then
-        ! The use of the source and target thicknesses here comes from the Hycom implementation,
-        ! but I do not understand it.  I think both should be the target thicknesses. -RWH
-        call mask_near_bottom_vel(v_tgt, h2, h1, CS_ALE%BBL_h_vel_mask, CS_ALE%h_vel_mask, nz)
+        call mask_near_bottom_vel(v_tgt, h2, CS_ALE%BBL_h_vel_mask, CS_ALE%h_vel_mask, nz)
       endif
 
       do k=1,nz
@@ -1098,6 +1094,32 @@ subroutine apply_partial_cell_mask(h1, h_mask)
     endif
   enddo
 end subroutine apply_partial_cell_mask
+
+
+!> Zero out velocities in a column in very thin layers near the seafloor
+subroutine mask_near_bottom_vel(vel, h, h_BBL, h_thin, nk)
+  integer, intent(in)    :: nk      !< The number of layers in this column
+  real,    intent(inout) :: vel(nk) !< The velocity component being zeroed out [L T-1 ~> m s-1]
+  real,    intent(in)    :: h(nk)   !< The layer thicknesses at velocity points  [H ~> m or kg m-2]
+  real,    intent(in)    :: h_BBL   !< The thickness of the near-bottom region over which to apply
+                                    !! the filtering [H ~> m or kg m-2]
+  real,    intent(in)    :: h_thin  !< A layer thickness below which the filtering is applied [H ~> m or kg m-2]
+
+  ! Local variables
+  real :: h_from_bot  ! The distance between the top of a layer and the seafloor [H ~> m or kg m-2]
+  integer :: k
+
+  if ((h_BBL < 0.0) .or. (h_thin < 0.0)) return
+
+  h_from_bot = 0.0
+  do k=nk,1,-1
+    h_from_bot = h_from_bot + h(k)
+    if (h_from_bot > h_BBL) return
+    ! Set the velocity to zero in thin, near-bottom layers.
+    if (h(k) <= h_thin) vel(k) = 0.0
+  enddo !k
+
+end subroutine mask_near_bottom_vel
 
 
 !> Remaps a single scalar between grids described by thicknesses h_src and h_dst.

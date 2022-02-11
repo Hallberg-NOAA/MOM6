@@ -45,8 +45,7 @@ integer, parameter  :: REMAPPING_PLM        = 1 !< O(h^2) remapping scheme
 integer, parameter  :: REMAPPING_PPM_H4     = 2 !< O(h^3) remapping scheme
 integer, parameter  :: REMAPPING_WENO       = 15 !< O(h^5) remapping scheme
 
-public init_hybgen_remap, hybgen_remap_column
-public mask_near_bottom_vel, get_hybgen_remap_params
+public init_hybgen_remap, hybgen_remap_column, get_hybgen_remap_params
 
 contains
 
@@ -146,34 +145,6 @@ subroutine hybgen_remap_column(remap_scheme, nfld, nks, h_src, fld_src, nkt, h_t
 
 end subroutine hybgen_remap_column
 
-
-!> Zero out velocities in a column in very thin layers near the seafloor
-subroutine mask_near_bottom_vel(vel, h, h_filt, h_BBL, h_thin, nk)
-  integer, intent(in)    :: nk      !< The number of layers in this column
-  real,    intent(inout) :: vel(nk) !< The velocity component being zeroed out [L T-1 ~> m s-1]
-  real,    intent(in)    :: h(nk)   !< The layer thicknesses at velocity points used to determine
-                                    !! the distance from the seafloor [H ~> m or kg m-2]
-  real,    intent(in)    :: h_filt(nk) !< The layer thicknesses at velocity points used to determine
-                                    !! where filtering should be applied [H ~> m or kg m-2]
-  real,    intent(in)    :: h_BBL   !< The thickness of the near-bottom region over which to apply
-                                    !! the filtering [H ~> m or kg m-2]
-  real,    intent(in)    :: h_thin  !< A layer thickness below which the filtering is applied [H ~> m or kg m-2]
-
-  ! Local variables
-  real :: h_from_bot  ! The distance between the top of a layer and the seafloor [H ~> m or kg m-2]
-  integer :: k
-
-  if ((h_BBL < 0.0) .or. (h_thin < 0.0)) return
-
-  h_from_bot = 0.0
-  do k=nk,1,-1
-    h_from_bot = h_from_bot + h(k)
-    if (h_from_bot > h_BBL) return
-    ! Set the velocity to zero in thin, near-bottom layers.
-    if (h_filt(k) <= h_thin) vel(k) = 0.0
-  enddo !k
-
-end subroutine mask_near_bottom_vel
 
 !> Do piecewise constant remapping for a set of scalars
 subroutine hybgen_pcm_remap(si, dpi, so, dpo, ki, ko, ks, thin)
