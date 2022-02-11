@@ -839,7 +839,7 @@ subroutine remap_all_state_vars(CS_remapping, CS_ALE, G, GV, h_old, h_new, Reg, 
   real :: h1(GV%ke)     ! A column of source grid layer thicknesses [H ~> m or kg m-2]
   real :: h2(GV%ke)     ! A column of target grid layer thicknesses [H ~> m or kg m-2]
   real :: h_neglect, h_neglect_edge ! Negligible thicknesses [H ~> m or kg m-2]
-  real :: dpthin ! A small thickness (nominally a micron) used by the Hybgen remapping schemes [H ~> m or kg m-2]
+  real :: h_thin ! A small thickness (nominally a micron) used by the Hybgen remapping schemes [H ~> m or kg m-2]
   integer :: hybgen_scheme, hybgen_vel_scheme  ! Flags indicating which scheme to use for remapping.
   logical                                     :: show_call_tree
   type(tracer_type), pointer                  :: Tr => NULL()
@@ -865,7 +865,7 @@ subroutine remap_all_state_vars(CS_remapping, CS_ALE, G, GV, h_old, h_new, Reg, 
 
   if (show_call_tree) call callTree_enter("remap_all_state_vars(), MOM_ALE.F90")
 
-  nz      = GV%ke
+  nz = GV%ke
 
   ntr = 0 ; if (associated(Reg)) ntr = Reg%ntr
 
@@ -877,7 +877,7 @@ subroutine remap_all_state_vars(CS_remapping, CS_ALE, G, GV, h_old, h_new, Reg, 
 
   if (CS_ALE%use_hybgen_remap) then
     call get_hybgen_remap_params(CS_ALE%hybgen_remapCS, hybmap=hybgen_scheme, hybmap_vel=hybgen_vel_scheme)
-    dpthin = 1.0e-6*GV%m_to_H
+    h_thin = 1.0e-6*GV%m_to_H
   endif
 
   ! Remap all registered tracers, including temperature and salinity.
@@ -895,7 +895,7 @@ subroutine remap_all_state_vars(CS_remapping, CS_ALE, G, GV, h_old, h_new, Reg, 
           if (CS_ALE%use_hybgen_remap) then
             ! Use the hybgen alternate version of the tracer remapping code.
             call hybgen_remap_column(hybgen_scheme, 1, nz, h1, Tr%t(i,j,:), nz, h2, &
-                                     tr_column, dpthin, PCM_cell=PCM)
+                                     tr_column, h_thin, PCM_cell=PCM)
           else
             call remapping_core_h(CS_remapping, nz, h1, Tr%t(i,j,:), nz, h2, &
                                   tr_column, h_neglect, h_neglect_edge, PCM_cell=PCM)
@@ -903,7 +903,7 @@ subroutine remap_all_state_vars(CS_remapping, CS_ALE, G, GV, h_old, h_new, Reg, 
         elseif (CS_ALE%use_hybgen_remap) then
           ! Use the hybgen alternate version of the tracer remapping code.
           call hybgen_remap_column(hybgen_scheme, 1, nz, h1, Tr%t(i,j,:), nz, h2, &
-                                   tr_column, dpthin)
+                                   tr_column, h_thin)
         else
           call remapping_core_h(CS_remapping, nz, h1, Tr%t(i,j,:), nz, h2, &
                                 tr_column, h_neglect, h_neglect_edge)
@@ -950,8 +950,7 @@ subroutine remap_all_state_vars(CS_remapping, CS_ALE, G, GV, h_old, h_new, Reg, 
 
   if (show_call_tree) call callTree_waypoint("tracers remapped (remap_all_state_vars)")
 
-!###  if (CS_ALE%partial_cell_vel_remap .and. (present(u) .or. present(v)) ) then
-  if (present(u) .or. present(v)) then
+  if (CS_ALE%partial_cell_vel_remap .and. (present(u) .or. present(v)) ) then
     h_tot(:,:) = 0.0
     do k=1,GV%ke ; do j=G%jsc-1,G%jec+1 ; do i=G%isc-1,G%iec+1
       h_tot(i,j) = h_tot(i,j) + h_old(i,j,k)
@@ -993,7 +992,7 @@ subroutine remap_all_state_vars(CS_remapping, CS_ALE, G, GV, h_old, h_new, Reg, 
 
       ! --- Remap u profiles from the source vertical grid onto the new target grid.
       if ( CS_ALE%use_hybgen_remap ) then
-        call hybgen_remap_column(hybgen_vel_scheme, 1, nz, h1, u_src, nz, h2, u_tgt, dpthin)
+        call hybgen_remap_column(hybgen_vel_scheme, 1, nz, h1, u_src, nz, h2, u_tgt, h_thin)
       else
         call remapping_core_h(CS_remapping, nz, h1, u(I,j,:), nz, h2, &
                               u_tgt, h_neglect, h_neglect_edge)
@@ -1029,7 +1028,6 @@ subroutine remap_all_state_vars(CS_remapping, CS_ALE, G, GV, h_old, h_new, Reg, 
         enddo
       endif
       if (CS_ALE%partial_cell_vel_remap) then
-        ! Use the hybgen alternate version of the velocity remapping code.
         h_mask_vel = min(h_tot(i,j), h_tot(i,j+1))
         call apply_partial_cell_mask(h1, h_mask_vel)
         call apply_partial_cell_mask(h2, h_mask_vel)
@@ -1044,7 +1042,7 @@ subroutine remap_all_state_vars(CS_remapping, CS_ALE, G, GV, h_old, h_new, Reg, 
 
       ! --- Remap v profiles from the source vertical grid onto the new target grid.
       if ( CS_ALE%use_hybgen_remap ) then
-        call hybgen_remap_column(hybgen_vel_scheme, 1, nz, h1, v_src, nz, h2, v_tgt, dpthin)
+        call hybgen_remap_column(hybgen_vel_scheme, 1, nz, h1, v_src, nz, h2, v_tgt, h_thin)
       else
         call remapping_core_h(CS_remapping, nz, h1, v(i,J,:), nz, h2, &
                               v_tgt, h_neglect, h_neglect_edge)

@@ -306,7 +306,7 @@ subroutine hybgen_regrid(G, GV, US, dp, tv, CS, dzInterface, PCM_cell)
   real :: h_tot             ! Total thickness of the water column [H ~> m or kg m-2]
   real :: nominalDepth      ! Depth of ocean bottom (positive downward) [H ~> m or kg m-2]
   real :: dilate            ! A factor by which to dilate the target positions from z to z* [nondim]
-  real :: dpthin            ! A very thin layer thickness, that is remapped differently [H ~> m or kg m-2]
+  real :: h_thin            ! A very thin layer thickness, that is remapped differently [H ~> m or kg m-2]
   integer :: fixlay         ! Deepest fixed coordinate layer
   integer, dimension(0:CS%nk) :: k_end ! The index of the deepest source layer that contributes to
                             ! each target layer, in the unusual case where the the input grid is
@@ -317,7 +317,7 @@ subroutine hybgen_regrid(G, GV, US, dp, tv, CS, dzInterface, PCM_cell)
   nk = CS%nk
 
   p_col(:) = CS%ref_pressure
-  dpthin = 1.0e-6*CS%onem
+  h_thin = 1.0e-6*CS%onem
 
   do j=G%jsc-1,G%jec+1 ; do i=G%isc-1,G%iec+1 ; if (G%mask2dT(i,j)>0.) then
 
@@ -402,7 +402,7 @@ subroutine hybgen_regrid(G, GV, US, dp, tv, CS, dzInterface, PCM_cell)
       if (CS%hybiso > 0.0) then
         ! --- thin or isopycnal source layers are remapped with PCM.
         PCM_lay(k) = (k > fixlay) .and. &
-            ((h_col(k) <= dpthin) .or. (abs(Rcv(k) - Rcv_tgt(k)) < CS%hybiso))
+            ((h_col(k) <= h_thin) .or. (abs(Rcv(k) - Rcv_tgt(k)) < CS%hybiso))
       else ! hybiso==0.0, so purely isopycnal layers use PCM
         PCM_lay(k) = .false.
       endif ! hybiso
@@ -509,19 +509,19 @@ subroutine hybgen_column_init(nk, nsigma, dp0k, ds0k, dp00i, topiso_i_j, &
       if ((dp0k(k) <= dp00i) .or. (dilate * dp0k(k) >= p_int(k) - dp0cum(k))) then
         ! This layer is in fixed surface coordinates.
         dp0ij(k) = dp0k(k)
-        qhrlx(k+1) = 1.0 ! 1 at  dp0k
+        qhrlx(k+1) = 1.0
       else
         q = dp0k(k) * (dilate * dp0k(k) / ( p_int(k) - dp0cum(k)) ) ! A fraction between 0 and 1 of dp0 to use here.
         if (dp00i >= q) then
           ! This layer is much deeper than the fixed surface coordinates.
           dp0ij(k) = dp00i
-          qhrlx(k+1) = qhybrlx  ! 1 at  dp0k, qhybrlx < 1 at dp00i
+          qhrlx(k+1) = qhybrlx
         else
-          ! This layer spans the margines of the fixed surface coordinates.
+          ! This layer spans the margins of the fixed surface coordinates.
           ! In this case dp00i < q < dp0k.
           dp0ij(k) = dilate * q
           qhrlx(k+1) = qhybrlx * (dp0k(k) - dp00i) / &
-                       ((dp0k(k) - q) + (q - dp00i)*qhybrlx)  !1 at  dp0k, qhybrlx at dp00i
+                       ((dp0k(k) - q) + (q - dp00i)*qhybrlx) ! 1 at dp0k, qhybrlx at dp00i
         endif
 
         ! The old equivalent code is:
@@ -799,7 +799,7 @@ subroutine hybgen_column_regrid(CS, nk, thkbot, onem, epsil, Rcv_tgt, &
 
       endif  !too-dense adjustment
     endif
-    
+
     ! In the original Hycom version, there is not a break between these two loops.
   enddo
 

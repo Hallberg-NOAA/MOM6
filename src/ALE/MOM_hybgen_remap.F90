@@ -108,7 +108,7 @@ end subroutine get_hybgen_remap_params
 
 
 !> Vertically remap a column of scalars (such as tracers or velocity components) to the new grid
-subroutine hybgen_remap_column(remap_scheme, nfld, nks, h_src, fld_src, nkt, h_tgt, fld_tgt, dpthin, PCM_cell)
+subroutine hybgen_remap_column(remap_scheme, nfld, nks, h_src, fld_src, nkt, h_tgt, fld_tgt, h_thin, PCM_cell)
   integer,           intent(in)    :: remap_scheme !< A coded integer indicating the remapping scheme to use
   integer,           intent(in)    :: nfld         !< The number of fields to remap
   integer,           intent(in)    :: nks          !< Number of layers in the source column
@@ -119,7 +119,7 @@ subroutine hybgen_remap_column(remap_scheme, nfld, nks, h_src, fld_src, nkt, h_t
   real,              intent(in)    :: h_tgt(nkt)    !< Target grid layer thicknesses [H ~> m or kg m-2]
   real,              intent(out)   :: fld_tgt(nkt,nfld) !< Columns of the fields on the target grid
                                                    !! in the same arbitrary units as fld_src [A]
-  real,              intent(in)    :: dpthin       !< A negligibly small thickness for the purpose of cell
+  real,              intent(in)    :: h_thin       !< A negligibly small thickness for the purpose of cell
                                                    !! reconstructions [H ~> m or kg m-2].
   logical, optional, intent(in)    :: PCM_cell(nks) !< If true for a layer, use PCM remapping for that layer
 
@@ -131,16 +131,16 @@ subroutine hybgen_remap_column(remap_scheme, nfld, nks, h_src, fld_src, nkt, h_t
   ! --- remap scalar field profiles from the source vertical grid
   ! --- grid onto the new target vertical grid.
   if     (remap_scheme == REMAPPING_PCM) then !PCM
-    call hybgen_pcm_remap(fld_src, h_src, fld_tgt, h_tgt, nks, nkt, nfld, dpthin)
+    call hybgen_pcm_remap(fld_src, h_src, fld_tgt, h_tgt, nks, nkt, nfld, h_thin)
   elseif (remap_scheme == REMAPPING_PLM) then !PLM (as in 2.1.08)
-    call hybgen_plm_coefs(fld_src, h_src, c1d, nks, nfld, dpthin, PCM_cell)
-    call hybgen_plm_remap(fld_src, h_src, c1d, fld_tgt, h_tgt, nks, nkt, nfld, dpthin)
+    call hybgen_plm_coefs(fld_src, h_src, c1d, nks, nfld, h_thin, PCM_cell)
+    call hybgen_plm_remap(fld_src, h_src, c1d, fld_tgt, h_tgt, nks, nkt, nfld, h_thin)
   elseif (remap_scheme == REMAPPING_PPM_H4) then !PPM
-    call hybgen_ppm_coefs(fld_src, h_src, c1d, nks, nfld, dpthin, PCM_cell)
-    call hybgen_ppm_remap(fld_src, h_src, c1d, fld_tgt, h_tgt, nks, nkt, nfld, dpthin)
+    call hybgen_ppm_coefs(fld_src, h_src, c1d, nks, nfld, h_thin, PCM_cell)
+    call hybgen_ppm_remap(fld_src, h_src, c1d, fld_tgt, h_tgt, nks, nkt, nfld, h_thin)
   elseif (remap_scheme == REMAPPING_WENO) then !WENO-like
-    call hybgen_weno_coefs(fld_src, h_src, c1d, nks, nfld, dpthin, PCM_cell)
-    call hybgen_weno_remap(fld_src, h_src, c1d, fld_tgt, h_tgt, nks, nkt, nfld, dpthin)
+    call hybgen_weno_coefs(fld_src, h_src, c1d, nks, nfld, h_thin, PCM_cell)
+    call hybgen_weno_remap(fld_src, h_src, c1d, fld_tgt, h_tgt, nks, nkt, nfld, h_thin)
   endif
 
 end subroutine hybgen_remap_column
