@@ -221,7 +221,8 @@ subroutine remapping_core_h(CS, n0, h0, u0, n1, h1, u1, h_neglect, h_neglect_edg
   real, dimension(n0,2)           :: ppoly_r_E     ! Edge value of polynomial
   real, dimension(n0,2)           :: ppoly_r_S     ! Edge slope of polynomial
   real, dimension(n0,CS%degree+1) :: ppoly_r_coefs ! Coefficients of polynomial
-  real, dimension(n0,1,3)         :: c1d           ! Hybgen scheme interpolation coefficients
+  real :: edges(n0,2)  ! Interpolation edge values [A]
+  real :: slope(n0)    ! Interpolation slopes per cell width [A]
   real :: h0tot, h0err ! Sum of source cell widths and round-off error in this sum [H]
   real :: h1tot, h1err ! Sum of target cell widths and round-off error in this sum [H]
   real :: u0tot, u0err ! Integrated values on the source grid and round-off error in this sum [H A]
@@ -240,14 +241,14 @@ subroutine remapping_core_h(CS, n0, h0, u0, n1, h1, u1, h_neglect, h_neglect_edg
   if     (CS%remapping_scheme == REMAPPING_PCM_HYBGEN) then !PCM
     call hybgen_pcm_remap(u0, h0, u1, h1, n0, n1, 1, hThin)
   elseif (CS%remapping_scheme == REMAPPING_PLM_HYBGEN) then !PLM (as in 2.1.08)
-    call hybgen_plm_coefs(u0, h0, c1d, n0, 1, hThin, PCM_cell)
-    call hybgen_plm_remap(u0, h0, c1d, u1, h1, n0, n1, 1, hThin)
+    call hybgen_plm_coefs(u0, h0, slope, n0, 1, hThin, PCM_cell)
+    call hybgen_plm_remap(u0, h0, slope, u1, h1, n0, n1, 1, hThin)
   elseif (CS%remapping_scheme == REMAPPING_PPM_HYBGEN) then !PPM
-    call hybgen_ppm_coefs(u0, h0, c1d, n0, 1, hThin, PCM_cell)
-    call hybgen_ppm_remap(u0, h0, c1d, u1, h1, n0, n1, 1, hThin)
+    call hybgen_ppm_coefs(u0, h0, edges, n0, 1, hThin, PCM_cell)
+    call hybgen_ppm_remap(u0, h0, edges, u1, h1, n0, n1, 1, hThin)
   elseif (CS%remapping_scheme == REMAPPING_WENO_HYBGEN) then !WENO-like
-    call hybgen_weno_coefs(u0, h0, c1d, n0, 1, hThin, PCM_cell)
-    call hybgen_weno_remap(u0, h0, c1d, u1, h1, n0, n1, 1, hThin)
+    call hybgen_weno_coefs(u0, h0, edges, n0, 1, hThin, PCM_cell)
+    call hybgen_weno_remap(u0, h0, edges, u1, h1, n0, n1, 1, hThin)
   else
 
 
@@ -347,7 +348,7 @@ subroutine remapping_core_w( CS, n0, h0, u0, n1, dx, u1, h_neglect, h_neglect_ed
     endif
   enddo
   call remap_via_sub_cells( n0, h0, u0, ppoly_r_E, ppoly_r_coefs, n1, h1, iMethod, &
-                            CS%force_bounds_in_subcell,u1, uh_err )
+                            CS%force_bounds_in_subcell, u1, uh_err )
 ! call remapByDeltaZ( n0, h0, u0, ppoly_r_E, ppoly_r_coefs, n1, dx, iMethod, u1, hNeglect )
 ! call remapByProjection( n0, h0, u0, CS%ppoly_r, n1, h1, iMethod, u1, hNeglect )
 
@@ -457,6 +458,13 @@ subroutine build_reconstructions_1d( CS, n0, h0, u0, ppoly_r_coefs, &
         call PPM_boundary_extrapolation( n0, h0, u0, ppoly_r_E, ppoly_r_coefs, h_neglect )
       endif
       iMethod = INTEGRATION_PPM
+   !  case ( REMAPPING_WENO_HYBGEN )
+   !   call hybgen_weno_coefs(u0, h0, ppoly_r_E, n0, 1, hThin)
+   !   call PPM_reconstruction( n0, h0, u0, ppoly_r_E, ppoly_r_coefs, h_neglect, answers_2018=CS%answers_2018 )
+   !   if ( CS%boundary_extrapolation ) then
+   !     call PPM_boundary_extrapolation( n0, h0, u0, ppoly_r_E, ppoly_r_coefs, h_neglect )
+   !   endif
+   !   iMethod = INTEGRATION_PPM
     case ( REMAPPING_PQM_IH4IH3 )
       call edge_values_implicit_h4( n0, h0, u0, ppoly_r_E, h_neglect_edge, answers_2018=CS%answers_2018 )
       call edge_slopes_implicit_h3( n0, h0, u0, ppoly_r_S, h_neglect, answers_2018=CS%answers_2018 )
