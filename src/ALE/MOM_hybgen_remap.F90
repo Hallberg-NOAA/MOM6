@@ -4,17 +4,10 @@ module MOM_hybgen_remap
 
 ! This file is part of MOM6. See LICENSE.md for the license.
 
-use MOM_domains,         only : pass_var
-use MOM_debugging,       only : hchksum, uvchksum
-use MOM_EOS,             only : EOS_type, calculate_density, calculate_density_derivs
 use MOM_error_handler,   only : MOM_mesg, MOM_error, FATAL, WARNING
 use MOM_file_parser,     only : get_param, param_file_type, log_param
-use MOM_open_boundary,   only : ocean_OBC_type, OBC_DIRECTION_E, OBC_DIRECTION_W
-use MOM_open_boundary,   only : OBC_DIRECTION_N, OBC_DIRECTION_S
 use MOM_string_functions, only : uppercase
-use MOM_tracer_registry, only : tracer_registry_type, tracer_type, MOM_tracer_chkinv
 use MOM_unit_scaling,    only : unit_scale_type
-use MOM_variables,       only : ocean_grid_type, thermo_var_ptrs
 use MOM_verticalGrid,    only : verticalGrid_type
 
 implicit none ; private
@@ -46,6 +39,8 @@ integer, parameter  :: REMAPPING_PPM_H4     = 2 !< O(h^3) remapping scheme
 integer, parameter  :: REMAPPING_WENO       = 15 !< O(h^5) remapping scheme
 
 public init_hybgen_remap, hybgen_remap_column, get_hybgen_remap_params
+public hybgen_pcm_remap, hybgen_plm_coefs, hybgen_plm_remap
+public hybgen_ppm_coefs, hybgen_ppm_remap, hybgen_weno_coefs, hybgen_weno_remap
 
 contains
 
@@ -71,11 +66,6 @@ subroutine init_hybgen_remap(CS, GV, US, param_file)
                  "An integer indicating the velocity remapping scheme to be used by Hygen. "//&
                  "Valid values are: \n"//trim(remappingSchemesDoc), default=trim(scheme_name))
   CS%hybmap_vel = hybgen_remap_scheme_from_name(vel_scheme_name, "HYBGEN_REMAPPING_VEL_SCHEME")
-
-  if (CS%hybmap_vel == REMAPPING_PPM_H4) then
-    call MOM_error(WARNING, "Replacing PPM_H4 scheme for HYBGEN_REMAPPING_VEL_SCHEME with WENO.")
-    CS%hybmap_vel = REMAPPING_WENO
-  endif
 
 end subroutine init_hybgen_remap
 
