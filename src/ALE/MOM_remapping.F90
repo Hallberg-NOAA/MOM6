@@ -13,6 +13,9 @@ use PCM_functions, only : PCM_reconstruction
 use PLM_functions, only : PLM_reconstruction, PLM_boundary_extrapolation
 use PPM_functions, only : PPM_reconstruction, PPM_boundary_extrapolation
 use PQM_functions, only : PQM_reconstruction, PQM_boundary_extrapolation_v1
+use MOM_hybgen_remap, only : hybgen_pcm_remap, hybgen_plm_coefs, hybgen_plm_remap
+use MOM_hybgen_remap, only : hybgen_ppm_coefs, hybgen_ppm_remap, hybgen_weno_coefs, hybgen_weno_remap
+
 use MOM_io, only : stdout, stderr
 
 implicit none ; private
@@ -46,11 +49,15 @@ public dzFromH1H2
 
 ! The following are private parameter constants
 integer, parameter  :: REMAPPING_PCM        = 0 !< O(h^1) remapping scheme
-integer, parameter  :: REMAPPING_PLM        = 1 !< O(h^2) remapping scheme
-integer, parameter  :: REMAPPING_PPM_H4     = 2 !< O(h^3) remapping scheme
-integer, parameter  :: REMAPPING_PPM_IH4    = 3 !< O(h^3) remapping scheme
-integer, parameter  :: REMAPPING_PQM_IH4IH3 = 4 !< O(h^4) remapping scheme
-integer, parameter  :: REMAPPING_PQM_IH6IH5 = 5 !< O(h^5) remapping scheme
+integer, parameter  :: REMAPPING_PCM_HYBGEN = 1 !< O(h^1) remapping scheme
+integer, parameter  :: REMAPPING_PLM        = 2 !< O(h^2) remapping scheme
+integer, parameter  :: REMAPPING_PLM_HYBGEN = 3 !< O(h^2) remapping scheme
+integer, parameter  :: REMAPPING_PPM_H4     = 4 !< O(h^3) remapping scheme
+integer, parameter  :: REMAPPING_PPM_IH4    = 5 !< O(h^3) remapping scheme
+integer, parameter  :: REMAPPING_PPM_HYBGEN = 6 !< O(h^3) remapping scheme
+integer, parameter  :: REMAPPING_WENO_HYBGEN= 7 !< O(h^3) remapping scheme
+integer, parameter  :: REMAPPING_PQM_IH4IH3 = 8 !< O(h^4) remapping scheme
+integer, parameter  :: REMAPPING_PQM_IH6IH5 = 9 !< O(h^5) remapping scheme
 
 integer, parameter  :: INTEGRATION_PCM = 0  !< Piecewise Constant Method
 integer, parameter  :: INTEGRATION_PLM = 1  !< Piecewise Linear Method
@@ -62,9 +69,13 @@ character(len=40)  :: mdl = "MOM_remapping" !< This module's name.
 !> Documentation for external callers
 character(len=256), public :: remappingSchemesDoc = &
                  "PCM         (1st-order accurate)\n"//&
+                 "PCM_HYBGEN  (1st-order accurate)\n"//&
                  "PLM         (2nd-order accurate)\n"//&
+                 "PLM_HYBGEN  (2nd-order accurate)\n"//&
                  "PPM_H4      (3rd-order accurate)\n"//&
                  "PPM_IH4     (3rd-order accurate)\n"//&
+                 "PPM_HYBGEN  (3rd-order accurate)\n"//&
+                 "WENO_HYBGEN (3rd-order accurate)\n"//&
                  "PQM_IH4IH3  (4th-order accurate)\n"//&
                  "PQM_IH6IH5  (5th-order accurate)\n"
 character(len=3), public :: remappingDefaultScheme = "PLM" !< Default remapping method
@@ -185,7 +196,7 @@ function isPosSumErrSignificant(n1, sum1, n2, sum2)
 end function isPosSumErrSignificant
 
 !> Remaps column of values u0 on grid h0 to grid h1 assuming the top edge is aligned.
-subroutine remapping_core_h(CS, n0, h0, u0, n1, h1, u1, h_neglect, h_neglect_edge, PCM_cell)
+subroutine remapping_core_h(CS, n0, h0, u0, n1, h1, u1, h_neglect, h_neglect_edge, h_thin, PCM_cell)
   type(remapping_CS),  intent(in)  :: CS !< Remapping control structure
   integer,             intent(in)  :: n0 !< Number of cells on source grid
   real, dimension(n0), intent(in)  :: h0 !< Cell widths on source grid [H]
@@ -195,10 +206,13 @@ subroutine remapping_core_h(CS, n0, h0, u0, n1, h1, u1, h_neglect, h_neglect_edg
   real, dimension(n1), intent(out) :: u1 !< Cell averages on target grid [A]
   real, optional,      intent(in)  :: h_neglect !< A negligibly small width for the
                                          !! purpose of cell reconstructions
-                                         !! in the same units as h0 [H].
+                                         !! in the same units as h0 [H]
   real, optional,      intent(in)  :: h_neglect_edge !< A negligibly small width
                                          !! for the purpose of edge value
-                                         !! calculations in the same units as h0 [H].
+                                         !! calculations in the same units as h0 [H]
+  real, optional,      intent(in)  :: h_thin  !< A small but not always negligible thickness
+                                         !! used in creating some Hybgen derived cell
+                                         !! reconstructions in the same units as h0 [H]
   logical, dimension(n0), optional, intent(in) :: PCM_cell !< If present, use PCM remapping for
                                          !! cells in the source grid where this is true.
 
@@ -207,6 +221,7 @@ subroutine remapping_core_h(CS, n0, h0, u0, n1, h1, u1, h_neglect, h_neglect_edg
   real, dimension(n0,2)           :: ppoly_r_E     ! Edge value of polynomial
   real, dimension(n0,2)           :: ppoly_r_S     ! Edge slope of polynomial
   real, dimension(n0,CS%degree+1) :: ppoly_r_coefs ! Coefficients of polynomial
+  real, dimension(n0,1,3)         :: c1d           ! Hybgen scheme interpolation coefficients
   real :: h0tot, h0err ! Sum of source cell widths and round-off error in this sum [H]
   real :: h1tot, h1err ! Sum of target cell widths and round-off error in this sum [H]
   real :: u0tot, u0err ! Integrated values on the source grid and round-off error in this sum [H A]
@@ -214,20 +229,38 @@ subroutine remapping_core_h(CS, n0, h0, u0, n1, h1, u1, h_neglect, h_neglect_edg
   real :: u0min, u0max, u1min, u1max ! Extrema of values on the two grids [A]
   real :: uh_err       ! Difference in the total amounts on the two grids [H A]
   real :: hNeglect, hNeglect_edge ! Negligibly small cell widths in the same units as h0 [H]
+  real :: hThin        ! A small cell width in the same units as h0 [H]
   integer :: k
 
   hNeglect = 1.0e-30 ; if (present(h_neglect)) hNeglect = h_neglect
   hNeglect_edge = 1.0e-10 ; if (present(h_neglect_edge)) hNeglect_edge = h_neglect_edge
+  hThin = hNeglect ; if (present(h_thin)) hThin = h_thin
 
-  call build_reconstructions_1d( CS, n0, h0, u0, ppoly_r_coefs, ppoly_r_E, ppoly_r_S, iMethod, &
+
+  if     (CS%remapping_scheme == REMAPPING_PCM_HYBGEN) then !PCM
+    call hybgen_pcm_remap(u0, h0, u1, h1, n0, n1, 1, hThin)
+  elseif (CS%remapping_scheme == REMAPPING_PLM_HYBGEN) then !PLM (as in 2.1.08)
+    call hybgen_plm_coefs(u0, h0, c1d, n0, 1, hThin, PCM_cell)
+    call hybgen_plm_remap(u0, h0, c1d, u1, h1, n0, n1, 1, hThin)
+  elseif (CS%remapping_scheme == REMAPPING_PPM_HYBGEN) then !PPM
+    call hybgen_ppm_coefs(u0, h0, c1d, n0, 1, hThin, PCM_cell)
+    call hybgen_ppm_remap(u0, h0, c1d, u1, h1, n0, n1, 1, hThin)
+  elseif (CS%remapping_scheme == REMAPPING_WENO_HYBGEN) then !WENO-like
+    call hybgen_weno_coefs(u0, h0, c1d, n0, 1, hThin, PCM_cell)
+    call hybgen_weno_remap(u0, h0, c1d, u1, h1, n0, n1, 1, hThin)
+  else
+
+
+    call build_reconstructions_1d( CS, n0, h0, u0, ppoly_r_coefs, ppoly_r_E, ppoly_r_S, iMethod, &
                                  hNeglect, hNeglect_edge, PCM_cell )
 
-  if (CS%check_reconstruction) call check_reconstructions_1d(n0, h0, u0, CS%degree, &
+    if (CS%check_reconstruction) call check_reconstructions_1d(n0, h0, u0, CS%degree, &
                                    CS%boundary_extrapolation, ppoly_r_coefs, ppoly_r_E, ppoly_r_S)
 
 
-  call remap_via_sub_cells( n0, h0, u0, ppoly_r_E, ppoly_r_coefs, n1, h1, iMethod, &
+    call remap_via_sub_cells( n0, h0, u0, ppoly_r_E, ppoly_r_coefs, n1, h1, iMethod, &
                             CS%force_bounds_in_subcell, u1, uh_err )
+  endif
 
   if (CS%check_remapping) then
     ! Check errors and bounds
@@ -1599,14 +1632,26 @@ subroutine setReconstructionType(string,CS)
     case ("PCM")
       CS%remapping_scheme = REMAPPING_PCM
       degree = 0
+    case ("PCM_HYBGEN")
+      CS%remapping_scheme = REMAPPING_PCM_HYBGEN
+      degree = 0
     case ("PLM")
       CS%remapping_scheme = REMAPPING_PLM
+      degree = 1
+    case ("PLM_HYBGEN")
+      CS%remapping_scheme = REMAPPING_PLM_HYBGEN
       degree = 1
     case ("PPM_H4")
       CS%remapping_scheme = REMAPPING_PPM_H4
       degree = 2
     case ("PPM_IH4")
       CS%remapping_scheme = REMAPPING_PPM_IH4
+      degree = 2
+    case ("PPM_HYBGEN")
+      CS%remapping_scheme = REMAPPING_PPM_HYBGEN
+      degree = 2
+    case ("WENO_HYBGEN")
+      CS%remapping_scheme = REMAPPING_WENO_HYBGEN
       degree = 2
     case ("PQM_IH4IH3")
       CS%remapping_scheme = REMAPPING_PQM_IH4IH3
