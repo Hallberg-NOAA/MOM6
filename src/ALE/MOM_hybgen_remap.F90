@@ -40,7 +40,7 @@ integer, parameter  :: REMAPPING_WENO       = 15 !< O(h^5) remapping scheme
 
 public init_hybgen_remap, hybgen_remap_column, get_hybgen_remap_params
 public hybgen_pcm_remap, hybgen_plm_coefs, hybgen_plm_remap
-public hybgen_ppm_coefs, hybgen_ppm_remap, hybgen_weno_coefs, hybgen_weno_remap
+public hybgen_ppm_coefs, hybgen_weno_coefs, hybgen_ppm_remap
 
 contains
 
@@ -131,7 +131,7 @@ subroutine hybgen_remap_column(remap_scheme, nfld, nks, h_src, fld_src, nkt, h_t
     call hybgen_ppm_remap(fld_src, h_src, edges, fld_tgt, h_tgt, nks, nkt, nfld, h_thin)
   elseif (remap_scheme == REMAPPING_WENO) then !WENO-like
     call hybgen_weno_coefs(fld_src, h_src, edges, nks, nfld, h_thin, PCM_cell)
-    call hybgen_weno_remap(fld_src, h_src, edges, fld_tgt, h_tgt, nks, nkt, nfld, h_thin)
+    call hybgen_ppm_remap(fld_src, h_src, edges, fld_tgt, h_tgt, nks, nkt, nfld, h_thin)
   endif
 
 end subroutine hybgen_remap_column
@@ -604,164 +604,6 @@ subroutine hybgen_ppm_coefs(s, h_src, edges, kk, ks, thin, PCM_lay)
 
 end subroutine hybgen_ppm_coefs
 
-!> Do piecewise parabolic remapping for a set of scalars
-subroutine hybgen_ppm_remap(si, dpi, edges, so, dpo, ki, ko, ks, thin)
-  integer, intent(in)  :: ki        !< The number of input layers
-  integer, intent(in)  :: ko        !< The number of output layers
-  integer, intent(in)  :: ks        !< The number of scalar fields to work on
-  real,    intent(in)  :: si(ki,ks) !< The input scalar fields [A]
-  real,    intent(in)  :: dpi(ki)   !< The input grid layer thicknesses [H ~> m or kg m-2]
-  real,    intent(in)  :: edges(ki,2,ks) !< The PPM interpolation edge values of the scalar fields [A]
-  real,    intent(out) :: so(ko,ks) !< The output scalar fields [A]
-  real,    intent(in)  :: dpo(ko)   !< The output layer thicknesses [H ~> m or kg m-2]
-  real,    intent(in)  :: thin      !< A negligible layer thickness that can be ignored [H ~> m or kg m-2]
-
-!-----------------------------------------------------------------------
-!  1) remap from one set of vertical cells to another.
-!     method: monotonic piecewise parabolic across each input cell
-!             the output is the average of the interpolation
-!             profile across each output cell.
-!     Colella, P. & P.R. Woodward, 1984, J. Comp. Phys., 54, 174-201.
-!
-!  2) input arguments:
-!       si    - initial scalar fields in pi-layer space
-!       pi    - initial layer interface depths (non-negative)
-!                  pi(   1) is the surface
-!                  pi(ki+1) is the bathymetry
-!                  pi(k+1) >= pi(k)
-!       dpi   - initial layer thicknesses (dpi(k) = pi(k+1)-pi(k))
-!       edges - cell edge scalar values for the WENO reconstruction
-!                  edges.1 is value at interface above
-!                  edges.2 is value at interface below
-!       ki    - number of  input layers
-!       ko    - number of output layers
-!       ks    - number of fields
-!       dpo   - target layer thicknesses (dpo(k) = po(k+1)-po(k))
-!       po    - target interface depths (non-negative)
-!                  po(   1) is the surface
-!                  po(ko+1) is the bathymetry (== pi(ki+1))
-!                  po(k+1) >= po(k)
-!       thin  - layer thickness (>0) that can be ignored
-!
-!  3) output arguments:
-!       so    - scalar fields in po-layer space
-!
-!  4) Tim Campbell, Mississippi State University, October 2002.
-!     Alan J. Wallcraft,  Naval Research Laboratory,  Aug. 2007.
-!-----------------------------------------------------------------------
-!
-  real  :: pi(ki+1)  !< The input interface positions relative to the surface [H ~> m or kg m-2]
-  real  :: po(ko+1)  !< The output interface positions relative to the surface [H ~> m or kg m-2]
-  real  :: ci(ki,ks,3) ! Parabolic fit coefficients for each tracer [A]
-                       ! profile(y) = ci.1+ci.2*y+ci.3*y^2, 0<=y<=1
-  integer i,k,l,lb,lt
-  real    qb0, qb1, qb2, qt0, qt1, qt2,xb,xt,zb,zt,zx,o
-  real*8  sz
-  real    si_min(ks),si_max(ks)
-!
-! --- enforce minval(si(:,i)) <= minval(so(:,i)) and
-! ---         maxval(si(:,i)) >= maxval(so(:,i)) for i=1:ks
-! --- in particular this enforces non-negativity, e.g. of tracers
-! --- only required due to finite precision
-!
-  do i=1,ks
-    si_min(i) = minval(si(:,i))
-    si_max(i) = maxval(si(:,i))
-
-    do k=1,ki
-      if (edges(k,1,i) /= edges(k,2,i)) then
-        ci(k,i,1) = edges(k,1,i)
-        ci(k,i,2) = edges(k,2,i) - edges(k,1,i)
-        ci(k,i,3) = 6.0*si(k,i) - 3.0*(edges(k,1,i)+edges(k,2,i))
-      else !PCM
-        ci(k,i,1) = edges(k,1,i)
-        ci(k,i,2) = 0.0
-        ci(k,i,3) = 0.0
-      endif
-    enddo !k
-  enddo !i
-
-  pi(1) = 0.0
-  do k=1,ki ; pi(k+1) = pi(K) + dpi(k) ; enddo
-  po(1) = 0.0
-  do k=1,ko ; po(k+1) = po(K) + dpo(k) ; enddo
-
-  zx = pi(ki+1) !maximum depth
-  zb = max(po(1), pi(1))
-  lb = 1
-  do while (pi(lb+1) < zb .and. lb < ki)
-    lb = lb+1
-  enddo
-  do k= 1,ko  !output layers
-    zt = zb
-    zb = min(po(k+1),zx)
-    lt = lb !top will always correspond to bottom of previous
-            !find input layer containing bottom output interface
-    do while (pi(lb+1) < zb .and. lb < ki)
-      lb = lb+1
-    enddo
-    if ((zb-zt <= thin) .or. (zt >= zx)) then
-      if (k /= 1) then
-!
-! ---       thin or bottomed layer, values taken from layer above
-!
-        do i=1,ks
-          so(k,i) = so(k-1,i)
-        enddo !i
-      else !thin surface layer
-        do i=1,ks
-          so(k,i) = si(k,i)
-        enddo !i
-      endif
-    else
-      ! Form layer averages.
-!
-!         if     (pi(lb) > zt) then
-!           write(mesg,*) 'bad lb = ',lb
-!           call MOM_error(FATAL, mesg)
-!         endif
-      xt=(zt-pi(lt))/max(dpi(lt),thin)
-      xb = (zb-pi(lb))/max(dpi(lb),thin)
-      if     (lt /= lb) then  !multiple layers
-        qt0 = (1.0-xt)
-        qt1 = (1.-xt**2)*0.5
-        qt2 = (1.-xt**3)/3.0
-        qb0 =     xb
-        qb1 =     xb**2 *0.5
-        qb2 =     xb**3 /3.0
-        do i=1,ks
-          o  = si((lt+lb)/2,i)  !offset to reduce round-off
-          sz = dpi(lt)*(  (ci(lt,i,1)-o)*qt0 &
-                         +(ci(lt,i,2) + ci(lt,i,3) ) *qt1 &
-                          -ci(lt,i,3)   *qt2 )
-          do l=lt+1,lb-1
-            sz = sz+dpi(l)*(si(l,i)-o)
-          enddo !l
-          sz = sz+dpi(lb)*( (ci(lb,i,1)-o)*qb0 &
-                           +(ci(lb,i,2) + ci(lb,i,3) ) *qb1 &
-                            -ci(lb,i,3)   *qb2 )
-          so(k,i) = o + sz/(zb-zt)  !zb-zt>=thin
-          so(k,i) = max( si_min(i), so(k,i) )
-          so(k,i) = min( si_max(i), so(k,i) )
-        enddo !i
-      else  !single layer
-        qt0 = (xb-xt)
-        qt1 = (xb**2-xt**2)*0.5
-        qt2 = (xb**3-xt**3)/3.0
-        do i=1,ks
-          o  = si( lt,i)  !offset to reduce round-off
-          sz = dpi(lt)*( (ci(lt,i,1)-o)*qt0 &
-                        +(ci(lt,i,2) + ci(lt,i,3) ) *qt1 &
-                         -ci(lt,i,3)   *qt2 )
-          so(k,i) = o + sz/(zb-zt)  !zb-zt>=thin
-          so(k,i) = max( si_min(i), so(k,i) )
-          so(k,i) = min( si_max(i), so(k,i) )
-        enddo !i
-      endif
-    endif !thin:std layer
-  enddo !k
-
-end subroutine hybgen_ppm_remap
 
 !> Set up the coefficients for PPM remapping of a set of scalars
 subroutine hybgen_weno_coefs(s, h_src, edges, kk, ks, thin, PCM_lay)
@@ -806,8 +648,9 @@ subroutine hybgen_weno_coefs(s, h_src, edges, kk, ks, thin, PCM_lay)
   logical :: PCM_layer(kk) ! True for layers that should use PCM remapping, either because they are
                            ! very thin, or because this is specified by PCM_lay.
   real :: dp(kk) ! Input grid layer thicknesses, but with a minimum thickness given by thin [H ~> m or kg m-2]
-  real    qdpjm(kk), qdpjmjp(kk), dpjm2jp(kk)
-  real    zw(kk+1,3)
+  real :: qdpjm(kk), qdpjmjp(kk) ! Inverse thicknesses [H-1 ~> m-1 or m2 kg-1]
+  real :: dpjm2jp(kk)  ! The distance between the centers of the layers two apart [H ~> m or kg m-2]
+  real :: zw(kk+1,3)
 
   ! The WENO remapper is not currently written to work with massless layers, so set
   ! the thicknesses for very thin layers to some minimum value.
@@ -905,28 +748,25 @@ subroutine hybgen_weno_coefs(s, h_src, edges, kk, ks, thin, PCM_lay)
 
 end subroutine hybgen_weno_coefs
 
-!> Do WENO remapping for a set of scalars
-subroutine hybgen_weno_remap(si, dpi, edges, so, dpo, ki, ko, ks, thin)
+!> Do peicewise parabolic remapping for a set of scalars
+subroutine hybgen_ppm_remap(si, dpi, edges, so, dpo, ki, ko, ks, thin)
   integer, intent(in)  :: ki        !< The number of input layers
   integer, intent(in)  :: ko        !< The number of output layers
   integer, intent(in)  :: ks        !< The scalar fields to work on
   real,    intent(in)  :: si(ki,ks) !< The input scalar fields [A]
   real,    intent(in)  :: dpi(ki)   !< The input grid layer thicknesses [H ~> m or kg m-2]
-  real,    intent(in)  :: edges(ki,2,ks) !< The WENO interpolation edge values of the scalar fields [A]
+  real,    intent(in)  :: edges(ki,2,ks) !< The interpolation edge values of the scalar fields [A]
   real,    intent(out) :: so(ko,ks) !< The output scalar fields [A]
   real,    intent(in)  :: dpo(ko)   !< The output layer thicknesses [H ~> m or kg m-2]
   real,    intent(in)  :: thin      !< A negligible layer thickness that can be ignored [H ~> m or kg m-2]
 
 !-----------------------------------------------------------------------
 !  1) remap from one set of vertical cells to another.
-!     method: monotonic WENO-like alternative to PPM across each input cell
-!             a second order polynomial approximation of the profiles
-!             using a WENO reconciliation of the slopes to compute the
-!             interfacial values
-!             the output is the average of the interpolation
+!     method: A monotonic piecewise parabolic subgrid cell distribution within each
+!             input cell is uniquely determined from the cell average and edge values.
+!             The output is the average of the interpolation
 !             profile across each output cell.
-!
-!     REFERENCE?
+!     Colella, P. & P.R. Woodward, 1984, J. Comp. Phys., 54, 174-201.
 !
 !  2) input arguments:
 !       si    - initial scalar fields in pi-layer space
@@ -935,7 +775,7 @@ subroutine hybgen_weno_remap(si, dpi, edges, so, dpo, ki, ko, ks, thin)
 !                  pi(ki+1) is the bathymetry
 !                  pi(k+1) >= pi(k)
 !       dpi   - initial layer thicknesses (dpi(k) = pi(k+1)-pi(k))
-!       edges - cell edge scalar values for the WENO reconstruction
+!       edges - cell edge scalar values for the PPM reconstruction
 !                  edges.1 is value at interface above
 !                  edges.2 is value at interface below
 !       ki    - number of  input layers
@@ -1005,10 +845,8 @@ subroutine hybgen_weno_remap(si, dpi, edges, so, dpo, ki, ko, ks, thin)
         enddo !i
       endif
     else
-!
-!         form layer averages.
-!
-!         if     (pi(lb) > zt) then
+      ! Form layer averages.
+!         if (pi(lb) > zt) then
 !           write(mesg,*) 'bad lb = ',lb
 !           call MOM_error(FATAL, mesg)
 !         endif
@@ -1052,6 +890,6 @@ subroutine hybgen_weno_remap(si, dpi, edges, so, dpo, ki, ko, ks, thin)
     endif !thin:std layer
   enddo !k
 
-end subroutine hybgen_weno_remap
+end subroutine hybgen_ppm_remap
 
 end module MOM_hybgen_remap

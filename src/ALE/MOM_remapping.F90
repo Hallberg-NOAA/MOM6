@@ -14,7 +14,7 @@ use PLM_functions, only : PLM_reconstruction, PLM_boundary_extrapolation
 use PPM_functions, only : PPM_reconstruction, PPM_boundary_extrapolation
 use PQM_functions, only : PQM_reconstruction, PQM_boundary_extrapolation_v1
 use MOM_hybgen_remap, only : hybgen_pcm_remap, hybgen_plm_coefs, hybgen_plm_remap
-use MOM_hybgen_remap, only : hybgen_ppm_coefs, hybgen_ppm_remap, hybgen_weno_coefs, hybgen_weno_remap
+use MOM_hybgen_remap, only : hybgen_ppm_coefs, hybgen_weno_coefs, hybgen_ppm_remap
 
 use MOM_io, only : stdout, stderr
 
@@ -248,7 +248,7 @@ subroutine remapping_core_h(CS, n0, h0, u0, n1, h1, u1, h_neglect, h_neglect_edg
     call hybgen_ppm_remap(u0, h0, edges, u1, h1, n0, n1, 1, hThin)
   elseif (CS%remapping_scheme == REMAPPING_WENO_HYBGEN) then !WENO-like
     call hybgen_weno_coefs(u0, h0, edges, n0, 1, hThin, PCM_cell)
-    call hybgen_weno_remap(u0, h0, edges, u1, h1, n0, n1, 1, hThin)
+    call hybgen_ppm_remap(u0, h0, edges, u1, h1, n0, n1, 1, hThin)
   else
 
 
@@ -444,6 +444,13 @@ subroutine build_reconstructions_1d( CS, n0, h0, u0, ppoly_r_coefs, &
         call PLM_boundary_extrapolation( n0, h0, u0, ppoly_r_E, ppoly_r_coefs, h_neglect)
       endif
       iMethod = INTEGRATION_PLM
+  ! case ( REMAPPING_PLM_HYBGEN )
+  !   call hybgen_PLM_coefs(u0, h0, ppoly_r_coefs(:,1), n0, 1, hThin)
+  !
+  !   if ( CS%boundary_extrapolation ) then
+  !     call PLM_boundary_extrapolation( n0, h0, u0, ppoly_r_E, ppoly_r_coefs, h_neglect )
+  !   endif
+  !   iMethod = INTEGRATION_PLM
     case ( REMAPPING_PPM_H4 )
       call edge_values_explicit_h4( n0, h0, u0, ppoly_r_E, h_neglect_edge, answers_2018=CS%answers_2018 )
       call PPM_reconstruction( n0, h0, u0, ppoly_r_E, ppoly_r_coefs, h_neglect, answers_2018=CS%answers_2018 )
@@ -458,13 +465,20 @@ subroutine build_reconstructions_1d( CS, n0, h0, u0, ppoly_r_coefs, &
         call PPM_boundary_extrapolation( n0, h0, u0, ppoly_r_E, ppoly_r_coefs, h_neglect )
       endif
       iMethod = INTEGRATION_PPM
-   !  case ( REMAPPING_WENO_HYBGEN )
-   !   call hybgen_weno_coefs(u0, h0, ppoly_r_E, n0, 1, hThin)
-   !   call PPM_reconstruction( n0, h0, u0, ppoly_r_E, ppoly_r_coefs, h_neglect, answers_2018=CS%answers_2018 )
-   !   if ( CS%boundary_extrapolation ) then
-   !     call PPM_boundary_extrapolation( n0, h0, u0, ppoly_r_E, ppoly_r_coefs, h_neglect )
-   !   endif
-   !   iMethod = INTEGRATION_PPM
+  ! case ( REMAPPING_PPM_HYBGEN )
+  !   call hybgen_PPM_coefs(u0, h0, ppoly_r_E, n0, 1, hThin)
+  !   call PPM_reconstruction( n0, h0, u0, ppoly_r_E, ppoly_r_coefs, h_neglect, answers_2018=CS%answers_2018 )
+  !   if ( CS%boundary_extrapolation ) then
+  !     call PPM_boundary_extrapolation( n0, h0, u0, ppoly_r_E, ppoly_r_coefs, h_neglect )
+  !   endif
+  !   iMethod = INTEGRATION_PPM
+  ! case ( REMAPPING_WENO_HYBGEN )
+  !   call hybgen_weno_coefs(u0, h0, ppoly_r_E, n0, 1, hThin)
+  !   call PPM_reconstruction( n0, h0, u0, ppoly_r_E, ppoly_r_coefs, h_neglect, answers_2018=CS%answers_2018 )
+  !   if ( CS%boundary_extrapolation ) then
+  !     call PPM_boundary_extrapolation( n0, h0, u0, ppoly_r_E, ppoly_r_coefs, h_neglect )
+  !   endif
+  !   iMethod = INTEGRATION_PPM
     case ( REMAPPING_PQM_IH4IH3 )
       call edge_values_implicit_h4( n0, h0, u0, ppoly_r_E, h_neglect_edge, answers_2018=CS%answers_2018 )
       call edge_slopes_implicit_h3( n0, h0, u0, ppoly_r_S, h_neglect, answers_2018=CS%answers_2018 )
