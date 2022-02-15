@@ -134,6 +134,7 @@ subroutine hybgen_unmix(G, GV, US, CS, tv, Reg, ntr, h)
 ! --- hybrid grid generator, single j-row (part A).
 ! --- --------------------------------------------
 
+  character(len=256) :: mesg  ! A string for output messages
   integer :: fixlay         ! deepest fixed coordinate layer
   real :: qhrlx( GV%ke+1)   ! relaxation coefficient
   real :: dp0ij( GV%ke)     ! minimum layer thickness
@@ -145,14 +146,21 @@ subroutine hybgen_unmix(G, GV, US, CS, tv, Reg, ntr, h)
   real :: Rcv(GV%ke)        ! A column of coordinate potential density [R ~> kg m-3]
   real :: h_col(GV%ke)      ! A column of layer thicknesses [H ~> m or kg m-2]
   real :: p_col(GV%ke)      ! A column of reference pressures [R L2 T-2 ~> Pa]
-  real :: tracer(GV%ke,max(ntr,1))  ! Columns of each tracer [Conc]
+  real :: tracer(GV%ke,max(ntr,1)) ! Columns of each tracer [Conc]
   real :: h_tot             ! Total thickness of the water column [H ~> m or kg m-2]
   real :: nominalDepth      ! Depth of ocean bottom (positive downward) [H ~> m or kg m-2]
   real :: h_thin            ! A negligibly small thickness to identify essentially
                             ! vanished layers [H ~> m or kg m-2]
   real :: dilate            ! A factor by which to dilate the target positions from z to z* [nondim]
+
+  real :: Th_tot_in, Th_tot_out ! Column integrated temperature [degC H ~> degC m or degC kg m-2]
+  real :: Sh_tot_in, Sh_tot_out ! Column integrated salinity [ppt H ~> ppt m or ppt kg m-2]
+  real :: Trh_tot_in(max(ntr,1))  ! Initial column integrated tracer amounts [conc H ~> conc m or conc kg m-2]
+  real :: Trh_tot_out(max(ntr,1)) ! Final column integrated tracer amounts [conc H ~> conc m or conc kg m-2]
+
+  logical :: debug_conservation ! If true, test for non-conservation.
   logical :: terrain_following  ! True if this column is terrain following.
-  integer :: trcflg(max(ntr,1))  ! Hycom tracer type flag for each tracer
+  integer :: trcflg(max(ntr,1)) ! Hycom tracer type flag for each tracer
   integer :: i, j, k, nk, m
 
   nk = GV%ke
@@ -161,6 +169,7 @@ subroutine hybgen_unmix(G, GV, US, CS, tv, Reg, ntr, h)
   trcflg(:) = 3
 
   h_thin = 1e-6*GV%m_to_H
+  debug_conservation = .false. !  Set this to true for debugging
 
   p_col(:) = CS%ref_pressure
 
@@ -182,6 +191,18 @@ subroutine hybgen_unmix(G, GV, US, CS, tv, Reg, ntr, h)
     do m=1,ntr ; do k=1,nk
       tracer(k,m) = Reg%Tr(m)%t(i,j,k)
     enddo ; enddo
+
+    ! Store original amounts to test for conservation of temperature, salinity, and tracers.
+    if (debug_conservation) then
+      Th_tot_in = 0.0 ; Sh_tot_in = 0.0 ; Trh_tot_in(:) = 0.0
+      do k=1,nk
+        Sh_tot_in = Sh_tot_in + h_col(k)*saln(k)
+        Th_tot_in = Th_tot_in + h_col(k)*temp(k)
+      enddo
+      do m=1,ntr ; do k=1,nk
+        Trh_tot_in(m) = Trh_tot_in(m) + h_col(k)*tracer(k,m)
+      enddo ; enddo
+    endif
 
     ! The following block of code is used to trigger z* stretching of the targets heights.
     nominalDepth = (G%bathyT(i,j)+G%Z_ref)*GV%Z_to_H
@@ -213,6 +234,40 @@ subroutine hybgen_unmix(G, GV, US, CS, tv, Reg, ntr, h)
     do m=1,ntr ; do k=1,nk
       Reg%Tr(m)%t(i,j,k) = tracer(k,m)
     enddo ; enddo
+    ! However, they may have been treated differently from other tracers.
+    do k=1,nk
+      tv%T(i,j,k) = temp(k)
+      tv%S(i,j,k) = saln(k)
+    enddo
+
+    ! Test for conservation of temperature, salinity, and tracers.
+    if (debug_conservation) then
+      Th_tot_out = 0.0 ; Sh_tot_out = 0.0 ; Trh_tot_out(:) = 0.0
+      do k=1,nk
+        Sh_tot_out = Sh_tot_out + h_col(k)*saln(k)
+        Th_tot_out = Th_tot_out + h_col(k)*temp(k)
+      enddo
+      do m=1,ntr ; do k=1,nk
+        Trh_tot_out(m) = Trh_tot_out(m) + h_col(k)*tracer(k,m)
+      enddo ; enddo
+      if (abs(Sh_tot_in - Sh_tot_out) > 1.e-8*(abs(Sh_tot_in) + abs(Sh_tot_out))) then
+        write(mesg, '("i,j=",2i8,"Sh_tot = ",2es17.8," err = ",es13.4)') &
+              i, j, Sh_tot_in, Sh_tot_out, (Sh_tot_in - Sh_tot_out)
+        call MOM_error(FATAL, "Mismatched column salinity in hybgen_unmix: "//trim(mesg))
+      endif
+      if (abs(Th_tot_in - Th_tot_out) > 1.e-8*(abs(Th_tot_in) + abs(Th_tot_out))) then
+        write(mesg, '("i,j=",2i8,"Th_tot = ",2es17.8," err = ",es13.4)') &
+              i, j, Th_tot_in, Th_tot_out, (Th_tot_in - Th_tot_out)
+        call MOM_error(FATAL, "Mismatched column temperature in hybgen_unmix: "//trim(mesg))
+      endif
+      do m=1,ntr
+        if (abs(Trh_tot_in(m) - Trh_tot_out(m)) > 1.e-8*(abs(Trh_tot_in(m)) + abs(Trh_tot_out(m)))) then
+          write(mesg, '("i,j=",2i8,"Trh_tot(",i2,") = ",2es17.8," err = ",es13.4)') &
+                i, j, m, Trh_tot_in(m), Trh_tot_out(m), (Trh_tot_in(m) - Trh_tot_out(m))
+          call MOM_error(FATAL, "Mismatched column tracer in hybgen_unmix: "//trim(mesg))
+        endif
+      enddo
+    endif
   endif ; enddo ; enddo !i & j.
 
 end subroutine hybgen_unmix
@@ -292,8 +347,8 @@ subroutine hybgenaij_unmix(CS, nk, Rcv_tgt, temp, saln, Rcv, eqn_of_state, &
     h_col(k) = 0.0
     kp = k-1
   elseif ( ((k > fixlay+1) .and. (.not.terrain_following)) .and. & ! layer not fixed depth
-           (h_col(k-1) >= h_thin)              .and. & ! layer above not too thin
-           (Rcv_tgt(k)-epsil > Rcv(k))   .and. & ! layer is lighter than its target
+           (h_col(k-1) >= h_thin)      .and. & ! layer above not too thin
+           (Rcv_tgt(k)-epsil > Rcv(k)) .and. & ! layer is lighter than its target
            (Rcv(k-1) > Rcv(k)) ) then
 ! ---   water in the deepest inflated layer with significant thickness
 ! ---   (kp) is too light, and it is lighter than the layer above, but not the layer two above.
@@ -344,11 +399,11 @@ subroutine hybgenaij_unmix(CS, nk, Rcv_tgt, temp, saln, Rcv, eqn_of_state, &
   k  = kp  !at least 2
   ka = max(k-2,1)  !k might be 2
 
-  if ( lunmix .and.  & !usually .true.
+  if ( lunmix .and.  & ! usually .true.
        ((k > fixlay+1) .and. (.not.terrain_following)) .and. & ! layer not fixed depth
        (h_col(k-1) >= h_thin)      .and. & ! layer above not too thin
-       (Rcv_tgt(k)-epsil > Rcv(k))   .and. & ! layer is lighter than its target
-       (Rcv_tgt(k-1) < Rcv(k))       .and. & ! layer is denser than the target above
+       (Rcv_tgt(k)-epsil > Rcv(k)) .and. & ! layer is lighter than its target
+       (Rcv_tgt(k-1) < Rcv(k))     .and. & ! layer is denser than the target above
        (abs(Rcv_tgt(k-1) - Rcv(k-1)) < CS%hybiso) .and. & ! layer above is near its target
        (Rcv(k) - Rcv(k-1) > 0.001*(Rcv_tgt(k) - Rcv_tgt(k-1))) ) then
 !
@@ -404,7 +459,8 @@ subroutine hybgenaij_unmix(CS, nk, Rcv_tgt, temp, saln, Rcv, eqn_of_state, &
 
     if ((ntr > 0) .and. (h_hat /= 0.0)) then
 ! ---     fraction of new upper layer from old lower layer
-      qtr = h_hat / max(h_hat, h_col(k))  !between 0 and 1
+      ! The bad original from Hycom: qtr = h_hat / max(h_hat, h_col(k))  !between 0 and 1
+      qtr = h_hat / h_col(k-1) ! Between 0 and 1, noting the h_col(k-1) = h_col(k-1) + h_hat above.
       do ktr=1,ntr
         if (trcflg(ktr) == 2) then !temperature tracer
           tracer(k,ktr) = tracer(k,ktr) + (q/(1.0-q)) * (tracer(k,ktr) - tracer(k-1,ktr))
