@@ -13,14 +13,11 @@ use PCM_functions, only : PCM_reconstruction
 use PLM_functions, only : PLM_reconstruction, PLM_boundary_extrapolation
 use PPM_functions, only : PPM_reconstruction, PPM_boundary_extrapolation
 use PQM_functions, only : PQM_reconstruction, PQM_boundary_extrapolation_v1
-use MOM_hybgen_remap, only : hybgen_pcm_remap, hybgen_plm_coefs, hybgen_plm_remap
-use MOM_hybgen_remap, only : hybgen_ppm_coefs, hybgen_weno_coefs, hybgen_ppm_remap
+use MOM_hybgen_remap, only : hybgen_plm_coefs, hybgen_ppm_coefs, hybgen_weno_coefs
 
 use MOM_io, only : stdout, stderr
 
 implicit none ; private
-
-#include <MOM_memory.h>
 
 !> Container for remapping parameters
 type, public :: remapping_CS
@@ -49,7 +46,6 @@ public dzFromH1H2
 
 ! The following are private parameter constants
 integer, parameter  :: REMAPPING_PCM        = 0 !< O(h^1) remapping scheme
-integer, parameter  :: REMAPPING_PCM_HYBGEN = 1 !< O(h^1) remapping scheme
 integer, parameter  :: REMAPPING_PLM        = 2 !< O(h^2) remapping scheme
 integer, parameter  :: REMAPPING_PLM_HYBGEN = 3 !< O(h^2) remapping scheme
 integer, parameter  :: REMAPPING_PPM_H4     = 4 !< O(h^3) remapping scheme
@@ -230,38 +226,19 @@ subroutine remapping_core_h(CS, n0, h0, u0, n1, h1, u1, h_neglect, h_neglect_edg
   real :: u0min, u0max, u1min, u1max ! Extrema of values on the two grids [A]
   real :: uh_err       ! Difference in the total amounts on the two grids [H A]
   real :: hNeglect, hNeglect_edge ! Negligibly small cell widths in the same units as h0 [H]
-  real :: hThin        ! A small cell width in the same units as h0 [H]
   integer :: k
 
   hNeglect = 1.0e-30 ; if (present(h_neglect)) hNeglect = h_neglect
   hNeglect_edge = 1.0e-10 ; if (present(h_neglect_edge)) hNeglect_edge = h_neglect_edge
-  hThin = hNeglect ; if (present(h_thin)) hThin = h_thin
 
+  call build_reconstructions_1d( CS, n0, h0, u0, ppoly_r_coefs, ppoly_r_E, ppoly_r_S, iMethod, &
+                               hNeglect, hNeglect_edge, PCM_cell, h_thin )
 
-  if     (CS%remapping_scheme == REMAPPING_PCM_HYBGEN) then !PCM
-    call hybgen_pcm_remap(u0, h0, u1, h1, n0, n1, 1, hThin)
-  elseif (CS%remapping_scheme == REMAPPING_PLM_HYBGEN) then !PLM (as in 2.1.08)
-    call hybgen_plm_coefs(u0, h0, slope, n0, 1, hThin, PCM_cell)
-    call hybgen_plm_remap(u0, h0, slope, u1, h1, n0, n1, 1, hThin)
-  elseif (CS%remapping_scheme == REMAPPING_PPM_HYBGEN) then !PPM
-    call hybgen_ppm_coefs(u0, h0, edges, n0, 1, hThin, PCM_cell)
-    call hybgen_ppm_remap(u0, h0, edges, u1, h1, n0, n1, 1, hThin)
-  elseif (CS%remapping_scheme == REMAPPING_WENO_HYBGEN) then !WENO-like
-    call hybgen_weno_coefs(u0, h0, edges, n0, 1, hThin, PCM_cell)
-    call hybgen_ppm_remap(u0, h0, edges, u1, h1, n0, n1, 1, hThin)
-  else
+  if (CS%check_reconstruction) call check_reconstructions_1d(n0, h0, u0, CS%degree, &
+                                 CS%boundary_extrapolation, ppoly_r_coefs, ppoly_r_E, ppoly_r_S)
 
-
-    call build_reconstructions_1d( CS, n0, h0, u0, ppoly_r_coefs, ppoly_r_E, ppoly_r_S, iMethod, &
-                                 hNeglect, hNeglect_edge, PCM_cell )
-
-    if (CS%check_reconstruction) call check_reconstructions_1d(n0, h0, u0, CS%degree, &
-                                   CS%boundary_extrapolation, ppoly_r_coefs, ppoly_r_E, ppoly_r_S)
-
-
-    call remap_via_sub_cells( n0, h0, u0, ppoly_r_E, ppoly_r_coefs, n1, h1, iMethod, &
-                            CS%force_bounds_in_subcell, u1, uh_err )
-  endif
+  call remap_via_sub_cells( n0, h0, u0, ppoly_r_E, ppoly_r_coefs, n1, h1, iMethod, &
+                          CS%force_bounds_in_subcell, u1, uh_err )
 
   if (CS%check_remapping) then
     ! Check errors and bounds
@@ -395,7 +372,7 @@ end subroutine remapping_core_w
 !> Creates polynomial reconstructions of u0 on the source grid h0.
 subroutine build_reconstructions_1d( CS, n0, h0, u0, ppoly_r_coefs, &
                                      ppoly_r_E, ppoly_r_S, iMethod, h_neglect, &
-                                     h_neglect_edge, PCM_cell )
+                                     h_neglect_edge, PCM_cell, h_thin )
   type(remapping_CS),    intent(in)  :: CS !< Remapping control structure
   integer,               intent(in)  :: n0 !< Number of cells on source grid
   real, dimension(n0),   intent(in)  :: h0 !< Cell widths on source grid
@@ -413,12 +390,18 @@ subroutine build_reconstructions_1d( CS, n0, h0, u0, ppoly_r_coefs, &
                                          !! calculations in the same units as h0.
   logical, optional,     intent(in)  :: PCM_cell(n0) !< If present, use PCM remapping for
                                          !! cells from the source grid where this is true.
+  real, optional,        intent(in)  :: h_thin  !< A small but not always negligible thickness
+                                         !! used in creating some Hybgen derived cell
+                                         !! reconstructions in the same units as h0 [H]
 
   ! Local variables
   integer :: local_remapping_scheme
   integer :: remapping_scheme !< Remapping scheme
   logical :: boundary_extrapolation !< Extrapolate at boundaries if true
+  real :: hThin        ! A small cell width in the same units as h0 [H]
   integer :: k, n
+
+  hThin = 1.0e-30 ; if (present(h_neglect)) hThin = h_neglect ; if (present(h_thin)) hThin = h_thin
 
   ! Reset polynomial
   ppoly_r_E(:,:) = 0.0
@@ -444,13 +427,16 @@ subroutine build_reconstructions_1d( CS, n0, h0, u0, ppoly_r_coefs, &
         call PLM_boundary_extrapolation( n0, h0, u0, ppoly_r_E, ppoly_r_coefs, h_neglect)
       endif
       iMethod = INTEGRATION_PLM
-  ! case ( REMAPPING_PLM_HYBGEN )
-  !   call hybgen_PLM_coefs(u0, h0, ppoly_r_coefs(:,1), n0, 1, hThin)
-  !
-  !   if ( CS%boundary_extrapolation ) then
-  !     call PLM_boundary_extrapolation( n0, h0, u0, ppoly_r_E, ppoly_r_coefs, h_neglect )
-  !   endif
-  !   iMethod = INTEGRATION_PLM
+    case ( REMAPPING_PLM_HYBGEN )
+      call hybgen_PLM_coefs(u0, h0, ppoly_r_coefs(:,2), n0, 1, hThin)
+      do k=1,n0
+        ppoly_r_E(k,1) = u0(k) - 0.5 * ppoly_r_coefs(k,2) ! Left edge value of cell k
+        ppoly_r_E(k,2) = u0(k) + 0.5 * ppoly_r_coefs(k,2) ! Right edge value of cell k
+        ppoly_r_coefs(k,1) = ppoly_r_E(k,1)
+      enddo
+      if ( CS%boundary_extrapolation ) &
+        call PLM_boundary_extrapolation( n0, h0, u0, ppoly_r_E, ppoly_r_coefs, h_neglect )
+      iMethod = INTEGRATION_PLM
     case ( REMAPPING_PPM_H4 )
       call edge_values_explicit_h4( n0, h0, u0, ppoly_r_E, h_neglect_edge, answers_2018=CS%answers_2018 )
       call PPM_reconstruction( n0, h0, u0, ppoly_r_E, ppoly_r_coefs, h_neglect, answers_2018=CS%answers_2018 )
@@ -465,20 +451,18 @@ subroutine build_reconstructions_1d( CS, n0, h0, u0, ppoly_r_coefs, &
         call PPM_boundary_extrapolation( n0, h0, u0, ppoly_r_E, ppoly_r_coefs, h_neglect )
       endif
       iMethod = INTEGRATION_PPM
-  ! case ( REMAPPING_PPM_HYBGEN )
-  !   call hybgen_PPM_coefs(u0, h0, ppoly_r_E, n0, 1, hThin)
-  !   call PPM_reconstruction( n0, h0, u0, ppoly_r_E, ppoly_r_coefs, h_neglect, answers_2018=CS%answers_2018 )
-  !   if ( CS%boundary_extrapolation ) then
-  !     call PPM_boundary_extrapolation( n0, h0, u0, ppoly_r_E, ppoly_r_coefs, h_neglect )
-  !   endif
-  !   iMethod = INTEGRATION_PPM
-  ! case ( REMAPPING_WENO_HYBGEN )
-  !   call hybgen_weno_coefs(u0, h0, ppoly_r_E, n0, 1, hThin)
-  !   call PPM_reconstruction( n0, h0, u0, ppoly_r_E, ppoly_r_coefs, h_neglect, answers_2018=CS%answers_2018 )
-  !   if ( CS%boundary_extrapolation ) then
-  !     call PPM_boundary_extrapolation( n0, h0, u0, ppoly_r_E, ppoly_r_coefs, h_neglect )
-  !   endif
-  !   iMethod = INTEGRATION_PPM
+    case ( REMAPPING_PPM_HYBGEN )
+      call hybgen_PPM_coefs(u0, h0, ppoly_r_E, n0, 1, hThin)
+      call PPM_reconstruction( n0, h0, u0, ppoly_r_E, ppoly_r_coefs, h_neglect, answers_2018=.false. )
+      if ( CS%boundary_extrapolation ) &
+        call PPM_boundary_extrapolation( n0, h0, u0, ppoly_r_E, ppoly_r_coefs, h_neglect )
+      iMethod = INTEGRATION_PPM
+    case ( REMAPPING_WENO_HYBGEN )
+      call hybgen_weno_coefs(u0, h0, ppoly_r_E, n0, 1, hThin)
+      call PPM_reconstruction( n0, h0, u0, ppoly_r_E, ppoly_r_coefs, h_neglect, answers_2018=.false. )
+      if ( CS%boundary_extrapolation ) &
+        call PPM_boundary_extrapolation( n0, h0, u0, ppoly_r_E, ppoly_r_coefs, h_neglect )
+      iMethod = INTEGRATION_PPM
     case ( REMAPPING_PQM_IH4IH3 )
       call edge_values_implicit_h4( n0, h0, u0, ppoly_r_E, h_neglect_edge, answers_2018=CS%answers_2018 )
       call edge_slopes_implicit_h3( n0, h0, u0, ppoly_r_S, h_neglect, answers_2018=CS%answers_2018 )
@@ -1655,7 +1639,7 @@ subroutine setReconstructionType(string,CS)
       CS%remapping_scheme = REMAPPING_PCM
       degree = 0
     case ("PCM_HYBGEN")
-      CS%remapping_scheme = REMAPPING_PCM_HYBGEN
+      CS%remapping_scheme = REMAPPING_PCM
       degree = 0
     case ("PLM")
       CS%remapping_scheme = REMAPPING_PLM
