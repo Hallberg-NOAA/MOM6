@@ -4,7 +4,7 @@ module MOM_hybgen_unmix
 
 ! This file is part of MOM6. See LICENSE.md for the license.
 
-use MOM_EOS,             only : EOS_type, calculate_density
+use MOM_EOS,             only : EOS_type, calculate_density, calculate_density_derivs
 use MOM_error_handler,   only : MOM_mesg, MOM_error, FATAL, WARNING
 use MOM_file_parser,     only : get_param, param_file_type, log_param
 use MOM_hybgen_regrid,   only : hybgen_column_init
@@ -222,9 +222,9 @@ subroutine hybgen_unmix(G, GV, US, CS, tv, Reg, ntr, h)
                             h_col, fixlay, qhrlx, dp0ij, dp0cum)
 
     ! Do any unmixing of the column that is needed to move the layer properties toward their targets.
-    call hybgen_column_unmix(CS, nk, Rcv_tgt, temp, saln, Rcv, tv%eqn_of_state, US, &
+    call hybgen_column_unmix(CS, nk, Rcv_tgt, temp, saln, Rcv, tv%eqn_of_state, &
                              ntr, tracer, trcflg, fixlay, qhrlx, h_col, &
-                             terrain_following, h_thin, 1.0e-11*US%kg_m3_to_R)
+                             terrain_following, h_thin)
 
     ! Store the output from hybgen_unmix in the 3-d arrays.
     do k=1,nk
@@ -274,9 +274,9 @@ end subroutine hybgen_unmix
 
 
 !> Unmix the properties in the lowest layer if it is too light.
-subroutine hybgen_column_unmix(CS, nk, Rcv_tgt, temp, saln, Rcv, eqn_of_state, US, &
+subroutine hybgen_column_unmix(CS, nk, Rcv_tgt, temp, saln, Rcv, eqn_of_state, &
                                ntr, tracer, trcflg, fixlay, qhrlx, h_col, &
-                               terrain_following, h_thin, epsil)
+                               terrain_following, h_thin)
   type(hybgen_unmix_CS), intent(in) :: CS  !< hybgen unmixing control structure
   integer,        intent(in)    :: nk           !< The number of layers
   integer,        intent(in)    :: fixlay       !< deepest fixed coordinate layer
@@ -286,8 +286,6 @@ subroutine hybgen_column_unmix(CS, nk, Rcv_tgt, temp, saln, Rcv, eqn_of_state, U
   real,           intent(inout) :: saln(nk)     !< A column of salinity [ppt]
   real,           intent(inout) :: Rcv(nk)      !< Coordinate potential density [R ~> kg m-3]
   type(EOS_type), intent(in)    :: eqn_of_state !< Equation of state structure
-  type(unit_scale_type), &
-                  intent(in)    :: US           !< A dimensional unit scaling type
   integer,        intent(in)    :: ntr          !< The number of registered passive tracers
   real,           intent(inout) :: tracer(nk, max(ntr,1)) !< Columns of the passive tracers [Conc]
   integer,        intent(in)    :: trcflg(max(ntr,1)) !< Hycom tracer type flag for each tracer
@@ -295,16 +293,20 @@ subroutine hybgen_column_unmix(CS, nk, Rcv_tgt, temp, saln, Rcv, eqn_of_state, U
   logical,        intent(in)    :: terrain_following !< True if this column is terrain following
   real,           intent(in)    :: h_thin       !< A negligibly small thickness to identify
                                                 !! essentially vanished layers [H ~> m or kg m-2]
-  real,           intent(in)    :: epsil        !< small nonzero density difference to prevent
-                                                !! division by zero [R ~> kg m-3]
+
 !
 ! --- ------------------------------------------------------------------
 ! --- hybrid grid generator, single column - ummix lowest massive layer.
 ! --- ------------------------------------------------------------------
 !
+  ! Local variables
   real :: h_hat       ! A portion of a layer to move across an interface [H ~> m or kg m-2]
   real :: delt, deltm ! Temperature differences between successive layers [degC]
   real :: dels, delsm ! Salinity differences between successive layers [ppt]
+  real :: abs_dRdT    ! The absolute value of the derivative of the coordinate density
+                      ! with temperature [R degC-1 ~> kg m-3 degC-1]
+  real :: abs_dRdS    ! The absolute value of the derivative of the coordinate density
+                      ! with salinity [R ppt-1 ~> kg m-3 ppt-1]
   real :: q, qts      ! Nondimensional fractions in the range of 0 to 1 [nondim]
   real :: frac_dts    ! The fraction of the temperature or salinity difference between successive
                       ! layers by which the source layer's property changes by the loss of water
@@ -332,7 +334,7 @@ subroutine hybgen_column_unmix(CS, nk, Rcv_tgt, temp, saln, Rcv, eqn_of_state, U
 !
   if ( ((k > fixlay+1) .and. (.not.terrain_following)) .and. & ! layer not fixed depth
        (h_col(k-1) >= h_thin)        .and. & ! layer above not too thin
-       (Rcv_tgt(k)-epsil > Rcv(k))   .and. & ! layer is lighter than its target
+       (Rcv_tgt(k) > Rcv(k))   .and. & ! layer is lighter than its target
        ((Rcv(k-1) > Rcv(k)) .and. (Rcv(ka) > Rcv(k))) ) then
 !
 ! ---   water in the deepest inflated layer with significant thickness
@@ -356,8 +358,8 @@ subroutine hybgen_column_unmix(CS, nk, Rcv_tgt, temp, saln, Rcv, eqn_of_state, U
     h_col(k) = 0.0
     kp = k-1
   elseif ( ((k > fixlay+1) .and. (.not.terrain_following)) .and. & ! layer not fixed depth
-           (h_col(k-1) >= h_thin)      .and. & ! layer above not too thin
-           (Rcv_tgt(k)-epsil > Rcv(k)) .and. & ! layer is lighter than its target
+           (h_col(k-1) >= h_thin) .and. & ! layer above not too thin
+           (Rcv_tgt(k) > Rcv(k))  .and. & ! layer is lighter than its target
            (Rcv(k-1) > Rcv(k)) ) then
 ! ---   water in the deepest inflated layer with significant thickness
 ! ---   (kp) is too light, and it is lighter than the layer above, but not the layer two above.
@@ -411,9 +413,9 @@ subroutine hybgen_column_unmix(CS, nk, Rcv_tgt, temp, saln, Rcv, eqn_of_state, U
 
   if ( lunmix .and.  & ! usually .true.
        ((k > fixlay+1) .and. (.not.terrain_following)) .and. & ! layer not fixed depth
-       (h_col(k-1) >= h_thin)      .and. & ! layer above not too thin
-       (Rcv_tgt(k)-epsil > Rcv(k)) .and. & ! layer is lighter than its target
-       (Rcv_tgt(k-1) < Rcv(k))     .and. & ! layer is denser than the target above
+       (h_col(k-1) >= h_thin)  .and. & ! layer above not too thin
+       (Rcv(k) < Rcv_tgt(k))   .and. & ! layer is lighter than its target
+       (Rcv(k) > Rcv_tgt(k-1)) .and. & ! layer is denser than the target above
        (abs(Rcv_tgt(k-1) - Rcv(k-1)) < CS%hybiso) .and. & ! layer above is near its target
        (Rcv(k) - Rcv(k-1) > 0.001*(Rcv_tgt(k) - Rcv_tgt(k-1))) ) then
 !
@@ -440,20 +442,18 @@ subroutine hybgen_column_unmix(CS, nk, Rcv_tgt, temp, saln, Rcv, eqn_of_state, U
     dels = abs(saln(k-1) - saln(k))
     deltm = abs(temp(ka) - temp(k-1))
     delt = abs(temp(k-1) - temp(k))
-    ! Sanity check on deltm and delsm, based a rough approximation to the thermal expansion
-    ! and haline contraction coefficients from the equation of state of seawater.
-    if (min(temp(ka), temp(k-1), temp(k)) > 6.0) then
-      deltm = min( deltm,  6.0*US%R_to_kg_m3*(Rcv_tgt(k)-Rcv_tgt(k-1)) )
-    else  !(q <= 6.0)
-      deltm = min( deltm, 10.0*US%R_to_kg_m3*(Rcv_tgt(k)-Rcv_tgt(k-1)) )
-    endif
-    delsm = min( delsm, 1.3*US%R_to_kg_m3*(Rcv_tgt(k)-Rcv_tgt(k-1)) )
+
+    call calculate_density_derivs(temp(k-1), saln(k-1), CS%ref_pressure, abs_dRdT, abs_dRdS, eqn_of_state)
+    ! Bound deltm and delsm based on the equation of state and density differences between layers.
+    abs_dRdT = abs(abs_dRdT) ; abs_dRdS = abs(abs_dRdS)
+    if (abs_dRdT * deltm > Rcv_tgt(k)-Rcv_tgt(k-1)) deltm = (Rcv_tgt(k)-Rcv_tgt(k-1)) / abs_dRdT
+    if (abs_dRdS * delsm > Rcv_tgt(k)-Rcv_tgt(k-1)) delsm = (Rcv_tgt(k)-Rcv_tgt(k-1)) / abs_dRdS
 
     qts = 0.0
     if (qts*dels < min(delsm-dels, dels)) qts = min(delsm-dels, dels) / dels
     if (qts*delt < min(deltm-delt, delt)) qts = min(deltm-delt, delt) / delt
 
-    ! Note that Rcv_tgt(k) > Rcv(k) + epsil > Rcv(k-1), and 0 <= qts <= 1.
+    ! Note that Rcv_tgt(k) > Rcv(k) > Rcv(k-1), and 0 <= qts <= 1.
     ! qhrlx is relaxation coefficient (inverse baroclinic time steps), 0 <= qhrlx <= 1.
     ! This takes the minimum of the two estimates.
     if ((1.0+qts) * (Rcv_tgt(k)-Rcv(k)) < qts * (Rcv_tgt(k)-Rcv(k-1))) then
