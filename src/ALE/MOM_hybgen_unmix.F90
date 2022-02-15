@@ -1,5 +1,5 @@
-!> This module contains the hybgen unmixing routines from HYCOM, with minor
-!! modifications to follow the MOM6 coding conventions
+!> This module contains the hybgen unmixing routines from HYCOM, with
+!! modifications to follow the MOM6 coding conventions and several bugs fixed
 module MOM_hybgen_unmix
 
 ! This file is part of MOM6. See LICENSE.md for the license.
@@ -22,10 +22,10 @@ implicit none ; private
 type, public :: hybgen_unmix_CS ; private
 
   integer :: nsigma  !< Number of sigma levels used by HYBGEN
-  real :: hybiso     !< Hybgen uses PCM if layer is within hybiso of target density [kg m-3]
+  real :: hybiso     !< Hybgen uses PCM if layer is within hybiso of target density [R ~> kg m-3]
 
   real :: dp00i   !< Deep isopycnal spacing minimum thickness [H ~> m or kg m-2]
-  real :: qhybrlx !< Hybgen relaxation coefficient (inverse baroclinic time steps) [s-1]
+  real :: qhybrlx !< Hybgen relaxation amount per thermodynamic time steps [nondim]
 
   real, allocatable, dimension(:) ::  &
     dp0k, &     !< minimum deep    z-layer separation [H ~> m or kg m-2]
@@ -136,9 +136,9 @@ subroutine hybgen_unmix(G, GV, US, CS, tv, Reg, ntr, h)
 
   character(len=256) :: mesg  ! A string for output messages
   integer :: fixlay         ! deepest fixed coordinate layer
-  real :: qhrlx( GV%ke+1)   ! relaxation coefficient
-  real :: dp0ij( GV%ke)     ! minimum layer thickness
-  real :: dp0cum(GV%ke+1)   ! minimum interface depth
+  real :: qhrlx( GV%ke+1)   ! relaxation coefficient per timestep [nondim]
+  real :: dp0ij( GV%ke)     ! minimum layer thickness [H ~> m or kg m-2]
+  real :: dp0cum(GV%ke+1)   ! minimum interface depth [H ~> m or kg m-2]
 
   real :: Rcv_tgt(GV%ke)    ! Target potential density [R ~> kg m-3]
   real :: temp(GV%ke)       ! A column of potential temperature [degC]
@@ -222,9 +222,9 @@ subroutine hybgen_unmix(G, GV, US, CS, tv, Reg, ntr, h)
                             h_col, fixlay, qhrlx, dp0ij, dp0cum)
 
     ! Do any unmixing of the column that is needed to move the layer properties toward their targets.
-    call hybgenaij_unmix(CS, nk, Rcv_tgt, temp, saln, Rcv, tv%eqn_of_state, &
-                         ntr, tracer, trcflg, fixlay, qhrlx, &
-                         h_col, terrain_following, h_thin, 1.0e-11*US%kg_m3_to_R)
+    call hybgen_column_unmix(CS, nk, Rcv_tgt, temp, saln, Rcv, tv%eqn_of_state, US, &
+                             ntr, tracer, trcflg, fixlay, qhrlx, h_col, &
+                             terrain_following, h_thin, 1.0e-11*US%kg_m3_to_R)
 
     ! Store the output from hybgen_unmix in the 3-d arrays.
     do k=1,nk
@@ -234,7 +234,7 @@ subroutine hybgen_unmix(G, GV, US, CS, tv, Reg, ntr, h)
     do m=1,ntr ; do k=1,nk
       Reg%Tr(m)%t(i,j,k) = tracer(k,m)
     enddo ; enddo
-    ! However, they may have been treated differently from other tracers.
+    ! However, temperature and salinity may have been treated differently from other tracers.
     do k=1,nk
       tv%T(i,j,k) = temp(k)
       tv%S(i,j,k) = saln(k)
@@ -274,18 +274,20 @@ end subroutine hybgen_unmix
 
 
 !> Unmix the properties in the lowest layer if it is too light.
-subroutine hybgenaij_unmix(CS, nk, Rcv_tgt, temp, saln, Rcv, eqn_of_state, &
-                           ntr, tracer, trcflg, fixlay, qhrlx, h_col, &
-                           terrain_following, h_thin, epsil)
+subroutine hybgen_column_unmix(CS, nk, Rcv_tgt, temp, saln, Rcv, eqn_of_state, US, &
+                               ntr, tracer, trcflg, fixlay, qhrlx, h_col, &
+                               terrain_following, h_thin, epsil)
   type(hybgen_unmix_CS), intent(in) :: CS  !< hybgen unmixing control structure
   integer,        intent(in)    :: nk           !< The number of layers
   integer,        intent(in)    :: fixlay       !< deepest fixed coordinate layer
-  real,           intent(in)    :: qhrlx(nk+1)  !< relaxation coefficient [s-1]
+  real,           intent(in)    :: qhrlx(nk+1)  !< Relaxation fraction per timestep [nondim], < 1.
   real,           intent(in)    :: Rcv_tgt(nk)  !< Target potential density [R ~> kg m-3]
   real,           intent(inout) :: temp(nk)     !< A column of potential temperature [degC]
   real,           intent(inout) :: saln(nk)     !< A column of salinity [ppt]
   real,           intent(inout) :: Rcv(nk)      !< Coordinate potential density [R ~> kg m-3]
   type(EOS_type), intent(in)    :: eqn_of_state !< Equation of state structure
+  type(unit_scale_type), &
+                  intent(in)    :: US           !< A dimensional unit scaling type
   integer,        intent(in)    :: ntr          !< The number of registered passive tracers
   real,           intent(inout) :: tracer(nk, max(ntr,1)) !< Columns of the passive tracers [Conc]
   integer,        intent(in)    :: trcflg(max(ntr,1)) !< Hycom tracer type flag for each tracer
@@ -297,17 +299,24 @@ subroutine hybgenaij_unmix(CS, nk, Rcv_tgt, temp, saln, Rcv, eqn_of_state, &
                                                 !! division by zero [R ~> kg m-3]
 !
 ! --- ------------------------------------------------------------------
-! --- hybrid grid generator, single column(part A) - ummix lowest layer.
+! --- hybrid grid generator, single column - ummix lowest massive layer.
 ! --- ------------------------------------------------------------------
 !
-  character(len=256) :: mesg  ! A string for output messages
   real :: h_hat       ! A portion of a layer to move across an interface [H ~> m or kg m-2]
   real :: delt, deltm ! Temperature differences between successive layers [degC]
   real :: dels, delsm ! Salinity differences between successive layers [ppt]
-  real :: q, qtr, qts ! Nondimensional fractions [nondim]
-  real :: s1d(nk, ntr+4) !original scalar fields
+  real :: q, qts      ! Nondimensional fractions in the range of 0 to 1 [nondim]
+  real :: frac_dts    ! The fraction of the temperature or salinity difference between successive
+                      ! layers by which the source layer's property changes by the loss of water
+                      ! that matches the destination layers properties via unmixing [nondim].
+  real :: qtr         ! The fraction of the water that will come from the layer below,
+                      ! used for updating the concentration of passive tracers [nondim]
+  real :: swap_T      ! A swap variable for temperature [degC]
+  real :: swap_S      ! A swap variable for salinity [ppt]
+  real :: swap_R      ! A swap variable for the coordinate potential density [R ~> kg m-3]
+  real :: swap_tr     ! A temporary swap variable for the tracers [conc]
   logical, parameter :: lunmix=.true.     ! unmix a too light deepest layer
-  integer :: k, ka, kp, ktr, kag, fixall
+  integer :: k, ka, kp, kt, m
 
   ! --- identify the deepest layer kp with significant thickness (> h_thin)
   kp = 2  !minimum allowed value
@@ -322,7 +331,7 @@ subroutine hybgenaij_unmix(CS, nk, Rcv_tgt, temp, saln, Rcv, eqn_of_state, &
   ka = max(k-2,1)  !k might be 2
 !
   if ( ((k > fixlay+1) .and. (.not.terrain_following)) .and. & ! layer not fixed depth
-       (h_col(k-1) >= h_thin)              .and. & ! layer above not too thin
+       (h_col(k-1) >= h_thin)        .and. & ! layer above not too thin
        (Rcv_tgt(k)-epsil > Rcv(k))   .and. & ! layer is lighter than its target
        ((Rcv(k-1) > Rcv(k)) .and. (Rcv(ka) > Rcv(k))) ) then
 !
@@ -339,9 +348,9 @@ subroutine hybgenaij_unmix(CS, nk, Rcv_tgt, temp, saln, Rcv, eqn_of_state, &
     saln(k-1) = saln(k-1) - q*(saln(k-1) - saln(k))
     call calculate_density(temp(k-1), saln(k-1), CS%ref_pressure, Rcv(k-1), eqn_of_state)
 
-    do ktr=1,ntr
-      tracer(k-1,ktr) = tracer(k-1,ktr) - q*(tracer(k-1,ktr) - tracer(k,ktr) )
-    enddo !ktr
+    do m=1,ntr
+      tracer(k-1,m) = tracer(k-1,m) - q*(tracer(k-1,m) - tracer(k,m) )
+    enddo !m
 ! ---   entrained the entire layer into the one above, so now kp=kp-1
     h_col(k-1) = h_col(k-1) + h_col(k)
     h_col(k) = 0.0
@@ -355,44 +364,45 @@ subroutine hybgenaij_unmix(CS, nk, Rcv_tgt, temp, saln, Rcv, eqn_of_state, &
 ! ---
 ! ---   swap the entire layer with the one above.
     if (h_col(k) <= h_col(k-1)) then
-! ---     bottom layer is thinner, take entire bottom layer
-!---      note the double negative in T=T-q*(T-T'), equiv. to T=T+q*(T'-T)
-      s1d(k-1,1) = temp(k-1)
-      s1d(k-1,2) = saln(k-1)
-      s1d(k-1,3) = Rcv(k-1)
+      ! The bottom layer is thinner; swap the entire bottom layer with a portion of the layer above.
       q = h_col(k) / h_col(k-1)  !<=1.0
 
-      temp(k-1) = temp(k-1) - q*(temp(k-1) - temp(k))
-      saln(k-1) = saln(k-1) - q*(saln(k-1) - saln(k))
+      swap_T = temp(k-1)
+      temp(k-1) = temp(k-1) + q*(temp(k) - temp(k-1))
+      temp(k) = swap_T
+
+      swap_S = saln(k-1)
+      saln(k-1) = saln(k-1) + q*(saln(k) - saln(k-1))
+      saln(k) = swap_S
+
+      Rcv(k) = Rcv(k-1)
       call calculate_density(temp(k-1), saln(k-1), CS%ref_pressure, Rcv(k-1), eqn_of_state)
 
-      temp(k) = s1d(k-1,1)
-      saln(k) = s1d(k-1,2)
-      Rcv(k) = s1d(k-1,3)
-      do ktr=1,ntr
-        s1d(k-1,2+ktr)  = tracer(k-1,ktr)
-        tracer(k-1,ktr) = tracer(k-1,ktr) - q * (tracer(k-1,ktr) - tracer(k,ktr))
-        tracer(k,  ktr) = s1d(k-1,2+ktr)
-      enddo !ktr
+      do m=1,ntr
+        swap_tr = tracer(k-1,m)
+        tracer(k-1,m) = tracer(k-1,m) - q * (tracer(k-1,m) - tracer(k,m))
+        tracer(k,m) = swap_tr
+      enddo !m
     else
-! ---     bottom layer is thicker, take entire layer above
-      s1d(k,1) = temp(k)
-      s1d(k,2) = saln(k)
-      s1d(k,3) = Rcv(k)
+      ! The bottom layer is thicker; swap the entire layer above with a portion of the bottom layer.
       q = h_col(k-1) / h_col(k)  !<1.0
 
+      swap_T = temp(k)
       temp(k) = temp(k) + q*(temp(k-1) - temp(k))
+      temp(k-1) = swap_T
+
+      swap_S = saln(k)
       saln(k) = saln(k) + q*(saln(k-1) - saln(k))
+      saln(k-1) = swap_S
+
+      Rcv(k-1) = Rcv(k)
       call calculate_density(temp(k), saln(k), CS%ref_pressure, Rcv(k), eqn_of_state)
 
-      temp(k-1) = s1d(k,1)
-      saln(k-1) = s1d(k,2)
-      Rcv(k-1) = s1d(k,3)
-      do ktr=1,ntr
-        s1d(k,2+ktr)    = tracer(k,ktr)
-        tracer(k,  ktr) = tracer(k,ktr) + q * (tracer(k-1,ktr) - tracer(k,ktr))
-        tracer(k-1,ktr) = s1d(k,2+ktr)
-      enddo !ktr
+      do m=1,ntr
+        swap_tr = tracer(k,m)
+        tracer(k,m) = tracer(k,m) + q * (tracer(k-1,m) - tracer(k,m))
+        tracer(k-1,m) = swap_tr
+      enddo !m
     endif !bottom too light
   endif
 
@@ -419,9 +429,9 @@ subroutine hybgenaij_unmix(CS, nk, Rcv_tgt, temp, saln, Rcv, eqn_of_state, &
 ! ---   It is also limited to a 50% change in layer thickness.
 
     ka = 1
-    do kag=k-2,2,-1
-      if ( Rcv(k-1) - Rcv(kag) >= Rcv_tgt(k-1) - Rcv_tgt(k-2) ) then
-        ka = kag  !usually k-2
+    do kt=k-2,2,-1
+      if ( Rcv(k-1) - Rcv(kt) >= Rcv_tgt(k-1) - Rcv_tgt(k-2) ) then
+        ka = kt  !usually k-2
         exit
       endif
     enddo
@@ -430,44 +440,48 @@ subroutine hybgenaij_unmix(CS, nk, Rcv_tgt, temp, saln, Rcv, eqn_of_state, &
     dels = abs(saln(k-1) - saln(k))
     deltm = abs(temp(ka) - temp(k-1))
     delt = abs(temp(k-1) - temp(k))
-! ---   sanity check on deltm and delsm
-    q = min(temp(ka), temp(k-1), temp(k))
-    if   (q > 6.0) then
-      deltm = min( deltm,  6.0*(Rcv_tgt(k)-Rcv_tgt(k-1)) )
+    ! Sanity check on deltm and delsm, based a rough approximation to the thermal expansion
+    ! and haline contraction coefficients from the equation of state of seawater.
+    if (min(temp(ka), temp(k-1), temp(k)) > 6.0) then
+      deltm = min( deltm,  6.0*US%R_to_kg_m3*(Rcv_tgt(k)-Rcv_tgt(k-1)) )
     else  !(q <= 6.0)
-      deltm = min( deltm, 10.0*(Rcv_tgt(k)-Rcv_tgt(k-1)) )
+      deltm = min( deltm, 10.0*US%R_to_kg_m3*(Rcv_tgt(k)-Rcv_tgt(k-1)) )
     endif
-    delsm = min( delsm, 1.3*(Rcv_tgt(k)-Rcv_tgt(k-1)) )
+    delsm = min( delsm, 1.3*US%R_to_kg_m3*(Rcv_tgt(k)-Rcv_tgt(k-1)) )
+
     qts = 0.0
-    if (delt > 1.0d-11) then  ! The hard-coded limit here is copied over from cb_arrays.F90
-      qts = max(qts, (min(deltm, 2.0*delt)-delt)/delt)  ! qts<=1.0
+    if (qts*dels < min(delsm-dels, dels)) qts = min(delsm-dels, dels) / dels
+    if (qts*delt < min(deltm-delt, delt)) qts = min(deltm-delt, delt) / delt
+
+    ! Note that Rcv_tgt(k) > Rcv(k) + epsil > Rcv(k-1), and 0 <= qts <= 1.
+    ! qhrlx is relaxation coefficient (inverse baroclinic time steps), 0 <= qhrlx <= 1.
+    ! This takes the minimum of the two estimates.
+    if ((1.0+qts) * (Rcv_tgt(k)-Rcv(k)) < qts * (Rcv_tgt(k)-Rcv(k-1))) then
+      q = qhrlx(k) * ((Rcv_tgt(k)-Rcv(k)) / (Rcv_tgt(k)-Rcv(k-1)))
+    else
+      q = qhrlx(k) * (qts / (1.0+qts)) ! upper sublayer <= 50% of total
     endif
-    if (dels > 1.0d-11) then  ! The hard-coded limit here is copied over from cb_arrays.F90
-      qts = max(qts, (min(delsm, 2.0*dels)-dels)/dels)  ! qts<=1.0
-    endif
-    q = (Rcv_tgt(k)-Rcv(k)) / (Rcv_tgt(k)-Rcv(k-1))
-    q = min(q, qts/(1.0+qts))  ! upper sublayer <= 50% of total
-    q = qhrlx(k)*q
-! ---   qhrlx is relaxation coefficient (inverse baroclinic time steps)
+    frac_dts = q / (1.0-q)     ! 0 <= q <= 0.5, so 0 <= frac_dts <= 1
+
     h_hat = q * h_col(k)
     h_col(k-1) = h_col(k-1) + h_hat
     h_col(k) = h_col(k) - h_hat
 
-    temp(k) = temp(k) + (q/(1.0-q)) * (temp(k) - temp(k-1))
-    saln(k) = saln(k) + (q/(1.0-q)) * (saln(k) - saln(k-1))
+    temp(k) = temp(k) + frac_dts * (temp(k) - temp(k-1))
+    saln(k) = saln(k) + frac_dts * (saln(k) - saln(k-1))
     call calculate_density(temp(k), saln(k), CS%ref_pressure, Rcv(k), eqn_of_state)
 
     if ((ntr > 0) .and. (h_hat /= 0.0)) then
-! ---     fraction of new upper layer from old lower layer
-      ! The bad original from Hycom: qtr = h_hat / max(h_hat, h_col(k))  !between 0 and 1
+      ! qtr is the fraction of the new upper layer from the old lower layer.
+      ! The nonconservative original from Hycom: qtr = h_hat / max(h_hat, h_col(k))  !between 0 and 1
       qtr = h_hat / h_col(k-1) ! Between 0 and 1, noting the h_col(k-1) = h_col(k-1) + h_hat above.
-      do ktr=1,ntr
-        if (trcflg(ktr) == 2) then !temperature tracer
-          tracer(k,ktr) = tracer(k,ktr) + (q/(1.0-q)) * (tracer(k,ktr) - tracer(k-1,ktr))
+      do m=1,ntr
+        if (trcflg(m) == 2) then !temperature tracer
+          tracer(k,m) = tracer(k,m) + frac_dts * (tracer(k,m) - tracer(k-1,m))
         else !standard tracer - not split into two sub-layers
-          tracer(k-1,ktr) = tracer(k-1,ktr) + qtr * (tracer(k,ktr) - tracer(k-1,ktr))
+          tracer(k-1,m) = tracer(k-1,m) + qtr * (tracer(k,m) - tracer(k-1,m))
         endif !trcflg
-      enddo !ktr
+      enddo !m
     endif !tracers
   endif !too light
 !
@@ -476,13 +490,13 @@ subroutine hybgenaij_unmix(CS, nk, Rcv_tgt, temp, saln, Rcv, eqn_of_state, &
   do k=kp+1,nk
     ! --- fill thin and massless layers on sea floor with fluid from above
     Rcv(k) = Rcv(k-1)
-    do ktr=1,ntr
-      tracer(k,ktr) = tracer(k-1,ktr)
-    enddo !ktr
+    do m=1,ntr
+      tracer(k,m) = tracer(k-1,m)
+    enddo !m
     saln(k) = saln(k-1)
     temp(k) = temp(k-1)
   enddo !k
 
-end subroutine hybgenaij_unmix
+end subroutine hybgen_column_unmix
 
 end module MOM_hybgen_unmix
