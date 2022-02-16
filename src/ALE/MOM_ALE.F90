@@ -21,8 +21,6 @@ use MOM_error_handler,    only : MOM_error, FATAL, WARNING
 use MOM_error_handler,    only : callTree_showQuery
 use MOM_error_handler,    only : callTree_enter, callTree_leave, callTree_waypoint
 use MOM_hybgen_unmix,     only : hybgen_unmix, init_hybgen_unmix, end_hybgen_unmix, hybgen_unmix_CS
-use MOM_hybgen_remap,     only : init_hybgen_remap, hybgen_remap_CS
-use MOM_hybgen_remap,     only : hybgen_remap_column, get_hybgen_remap_params
 use MOM_hybgen_regrid,    only : hybgen_regrid_CS
 use MOM_file_parser,      only : get_param, param_file_type, log_param
 use MOM_io,               only : vardesc, var_desc, fieldtype, SINGLE_FILE
@@ -81,11 +79,9 @@ type, public :: ALE_CS ; private
   type(remapping_CS)  :: vel_remapCS  !< Remapping parameters for velocities and work arrays
 
   type(hybgen_unmix_CS), pointer :: hybgen_unmixCS => NULL() !< Parameters for hybgen remapping
-  type(hybgen_remap_CS), pointer :: hybgen_remapCS => NULL() !< Parameters for hybgen remapping
 
   logical :: use_hybgen_unmix   !< If true, use the hybgen unmixing code before regridding
   logical :: do_conv_adj        !< If true, do convective adjustment before regridding
-  logical :: use_hybgen_remap   !< If true, use the hybgen code for remapping
 
   integer :: nk             !< Used only for queries, not directly by this module
   real :: BBL_h_vel_mask    !< The thickness of a bottom boundary layer within which velocities in
@@ -175,7 +171,6 @@ subroutine ALE_init( param_file, GV, US, max_depth, CS)
   character(len=40) :: mdl = "MOM_ALE" ! This module's name.
   character(len=80) :: string, vel_string ! Temporary strings
   real              :: filter_shallow_depth, filter_deep_depth
-  real              :: sign ! +1 or -1, used in setting some parameter defaults.
   logical           :: default_2018_answers
   logical           :: check_reconstruction
   logical           :: check_remapping
@@ -204,11 +199,6 @@ subroutine ALE_init( param_file, GV, US, max_depth, CS)
   ! Initialize and configure regridding
   call ALE_initRegridding(GV, US, max_depth, param_file, mdl, CS%regridCS)
   call regridding_preadjust_reqs(CS%regridCS, CS%do_conv_adj, CS%use_hybgen_unmix, hybgen_CS=hybgen_regridCS)
-
-  call get_param(param_file, mdl, "USE_HYBGEN_REMAP", CS%use_hybgen_remap, &
-              "If true, use hybgen code for remapping.", default=.false.)
-  if (CS%use_hybgen_remap) &
-    call init_hybgen_remap(CS%hybgen_remapCS, GV, US, param_file)
 
   ! Initialize and configure remapping that is orchestrated by ALE.
   call get_param(param_file, mdl, "REMAPPING_SCHEME", string, &
@@ -259,7 +249,7 @@ subroutine ALE_init( param_file, GV, US, max_depth, CS)
   call get_param(param_file, mdl, "PARTIAL_CELL_VELOCITY_REMAP", CS%partial_cell_vel_remap, &
                  "If true, use partial cell thicknesses at velocity points that are masked out "//&
                  "where they extend below the shallower of the neighboring bathymetry for "//&
-                 "remapping velocity.", default=CS%use_hybgen_remap)
+                 "remapping velocity.", default=.false.)
 
   call get_param(param_file, mdl, "REMAP_AFTER_INITIALIZATION", CS%remap_after_initialization, &
                  "If true, applies regridding and remapping immediately after "//&
@@ -291,7 +281,6 @@ subroutine ALE_init( param_file, GV, US, max_depth, CS)
                  "code.", default=.true., do_not_log=.true.)
   call set_regrid_params(CS%regridCS, integrate_downward_for_e=.not.local_logical)
 
-  sign = -1.0 ; if (CS%use_hybgen_remap) sign = 1.0
   call get_param(param_file, mdl, "HYBGEN_H_THIN_REMAP", CS%h_thin_remap, &
                  "A negligibly small thickness for the purpose of some cell reconstructions.", &
                  default=1.0e-6, units="m", scale=GV%m_to_H)
@@ -300,11 +289,12 @@ subroutine ALE_init( param_file, GV, US, max_depth, CS)
                  "A thickness of a bottom boundary layer below which velocities in thin layers "//&
                  "are zeroed out after remapping, following practice with Hybgen remapping, "//&
                  "or a negative value to avoid such filtering altogether.", &
-                 default=0.001*sign, units="m", scale=GV%m_to_H)
+                 default=-0.001, units="m", scale=GV%m_to_H)
   call get_param(param_file, mdl, "HYBGEN_REMAP_VEL_MASK_H", CS%h_vel_mask, &
                  "A thickness at velocity points below which near-bottom layers are zeroed out "//&
                  "after remapping, following practice with Hybgen remapping, or a negative value "//&
-                 "to avoid such filtering altogether.", default=1.0e-6*sign, units="m", scale=GV%m_to_H)
+                 "to avoid such filtering altogether.", &
+                 default=1.0e-6, units="m", scale=GV%m_to_H, do_not_log=(CS%BBL_h_vel_mask<=0.0))
 
   if (CS%use_hybgen_unmix) &
     call init_hybgen_unmix(CS%hybgen_unmixCS, GV, US, param_file, hybgen_regridCS)
@@ -855,7 +845,6 @@ subroutine remap_all_state_vars(CS, G, GV, h_old, h_new, Reg, OBC, &
   real :: h1(GV%ke)     ! A column of source grid layer thicknesses [H ~> m or kg m-2]
   real :: h2(GV%ke)     ! A column of target grid layer thicknesses [H ~> m or kg m-2]
   real :: h_neglect, h_neglect_edge ! Negligible thicknesses [H ~> m or kg m-2]
-  integer :: hybgen_scheme, hybgen_vel_scheme  ! Flags indicating which scheme to use for remapping.
   logical                                     :: show_call_tree
   type(tracer_type), pointer                  :: Tr => NULL()
   integer                                     :: i, j, k, m, nz, ntr
@@ -890,10 +879,6 @@ subroutine remap_all_state_vars(CS, G, GV, h_old, h_new, Reg, OBC, &
     work_cont(:,:,:) = 0.0
   endif
 
-  if (CS%use_hybgen_remap) then
-    call get_hybgen_remap_params(CS%hybgen_remapCS, hybmap=hybgen_scheme, hybmap_vel=hybgen_vel_scheme)
-  endif
-
   ! Remap all registered tracers, including temperature and salinity.
   if (ntr>0) then
     if (show_call_tree) call callTree_waypoint("remapping tracers (remap_all_state_vars)")
@@ -906,18 +891,8 @@ subroutine remap_all_state_vars(CS, G, GV, h_old, h_new, Reg, OBC, &
         h2(:) = h_new(i,j,:)
         if (present(PCM_cell)) then
           PCM(:) = PCM_cell(i,j,:)
-          if (CS%use_hybgen_remap) then
-            ! Use the hybgen alternate version of the tracer remapping code.
-            call hybgen_remap_column(hybgen_scheme, 1, nz, h1, Tr%t(i,j,:), nz, h2, &
-                                     tr_column, CS%h_thin_remap, PCM_cell=PCM)
-          else
-            call remapping_core_h(CS%remapCS, nz, h1, Tr%t(i,j,:), nz, h2, &
-                                  tr_column, h_neglect, h_neglect_edge, h_thin=CS%h_thin_remap, PCM_cell=PCM)
-          endif
-        elseif (CS%use_hybgen_remap) then
-          ! Use the hybgen alternate version of the tracer remapping code.
-          call hybgen_remap_column(hybgen_scheme, 1, nz, h1, Tr%t(i,j,:), nz, h2, &
-                                   tr_column, CS%h_thin_remap)
+          call remapping_core_h(CS%remapCS, nz, h1, Tr%t(i,j,:), nz, h2, tr_column, &
+                                h_neglect, h_neglect_edge, h_thin=CS%h_thin_remap, PCM_cell=PCM)
         else
           call remapping_core_h(CS%remapCS, nz, h1, Tr%t(i,j,:), nz, h2, tr_column, &
                                 h_neglect, h_neglect_edge, h_thin=CS%h_thin_remap)
@@ -1005,12 +980,8 @@ subroutine remap_all_state_vars(CS, G, GV, h_old, h_new, Reg, OBC, &
       endif ; endif
 
       ! --- Remap u profiles from the source vertical grid onto the new target grid.
-      if ( CS%use_hybgen_remap ) then
-        call hybgen_remap_column(hybgen_vel_scheme, 1, nz, h1, u_src, nz, h2, u_tgt, CS%h_thin_remap)
-      else
-        call remapping_core_h(CS%vel_remapCS, nz, h1, u_src, nz, h2, u_tgt, &
-                              h_neglect, h_neglect_edge, h_thin=CS%h_thin_remap)
-      endif
+      call remapping_core_h(CS%vel_remapCS, nz, h1, u_src, nz, h2, u_tgt, &
+                            h_neglect, h_neglect_edge, h_thin=CS%h_thin_remap)
 
       if ((CS%BBL_h_vel_mask > 0.0) .and. (CS%h_vel_mask > 0.0)) then
         call mask_near_bottom_vel(u_tgt, h2, CS%BBL_h_vel_mask, CS%h_vel_mask, nz)
@@ -1055,12 +1026,8 @@ subroutine remap_all_state_vars(CS, G, GV, h_old, h_new, Reg, OBC, &
       endif ; endif
 
       ! --- Remap v profiles from the source vertical grid onto the new target grid.
-      if ( CS%use_hybgen_remap ) then
-        call hybgen_remap_column(hybgen_vel_scheme, 1, nz, h1, v_src, nz, h2, v_tgt, CS%h_thin_remap)
-      else
-        call remapping_core_h(CS%vel_remapCS, nz, h1, v_src, nz, h2, v_tgt, &
-                              h_neglect, h_neglect_edge, h_thin=CS%h_thin_remap)
-      endif
+      call remapping_core_h(CS%vel_remapCS, nz, h1, v_src, nz, h2, v_tgt, &
+                            h_neglect, h_neglect_edge, h_thin=CS%h_thin_remap)
 
       if ((CS%BBL_h_vel_mask > 0.0) .and. (CS%h_vel_mask > 0.0)) then
         call mask_near_bottom_vel(v_tgt, h2, CS%BBL_h_vel_mask, CS%h_vel_mask, nz)
