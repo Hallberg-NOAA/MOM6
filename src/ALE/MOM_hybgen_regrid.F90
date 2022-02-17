@@ -306,7 +306,6 @@ subroutine hybgen_regrid(G, GV, US, dp, tv, CS, dzInterface, PCM_cell)
   real :: h_tot             ! Total thickness of the water column [H ~> m or kg m-2]
   real :: nominalDepth      ! Depth of ocean bottom (positive downward) [H ~> m or kg m-2]
   real :: dilate            ! A factor by which to dilate the target positions from z to z* [nondim]
-  real :: h_thin            ! A very thin layer thickness, that is remapped differently [H ~> m or kg m-2]
   integer :: fixlay         ! Deepest fixed coordinate layer
   integer, dimension(0:CS%nk) :: k_end ! The index of the deepest source layer that contributes to
                             ! each target layer, in the unusual case where the the input grid is
@@ -317,7 +316,6 @@ subroutine hybgen_regrid(G, GV, US, dp, tv, CS, dzInterface, PCM_cell)
   nk = CS%nk
 
   p_col(:) = CS%ref_pressure
-  h_thin = 1.0e-6*CS%onem
 
   do j=G%jsc-1,G%jec+1 ; do i=G%isc-1,G%iec+1 ; if (G%mask2dT(i,j)>0.) then
 
@@ -401,8 +399,7 @@ subroutine hybgen_regrid(G, GV, US, dp, tv, CS, dzInterface, PCM_cell)
     do k=1,GV%ke
       if (CS%hybiso > 0.0) then
         ! --- thin or isopycnal source layers are remapped with PCM.
-        PCM_lay(k) = (k > fixlay) .and. &
-            ((h_col(k) <= h_thin) .or. (abs(Rcv(k) - Rcv_tgt(k)) < CS%hybiso))
+        PCM_lay(k) = (k > fixlay) .and. (abs(Rcv(k) - Rcv_tgt(k)) < CS%hybiso)
       else ! hybiso==0.0, so purely isopycnal layers use PCM
         PCM_lay(k) = .false.
       endif ! hybiso

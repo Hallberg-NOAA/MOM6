@@ -92,8 +92,6 @@ type, public :: ALE_CS ; private
                             !! zeroed out after remapping, following the practice with Hybgen
                             !! remapping, or a negative value to avoid such filtering altogether,
                             !! in [H ~> m or kg m-2].
-  real :: h_thin_remap      !< A negligibly small thickness for the purpose of some cell
-                            !! reconstructions [H ~> m or kg m-2].
 
   logical :: remap_after_initialization !< Indicates whether to regrid/remap after initializing the state.
 
@@ -280,10 +278,6 @@ subroutine ALE_init( param_file, GV, US, max_depth, CS)
                  "regridding integrates downward, consistant with the remapping "//&
                  "code.", default=.true., do_not_log=.true.)
   call set_regrid_params(CS%regridCS, integrate_downward_for_e=.not.local_logical)
-
-  call get_param(param_file, mdl, "HYBGEN_H_THIN_REMAP", CS%h_thin_remap, &
-                 "A negligibly small thickness for the purpose of some cell reconstructions.", &
-                 default=1.0e-6, units="m", scale=GV%m_to_H)
 
   call get_param(param_file, mdl, "HYBGEN_REMAP_MASK_BBL_THICK", CS%BBL_h_vel_mask, &
                  "A thickness of a bottom boundary layer below which velocities in thin layers "//&
@@ -896,10 +890,10 @@ subroutine remap_all_state_vars(CS, G, GV, h_old, h_new, Reg, OBC, &
         if (present(PCM_cell)) then
           PCM(:) = PCM_cell(i,j,:)
           call remapping_core_h(CS%remapCS, nz, h1, Tr%t(i,j,:), nz, h2, tr_column, &
-                                h_neglect, h_neglect_edge, h_thin=CS%h_thin_remap, PCM_cell=PCM)
+                                h_neglect, h_neglect_edge, PCM_cell=PCM)
         else
           call remapping_core_h(CS%remapCS, nz, h1, Tr%t(i,j,:), nz, h2, tr_column, &
-                                h_neglect, h_neglect_edge, h_thin=CS%h_thin_remap)
+                                h_neglect, h_neglect_edge)
         endif
 
         ! Intermediate steps for tendency of tracer concentration and tracer content.
@@ -984,7 +978,7 @@ subroutine remap_all_state_vars(CS, G, GV, h_old, h_new, Reg, OBC, &
 
       ! --- Remap u profiles from the source vertical grid onto the new target grid.
       call remapping_core_h(CS%vel_remapCS, nz, h1, u_src, nz, h2, u_tgt, &
-                            h_neglect, h_neglect_edge, h_thin=CS%h_thin_remap)
+                            h_neglect, h_neglect_edge)
 
       if ((CS%BBL_h_vel_mask > 0.0) .and. (CS%h_vel_mask > 0.0)) then
         call mask_near_bottom_vel(u_tgt, h2, CS%BBL_h_vel_mask, CS%h_vel_mask, nz)
@@ -1029,7 +1023,7 @@ subroutine remap_all_state_vars(CS, G, GV, h_old, h_new, Reg, OBC, &
 
       ! --- Remap v profiles from the source vertical grid onto the new target grid.
       call remapping_core_h(CS%vel_remapCS, nz, h1, v_src, nz, h2, v_tgt, &
-                            h_neglect, h_neglect_edge, h_thin=CS%h_thin_remap)
+                            h_neglect, h_neglect_edge)
 
       if ((CS%BBL_h_vel_mask > 0.0) .and. (CS%h_vel_mask > 0.0)) then
         call mask_near_bottom_vel(v_tgt, h2, CS%BBL_h_vel_mask, CS%h_vel_mask, nz)
