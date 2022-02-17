@@ -56,6 +56,7 @@ use MOM_ALE,                   only : ALE_updateVerticalGridType, ALE_remap_init
 use MOM_ALE_sponge,            only : rotate_ALE_sponge, update_ALE_sponge_field
 use MOM_barotropic,            only : Barotropic_CS
 use MOM_boundary_update,       only : call_OBC_register, OBC_register_end, update_OBC_CS
+use MOM_check_scaling,         only : check_MOM6_scaling_factors
 use MOM_coord_initialization,  only : MOM_initialize_coord
 use MOM_diabatic_driver,       only : diabatic, diabatic_driver_init, diabatic_CS, extract_diabatic_member
 use MOM_diabatic_driver,       only : adiabatic, adiabatic_driver_init, diabatic_driver_end
@@ -1138,11 +1139,9 @@ subroutine step_MOM_dynamics(forces, p_surf_begin, p_surf_end, dt, dt_thermo, &
 
   endif ! -------------------------------------------------- end SPLIT
 
-   if (CS%do_dynamics) then!run particles whether or not stepping is split
-     if (CS%use_particles) then
-       call particles_run(CS%particles, Time_local, CS%u, CS%v, CS%h, CS%tv) ! Run the particles model
-     endif
-   endif
+  if (CS%use_particles .and. CS%do_dynamics) then ! Run particles whether or not stepping is split
+    call particles_run(CS%particles, Time_local, CS%u, CS%v, CS%h, CS%tv) ! Run the particles model
+  endif
 
 
   if (CS%thickness_diffuse .and. .not.CS%thickness_diffuse_first) then
@@ -2286,6 +2285,8 @@ subroutine initialize_MOM(Time, Time_init, param_file, dirs, CS, restart_CSp, &
     CS%OBC => OBC_in
   endif
   ! dG_in is retained for now so that it can be used with write_ocean_geometry_file() below.
+
+  if (is_root_PE()) call check_MOM6_scaling_factors(CS%GV, US)
 
   call callTree_waypoint("grids initialized (initialize_MOM)")
 
@@ -3721,8 +3722,8 @@ subroutine MOM_end(CS)
   endif
 
   if (CS%use_particles) then
-     call particles_end(CS%particles)
-     deallocate(CS%particles)
+    call particles_end(CS%particles)
+    deallocate(CS%particles)
   endif
 
   call thickness_diffuse_end(CS%thickness_diffuse_CSp, CS%CDp)
