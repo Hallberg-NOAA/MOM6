@@ -18,11 +18,9 @@ implicit none ; private
 !> Control structure containing required parameters for the hybgen coordinate generator
 type, public :: hybgen_regrid_CS ; private
 
-!  !> Minimum thickness allowed for layers, often in [H ~> m or kg m-2]
-!  real :: min_thickness = 0.
+  real :: min_thickness !< Minimum thickness allowed for layers [H ~> m or kg m-2]
 
-  !> Number of layers on the target grid
-  integer :: nk
+  integer :: nk         !< Number of layers on the target grid
 
   !> Reference pressure for density calculations [R L2 T-2 ~> Pa]
   real :: ref_pressure
@@ -92,6 +90,10 @@ subroutine init_hybgen_regrid(CS, GV, US, param_file)
                  "This is only used if USE_EOS and ENABLE_THERMODYNAMICS are true.", &
                  units="Pa", default=2.0e7, scale=US%kg_m3_to_R*US%m_s_to_L_T**2)
 
+  call get_param(param_file, mdl, "HYBGEN_MIN_THICKNESS", CS%min_thickness, &
+                 "The minimum layer thickness allowed when regridding with Hybgen.",  &
+                 units="m", default=0.0, scale=GV%m_to_H )
+
   call get_param(param_file, mdl, "HYBGEN_N_SIGMA", CS%nsigma, &
                  "The number of sigma-coordinate (terrain-following) layers with Hybgen regridding.", &
                  default=0)
@@ -133,6 +135,9 @@ subroutine init_hybgen_regrid(CS, GV, US, param_file)
   CS%onem = 1.0 * GV%m_to_H
 
   do k=1,CS%nk ;  CS%target_density(k) = GV%Rlay(k) ; enddo
+
+  do k=1,CS%nk ; CS%dp0k(k) = max(CS%dp0k(k), CS%min_thickness) ; enddo
+  CS%dp00i = max(CS%dp00i, CS%min_thickness)
 
   ! Determine the depth range over which to use a sigma (terrain-following) coordinate.
   ! --- terrain following starts at depth dpns and ends at depth dsns
@@ -622,6 +627,7 @@ subroutine hybgen_column_regrid(CS, nk, thkbot, onem, epsil, Rcv_tgt, &
   real :: p_int(nk+1)   ! layer interface positions [H ~> m or kg m-2]
   real :: h_col(nk)     ! Updated layer thicknesses [H ~> m or kg m-2]
   real :: q_frac ! A fraction of a layer to entrain [nondim]
+  real :: h_min  ! The minimum layer thickness [H ~> m or kg m-2]
   real :: h_hat3 ! Thickness movement upward across the interface between layers k-2 and k-3 [H ~> m or kg m-2]
   real :: h_hat2 ! Thickness movement upward across the interface between layers k-1 and k-2 [H ~> m or kg m-2]
   real :: h_hat  ! Thickness movement upward across the interface between layers k and k-1 [H ~> m or kg m-2]
@@ -653,6 +659,8 @@ subroutine hybgen_column_regrid(CS, nk, thkbot, onem, epsil, Rcv_tgt, &
     h_col(k) = max(h_in(k), 0.0)
     p_int(K+1) = p_int(K) + h_col(k)
   enddo
+  h_min = min( CS%min_thickness, p_int(nk+1)/real(CS%nk) )
+
   if (trap_errors) then
     do K=1,nk+1 ; pres_in(K) = p_int(K) ; enddo
   endif
@@ -663,9 +671,9 @@ subroutine hybgen_column_regrid(CS, nk, thkbot, onem, epsil, Rcv_tgt, &
   ! Maintain prescribed thickness in layer k <= fixlay
   ! There may be massless layers at the bottom, so work upwards.
   do k=min(nk-1,fixlay),1,-1
-    p_new = min(dp0cum(k+1), p_int(nk+1)) ! This could be positive or negative.
+    p_new = min(dp0cum(k+1), p_int(nk+1) - (nk-k)*h_min) ! This could be positive or negative.
     dh_cor = p_new - p_int(K+1)
-    if (k<fixlay) dh_cor = min(dh_cor, h_col(k+1))
+    if (k<fixlay) dh_cor = min(dh_cor, h_col(k+1) - h_min)
     h_col(k)    = h_col(k)    + dh_cor
     h_col(k+1)  = h_col(k+1)  - dh_cor
     dp_int(K+1) = dp_int(K+1) + dh_cor
@@ -674,19 +682,19 @@ subroutine hybgen_column_regrid(CS, nk, thkbot, onem, epsil, Rcv_tgt, &
 
   ! Eliminate negative thicknesses below the fixed layers, entraining from below as necessary.
   do k=fixlay+1,nk-1
-    if (h_col(k) >= 0.0) exit  ! usually get here quickly
-    dh_cor = -h_col(k)  ! This is positive.
-    h_col(k)    = h_col(k) + dh_cor
+    if (h_col(k) >= h_min) exit  ! usually get here quickly
+    dh_cor = h_min - h_col(k)  ! This is positive.
+    h_col(k)    = h_min ! = h_col(k) + dh_cor
     h_col(k+1)  = h_col(k+1)  - dh_cor
     dp_int(k+1) = dp_int(k+1) + dh_cor
     p_int(k+1) = p_int(fixlay+1)
   enddo
-  if (h_col(nk) < 0.0) then  ! This should be uncommon, and should only arise at the level of roundoff.
+  if (h_col(nk) < h_min) then  ! This should be uncommon, and should only arise at the level of roundoff.
     do k=nk,2,-1
-      if (h_col(k) >= 0.0) exit
-      dh_cor = h_col(k)  ! dh_cor is negative.
+      if (h_col(k) >= h_min) exit
+      dh_cor = h_col(k) - h_min ! dh_cor is negative.
       h_col(k-1) = h_col(k-1) + dh_cor
-      h_col(k)   = h_col(k)  - dh_cor
+      h_col(k)   = h_min ! = h_col(k)  - dh_cor
       dp_int(k)  = dp_int(k) + dh_cor
       p_int(k)   = p_int(k) + dh_cor
     enddo
