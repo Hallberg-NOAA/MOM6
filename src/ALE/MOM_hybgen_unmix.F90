@@ -250,18 +250,18 @@ subroutine hybgen_unmix(G, GV, US, CS, tv, Reg, ntr, h)
       do m=1,ntr ; do k=1,nk
         Trh_tot_out(m) = Trh_tot_out(m) + h_col(k)*tracer(k,m)
       enddo ; enddo
-      if (abs(Sh_tot_in - Sh_tot_out) > 1.e-8*(abs(Sh_tot_in) + abs(Sh_tot_out))) then
+      if (abs(Sh_tot_in - Sh_tot_out) > 1.e-15*(abs(Sh_tot_in) + abs(Sh_tot_out))) then
         write(mesg, '("i,j=",2i8,"Sh_tot = ",2es17.8," err = ",es13.4)') &
               i, j, Sh_tot_in, Sh_tot_out, (Sh_tot_in - Sh_tot_out)
         call MOM_error(FATAL, "Mismatched column salinity in hybgen_unmix: "//trim(mesg))
       endif
-      if (abs(Th_tot_in - Th_tot_out) > 1.e-8*(abs(Th_tot_in) + abs(Th_tot_out))) then
+      if (abs(Th_tot_in - Th_tot_out) > 1.e-10*(abs(Th_tot_in) + abs(Th_tot_out))) then
         write(mesg, '("i,j=",2i8,"Th_tot = ",2es17.8," err = ",es13.4)') &
               i, j, Th_tot_in, Th_tot_out, (Th_tot_in - Th_tot_out)
         call MOM_error(FATAL, "Mismatched column temperature in hybgen_unmix: "//trim(mesg))
       endif
       do m=1,ntr
-        if (abs(Trh_tot_in(m) - Trh_tot_out(m)) > 1.e-8*(abs(Trh_tot_in(m)) + abs(Trh_tot_out(m)))) then
+        if (abs(Trh_tot_in(m) - Trh_tot_out(m)) > 1.e-10*(abs(Trh_tot_in(m)) + abs(Trh_tot_out(m)))) then
           write(mesg, '("i,j=",2i8,"Trh_tot(",i2,") = ",2es17.8," err = ",es13.4)') &
                 i, j, m, Trh_tot_in(m), Trh_tot_out(m), (Trh_tot_in(m) - Trh_tot_out(m))
           call MOM_error(FATAL, "Mismatched column tracer in hybgen_unmix: "//trim(mesg))
@@ -484,18 +484,18 @@ subroutine hybgen_column_unmix(CS, nk, Rcv_tgt, temp, saln, Rcv, eqn_of_state, &
       enddo !m
     endif !tracers
   endif !too light
-!
-! --- massless or near-massless (thickness < h_thin) layers
-!
-  do k=kp+1,nk
-    ! --- fill thin and massless layers on sea floor with fluid from above
-    Rcv(k) = Rcv(k-1)
-    do m=1,ntr
-      tracer(k,m) = tracer(k-1,m)
-    enddo !m
-    saln(k) = saln(k-1)
-    temp(k) = temp(k-1)
-  enddo !k
+
+!  ! Fill properties of massless or near-massless (thickness < h_thin) layers
+!  ! This was in the Hycom verion, but it appears to be unnecessary in MOM6.
+!  do k=kp+1,nk
+!    ! --- fill thin and massless layers on sea floor with fluid from above
+!    Rcv(k) = Rcv(k-1)
+!    do m=1,ntr
+!      tracer(k,m) = tracer(k-1,m)
+!    enddo !m
+!    saln(k) = saln(k-1)
+!    temp(k) = temp(k-1)
+!  enddo !k
 
 end subroutine hybgen_column_unmix
 
