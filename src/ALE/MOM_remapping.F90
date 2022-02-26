@@ -63,7 +63,7 @@ integer, parameter  :: INTEGRATION_PQM = 5  !< Piecewise Quartic Method
 character(len=40)  :: mdl = "MOM_remapping" !< This module's name.
 
 !> Documentation for external callers
-character(len=256), public :: remappingSchemesDoc = &
+character(len=400), public :: remappingSchemesDoc = &
                  "PCM         (1st-order accurate)\n"//&
                  "PCM_HYBGEN  (1st-order accurate)\n"//&
                  "PLM         (2nd-order accurate)\n"//&

@@ -306,7 +306,7 @@ subroutine mixedlayer_restrat_general(h, uhtr, vhtr, tv, forces, dt, MLD_in, Var
 
   p0(:) = 0.0
   EOSdom(:) = EOS_domain(G%HI, halo=1)
-  !$OMP parallel default(none) private(rho_ml,h_vel,u_star,absf,mom_mixrate,timescale, &
+  !$OMP parallel default(shared) private(rho_ml,h_vel,u_star,absf,mom_mixrate,timescale, &
   !$OMP                                line_is_empty, keep_going,res_scaling_fac,      &
   !$OMP                                a,IhTot,b,Ihtot_slow,zpb,hAtVel,zpa,dh)         &
   !$OMP                        firstprivate(uDml,vDml,uDml_slow,vDml_slow)

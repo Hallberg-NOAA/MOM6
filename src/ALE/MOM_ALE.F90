@@ -947,7 +947,7 @@ subroutine remap_all_state_vars(CS, G, GV, h_old, h_new, Reg, OBC, &
   ! Remap u velocity component
   if ( present(u) ) then
 
-    !$OMP parallel do default(shared) private(h1,h2,dz,u_src,dz,h_mask_vel,u_tgt)
+    !$OMP parallel do default(shared) private(h1,h2,dz,u_src,h_mask_vel,u_tgt)
     do j=G%jsc,G%jec ; do I=G%IscB,G%IecB ; if (G%mask2dCu(I,j)>0.) then
       ! Build the start and final grids
       do k=1,nz
