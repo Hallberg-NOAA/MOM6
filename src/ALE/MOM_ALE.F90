@@ -279,12 +279,12 @@ subroutine ALE_init( param_file, GV, US, max_depth, CS)
                  "code.", default=.true., do_not_log=.true.)
   call set_regrid_params(CS%regridCS, integrate_downward_for_e=.not.local_logical)
 
-  call get_param(param_file, mdl, "HYBGEN_REMAP_MASK_BBL_THICK", CS%BBL_h_vel_mask, &
+  call get_param(param_file, mdl, "REMAP_VEL_MASK_BBL_THICK", CS%BBL_h_vel_mask, &
                  "A thickness of a bottom boundary layer below which velocities in thin layers "//&
                  "are zeroed out after remapping, following practice with Hybgen remapping, "//&
                  "or a negative value to avoid such filtering altogether.", &
                  default=-0.001, units="m", scale=GV%m_to_H)
-  call get_param(param_file, mdl, "HYBGEN_REMAP_VEL_MASK_H", CS%h_vel_mask, &
+  call get_param(param_file, mdl, "REMAP_VEL_MASK_H_THIN", CS%h_vel_mask, &
                  "A thickness at velocity points below which near-bottom layers are zeroed out "//&
                  "after remapping, following practice with Hybgen remapping, or a negative value "//&
                  "to avoid such filtering altogether.", &
