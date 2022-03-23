@@ -822,6 +822,7 @@ subroutine remap_all_state_vars(CS, G, GV, h_old, h_new, Reg, OBC, &
   real,                            optional, intent(in)    :: dt     !< time step for diagnostics [T ~> s]
   logical, dimension(SZI_(G),SZJ_(G),SZK_(GV)), &
                                    optional, intent(in)    :: PCM_cell !< Use PCM remapping in cells where true
+
   ! Local variables
   real, dimension(SZI_(G),SZJ_(G)) :: h_tot  ! The vertically summed thicknesses [H ~> m or kg m-2]
   real :: h_mask_vel ! A depth below which the thicknesses at a velocity point are masked out [H ~> m or kg m-2]

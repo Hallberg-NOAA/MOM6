@@ -801,6 +801,7 @@ subroutine regridding_main( remapCS, CS, G, GV, h, tv, h_new, dzInterface, frac_
   logical,                          optional, intent(in   ) :: conv_adjust !< If true, do convective adjustment
   logical, dimension(SZI_(G),SZJ_(G),SZK_(GV)), &
                                     optional, intent(out  ) :: PCM_cell !< Use PCM remapping in cells where true
+
   ! Local variables
   real :: trickGnuCompiler
   logical :: do_convective_adjustment
