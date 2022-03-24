@@ -4,12 +4,15 @@ module MOM_hybgen_regrid
 
 ! This file is part of MOM6. See LICENSE.md for the license.
 
-use MOM_EOS,             only : EOS_type, calculate_density
-use MOM_error_handler,   only : MOM_mesg, MOM_error, FATAL, WARNING, assert
-use MOM_file_parser,     only : get_param, param_file_type, log_param
-use MOM_unit_scaling,    only : unit_scale_type
-use MOM_variables,       only : ocean_grid_type, thermo_var_ptrs
-use MOM_verticalGrid,    only : verticalGrid_type
+use MOM_EOS,              only : EOS_type, calculate_density
+use MOM_error_handler,    only : MOM_mesg, MOM_error, FATAL, WARNING, assert
+use MOM_file_parser,      only : get_param, param_file_type, log_param
+use MOM_io,               only : close_file, create_file, file_type, fieldtype, file_exists
+use MOM_io,               only : MOM_read_data, MOM_write_field, vardesc, var_desc, SINGLE_FILE
+use MOM_string_functions, only : slasher
+use MOM_unit_scaling,     only : unit_scale_type
+use MOM_variables,        only : ocean_grid_type, thermo_var_ptrs
+use MOM_verticalGrid,     only : verticalGrid_type
 
 implicit none ; private
 
@@ -37,6 +40,9 @@ type, public :: hybgen_regrid_CS ; private
     dp0k, & !< minimum deep    z-layer separation [H ~> m or kg m-2]
     ds0k    !< minimum shallow z-layer separation [H ~> m or kg m-2]
 
+  real :: coord_scale = 1.0     !< A scaling factor to restores the depth coordinates to values in m
+  real :: Rho_coord_scale = 1.0 !< A scaling factor to restores the denesity coordinates to values in kg m-3
+
   real :: dpns  !< depth to start terrain following [H ~> m or kg m-2]
   real :: dsns  !< depth to stop terrain following [H ~> m or kg m-2]
   real :: min_dilate !< The minimum amount of dilation that is permitted when converting target
@@ -60,7 +66,7 @@ end type hybgen_regrid_CS
 
 
 public hybgen_regrid, init_hybgen_regrid, end_hybgen_regrid
-public hybgen_column_init, get_hybgen_regrid_params
+public hybgen_column_init, get_hybgen_regrid_params, write_Hybgen_coord_file
 
 contains
 
@@ -73,6 +79,9 @@ subroutine init_hybgen_regrid(CS, GV, US, param_file)
 
   character(len=40) :: mdl = "MOM_hybgen_regrid" ! This module's name.
   real    :: hybrlx  ! The number of remappings over which to move toward the target coordinate [timesteps]
+  character(len=40)  :: dp0_coord_var, ds0_coord_var, rho_coord_var
+  character(len=200) :: filename, coord_file, inputdir ! Strings for file/path
+  logical :: use_coord_file
   integer :: k
 
   if (associated(CS)) call MOM_error(FATAL, "init_hybgen_regrid: CS already associated!")
@@ -83,6 +92,8 @@ subroutine init_hybgen_regrid(CS, GV, US, param_file)
   allocate(CS%target_density(CS%nk))
   allocate(CS%dp0k(CS%nk), source=0.0) ! minimum deep z-layer separation
   allocate(CS%ds0k(CS%nk), source=0.0) ! minimum shallow z-layer separation
+
+  do k=1,CS%nk ;  CS%target_density(k) = GV%Rlay(k) ; enddo
 
   call get_param(param_file, mdl, "P_REF", CS%ref_pressure, &
                  "The pressure that is used for calculating the coordinate "//&
@@ -97,12 +108,47 @@ subroutine init_hybgen_regrid(CS, GV, US, param_file)
   call get_param(param_file, mdl, "HYBGEN_N_SIGMA", CS%nsigma, &
                  "The number of sigma-coordinate (terrain-following) layers with Hybgen regridding.", &
                  default=0)
+  call get_param(param_file, mdl, "HYBGEN_COORD_FILE", coord_file, &
+                 "The file from which the Hybgen profile is read, or blank to use a list of "//&
+                 "real input parameters from the MOM_input file.", default="")
+
+  use_coord_file = (len_trim(coord_file) > 0)
   call get_param(param_file, mdl, "HYBGEN_DEEP_DZ_PR0FILE", CS%dp0k, &
                  "The layerwise list of deep z-level minimum thicknesses for Hybgen (dp0k in Hycom).", &
-                 units="m", default=0.0, scale=GV%m_to_H)
+                 units="m", default=0.0, scale=GV%m_to_H, do_not_log=use_coord_file)
   call get_param(param_file, mdl, "HYBGEN_SHALLOW_DZ_PR0FILE", CS%ds0k, &
                  "The layerwise list of shallow z-level minimum thicknesses for Hybgen (ds0k in Hycom).", &
-                 units="m", default=0.0, scale=GV%m_to_H)
+                 units="m", default=0.0, scale=GV%m_to_H, do_not_log=use_coord_file)
+
+  if (use_coord_file) then
+    call get_param(param_file, mdl, "INPUTDIR", inputdir, default=".")
+    inputdir = slasher(inputdir)
+    filename = trim(inputdir)//trim(coord_file)
+    call log_param(param_file, mdl, "INPUTDIR/HYBGEN_COORD_FILE", filename)
+    if (.not.file_exists(filename)) call MOM_error(FATAL, &
+        " set_coord_from_file: Unable to open "//trim(filename))
+
+    call get_param(param_file, mdl, "HYBGEN_DEEP_DZ_VAR", dp0_coord_var, &
+                 "The variable in HYBGEN_COORD_FILE that is to be used for the "//&
+                 "deep z-level minimum thicknesses for Hybgen (dp0k in Hycom).", &
+                 default="dp0")
+    call get_param(param_file, mdl, "HYBGEN_SHALLOW_DZ_VAR", ds0_coord_var, &
+                 "The variable in HYBGEN_COORD_FILE that is to be used for the "//&
+                 "shallow z-level minimum thicknesses for Hybgen (ds0k in Hycom).", &
+                 default="ds0")
+    call get_param(param_file, mdl, "HYBGEN_TGT_DENSITY_VAR", rho_coord_var, &
+                 "The variable in HYBGEN_COORD_FILE that is to be used for the Hybgen "//&
+                 "target layer densities, or blank to reuse the values in GV%Rlay.", &
+                 default="")
+
+    call MOM_read_data(filename, dp0_coord_var, CS%dp0k, scale=GV%m_to_H)
+
+    call MOM_read_data(filename, ds0_coord_var, CS%ds0k, scale=GV%m_to_H)
+
+    if (len_trim(rho_coord_var) > 0) &
+      call MOM_read_data(filename, rho_coord_var, CS%target_density, scale=US%kg_m3_to_R)
+  endif
+
   call get_param(param_file, mdl, "HYBGEN_ISOPYCNAL_DZ_MIN", CS%dp00i, &
                  "The Hybgen deep isopycnal spacing minimum thickness (dp00i in Hycom)", &
                  units="m", default=0.0, scale=GV%m_to_H)
@@ -134,8 +180,6 @@ subroutine init_hybgen_regrid(CS, GV, US, param_file)
 
   CS%onem = 1.0 * GV%m_to_H
 
-  do k=1,CS%nk ;  CS%target_density(k) = GV%Rlay(k) ; enddo
-
   do k=1,CS%nk ; CS%dp0k(k) = max(CS%dp0k(k), CS%min_thickness) ; enddo
   CS%dp00i = max(CS%dp00i, CS%min_thickness)
 
@@ -153,7 +197,34 @@ subroutine init_hybgen_regrid(CS, GV, US, param_file)
     enddo !k
   endif !nsigma
 
+  CS%coord_scale = GV%H_to_m
+  CS%Rho_coord_scale = US%R_to_kg_m3
+
 end subroutine init_hybgen_regrid
+
+!> Writes out a file containing any available data related
+!! to the vertical grid used by the MOM ocean model.
+subroutine write_Hybgen_coord_file(GV, CS, filepath)
+  type(verticalGrid_type), intent(in)  :: GV        !< The ocean's vertical grid structure
+  type(hybgen_regrid_CS),  intent(in)  :: CS        !< Control structure for this module
+  character(len=*),        intent(in)  :: filepath  !< The full path to the file to write
+  ! Local variables
+  type(vardesc) :: vars(3)
+  type(fieldtype) :: fields(3)
+  type(file_type) :: IO_handle ! The I/O handle of the fileset
+
+  vars(1) = var_desc("dp0", "meter", "Deep z-level minimum thicknesses for Hybgen", '1', 'L', '1')
+  vars(2) = var_desc("ds0", "meter", "Shallow z-level minimum thicknesses for Hybgen", '1', 'L', '1')
+  vars(3) = var_desc("Rho_tgt", "kg m-3", "Target coordinate potential densities for Hybgen", '1', 'L', '1')
+  call create_file(IO_handle, trim(filepath), vars, 3, fields, SINGLE_FILE, GV=GV)
+
+  call MOM_write_field(IO_handle, fields(1), CS%dp0k, scale=CS%coord_scale)
+  call MOM_write_field(IO_handle, fields(2), CS%ds0k, scale=CS%coord_scale)
+  call MOM_write_field(IO_handle, fields(3), CS%target_density, scale=CS%Rho_coord_scale)
+
+  call close_file(IO_handle)
+
+end subroutine write_Hybgen_coord_file
 
 !> This subroutine deallocates memory in the control structure for the hybgen module
 subroutine end_hybgen_regrid(CS)
