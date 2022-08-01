@@ -28,6 +28,7 @@ integer, parameter :: FILENAME_LENGTH = 200   !< Maximum number of characters in
 !>@{ Default values for parameters
 logical, parameter :: report_unused_default = .true.
 logical, parameter :: unused_params_fatal_default = .false.
+logical, parameter :: missing_default_fatal_default = .false.
 logical, parameter :: log_to_stdout_default = .false.
 logical, parameter :: complete_doc_default = .true.
 logical, parameter :: minimal_doc_default = .true.
@@ -73,6 +74,9 @@ type, public :: param_file_type ; private
                                     !! parameter lines that are not used in the run.
   logical  :: unused_params_fatal = unused_params_fatal_default  !< If true, kill
                                     !! the run if there are any unused parameters.
+  logical  :: missing_default_fatal = missing_default_fatal_default !< If true, kill
+                                    !! the run if there are any get param calls that do not
+                                    !! have either a default or a fail_if_missing argument.
   logical  :: log_to_stdout = log_to_stdout_default !< If true, all log
                                     !! messages are also sent to stdout.
   logical  :: log_open = .false.    !< True if the log file has been opened.
@@ -215,9 +219,10 @@ subroutine open_param_file(filename, CS, checkable, component, doc_file_dir, ens
   ! Increment the maximum line length, but always report values in blocks of 4 characters.
   CS%max_line_len = max(CS%max_line_len, 4 + 4*(max_input_line_length(CS, i) - 1) / 4)
 
-  call read_param(CS,"SEND_LOG_TO_STDOUT",CS%log_to_stdout)
-  call read_param(CS,"REPORT_UNUSED_PARAMS",CS%report_unused)
-  call read_param(CS,"FATAL_UNUSED_PARAMS",CS%unused_params_fatal)
+  call read_param(CS, "SEND_LOG_TO_STDOUT", CS%log_to_stdout)
+  call read_param(CS, "REPORT_UNUSED_PARAMS", CS%report_unused)
+  call read_param(CS, "FATAL_UNUSED_PARAMS", CS%unused_params_fatal)
+  call read_param(CS, "FATAL_MISSING_DEFAULT", CS%missing_default_fatal)
   CS%doc_file = "MOM_parameter_doc"
   if (present(ensemble_num)) then
     ! append instance suffix to doc_file
@@ -305,13 +310,15 @@ subroutine close_param_file(CS, quiet_close, component)
                  "If true, all log messages are also sent to stdout.", &
                  default=log_to_stdout_default)
   call log_param(CS, mdl, "REPORT_UNUSED_PARAMS", CS%report_unused, &
-                 "If true, report any parameter lines that are not used "//&
-                 "in the run.", default=report_unused_default, &
-                 debuggingParam=.true.)
+                 "If true, report any parameter lines that are not used in the run.", &
+                 default=report_unused_default, debuggingParam=.true.)
   call log_param(CS, mdl, "FATAL_UNUSED_PARAMS", CS%unused_params_fatal, &
-                 "If true, kill the run if there are any unused "//&
-                 "parameters.", default=unused_params_fatal_default, &
-                 debuggingParam=.true.)
+                 "If true, kill the run if there are any unused parameters.", &
+                 default=unused_params_fatal_default, debuggingParam=.true.)
+  call log_param(CS, mdl, "FATAL_MISSING_DEFAULT", CS%missing_default_fatal, &
+                 "If true, kill the run if there are any get param calls that "//&
+                 "do not have either a default or a fail_if_missing argument.", &
+                 default=missing_default_fatal_default, debuggingParam=.true.)
   call log_param(CS, mdl, "DOCUMENT_FILE", CS%doc_file, &
                  "The basename for files where run-time parameters, their "//&
                  "settings, units and defaults are documented. Blank will "//&
@@ -1737,6 +1744,10 @@ subroutine get_param_int(CS, modulename, varname, value, desc, units, &
                        default, layoutParam, debuggingParam)
   endif
 
+  if (CS%missing_default_fatal .and. .not.(present(default) .or. present(fail_if_missing))) &
+    call MOM_error(FATAL, "get_param_int call for "//trim(varname)//" does not have "//&
+                          "either a default or a fail_if_missing argument.")
+
 end subroutine get_param_int
 
 !> This subroutine reads the values of an array of integer model parameters from a parameter file
@@ -1779,6 +1790,10 @@ subroutine get_param_int_array(CS, modulename, varname, value, desc, units, &
     call log_param_int_array(CS, modulename, varname, value, desc, &
                              units, default, layoutParam, debuggingParam)
   endif
+
+  if (CS%missing_default_fatal .and. .not.(present(default) .or. present(fail_if_missing))) &
+    call MOM_error(FATAL, "get_param_int_array call for "//trim(varname)//" does not have "//&
+                          "either a default or a fail_if_missing argument.")
 
 end subroutine get_param_int_array
 
@@ -1828,6 +1843,10 @@ subroutine get_param_real(CS, modulename, varname, value, desc, units, &
   if (present(unscaled)) unscaled = value
   if (present(scale)) value = scale*value
 
+  if (CS%missing_default_fatal .and. .not.(present(default) .or. present(fail_if_missing))) &
+    call MOM_error(FATAL, "get_param_real call for "//trim(varname)//" does not have "//&
+                          "either a default or a fail_if_missing argument.")
+
 end subroutine get_param_real
 
 !> This subroutine reads the values of an array of real model parameters from a parameter file
@@ -1876,6 +1895,10 @@ subroutine get_param_real_array(CS, modulename, varname, value, desc, units, &
   if (present(unscaled)) unscaled(:) = value(:)
   if (present(scale)) value(:) = scale*value(:)
 
+  if (CS%missing_default_fatal .and. .not.(present(default) .or. present(fail_if_missing))) &
+    call MOM_error(FATAL, "get_param_real_array call for "//trim(varname)//" does not have "//&
+                          "either a default or a fail_if_missing argument.")
+
 end subroutine get_param_real_array
 
 !> This subroutine reads the value of a character string model parameter from a parameter file
@@ -1918,6 +1941,10 @@ subroutine get_param_char(CS, modulename, varname, value, desc, units, &
     call log_param_char(CS, modulename, varname, value, desc, units, &
                         default, layoutParam, debuggingParam)
   endif
+
+  if (CS%missing_default_fatal .and. .not.(present(default) .or. present(fail_if_missing))) &
+    call MOM_error(FATAL, "get_param_char call for "//trim(varname)//" does not have "//&
+                          "either a default or a fail_if_missing argument.")
 
 end subroutine get_param_char
 
@@ -1968,6 +1995,10 @@ subroutine get_param_char_array(CS, modulename, varname, value, desc, units, &
                         units, default)
   endif
 
+  if (CS%missing_default_fatal .and. .not.(present(default) .or. present(fail_if_missing))) &
+    call MOM_error(FATAL, "get_param_char_array call for "//trim(varname)//" does not have "//&
+                          "either a default or a fail_if_missing argument.")
+
 end subroutine get_param_char_array
 
 !> This subroutine reads the value of a logical model parameter from a parameter file
@@ -2010,6 +2041,10 @@ subroutine get_param_logical(CS, modulename, varname, value, desc, units, &
     call log_param_logical(CS, modulename, varname, value, desc, &
                            units, default, layoutParam, debuggingParam)
   endif
+
+  if (CS%missing_default_fatal .and. .not.(present(default) .or. present(fail_if_missing))) &
+    call MOM_error(FATAL, "get_param_logical call for "//trim(varname)//" does not have "//&
+                          "either a default or a fail_if_missing argument.")
 
 end subroutine get_param_logical
 
@@ -2061,6 +2096,10 @@ subroutine get_param_time(CS, modulename, varname, value, desc, units, &
                         timeunit, layoutParam=layoutParam, &
                         debuggingParam=debuggingParam, log_date=log_date)
   endif
+
+  if (CS%missing_default_fatal .and. .not.(present(default) .or. present(fail_if_missing))) &
+    call MOM_error(FATAL, "get_param_time call for "//trim(varname)//" does not have "//&
+                          "either a default or a fail_if_missing argument.")
 
 end subroutine get_param_time
 
