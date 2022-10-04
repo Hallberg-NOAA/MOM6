@@ -630,6 +630,8 @@ subroutine btstep(U_in, V_in, eta_in, dt, bc_accel_u, bc_accel_v, forces, pbce, 
   real :: visc_rem    ! A work variable that may equal visc_rem_[uv] [nondim]
   real :: vel_prev    ! The previous velocity [L T-1 ~> m s-1].
   real :: dtbt        ! The barotropic time step [T ~> s].
+  real :: dtbt_diag   ! The nominal barotropic time step used in hifreq diagnostics [T ~> s].
+                      ! dtbt_diag = dt/(nstep+nfilter)
   real :: bebt        ! A copy of CS%bebt [nondim].
   real :: be_proj     ! The fractional amount by which velocities are projected
                       ! when project_velocity is true [nondim]. For now be_proj is set
@@ -680,18 +682,18 @@ subroutine btstep(U_in, V_in, eta_in, dt, bc_accel_u, bc_accel_v, forces, pbce, 
   real, allocatable :: wt_vel(:)    ! The raw or relative weights of each of the barotropic timesteps
                                     ! in determining the average velocities [nondim]
   real, allocatable :: wt_eta(:)    ! The raw or relative weights of each of the barotropic timesteps
-                                    ! in determining the average the average of eta [nondim]
+                                    ! in determining the average eta [nondim]
   real, allocatable :: wt_accel(:)  ! The raw or relative weights of each of the barotropic timesteps
                                     ! in determining the average accelerations [nondim]
   real, allocatable :: wt_trans(:)  ! The raw or relative weights of each of the barotropic timesteps
                                     ! in determining the average transports [nondim]
   real, allocatable :: wt_accel2(:) ! A potentially un-normalized copy of wt_accel [nondim]
   real :: sum_wt_vel     ! The sum of the raw weights used to find average velocities [nondim]
-  real :: sum_wt_eta     ! The sum of the raw weights used to find average the average of eta [nondim]
+  real :: sum_wt_eta     ! The sum of the raw weights used to find average eta [nondim]
   real :: sum_wt_accel   ! The sum of the raw weights used to find average accelerations [nondim]
   real :: sum_wt_trans   ! The sum of the raw weights used to find average transports [nondim]
   real :: I_sum_wt_vel   ! The inverse of the sum of the raw weights used to find average velocities [nondim]
-  real :: I_sum_wt_eta   ! The inverse of the sum of the raw weights used to find the average of eta [nondim]
+  real :: I_sum_wt_eta   ! The inverse of the sum of the raw weights used to find eta [nondim]
   real :: I_sum_wt_accel ! The inverse of the sum of the raw weights used to find average accelerations [nondim]
   real :: I_sum_wt_trans ! The inverse of the sum of the raw weights used to find average transports [nondim]
   real :: dt_filt     ! The half-width of the barotropic filter [T ~> s].
@@ -1718,6 +1720,8 @@ subroutine btstep(U_in, V_in, eta_in, dt, bc_accel_u, bc_accel_v, forces, pbce, 
   if (nstep+nfilter==0 ) call MOM_error(FATAL, &
       "btstep: number of barotropic step (nstep+nfilter) is 0")
 
+  dtbt_diag = dt/(nstep+nfilter)
+
   ! Set up the normalized weights for the filtered velocity.
   sum_wt_vel = 0.0 ; sum_wt_eta = 0.0 ; sum_wt_accel = 0.0 ; sum_wt_trans = 0.0
   allocate(wt_vel(nstep+nfilter)) ; allocate(wt_eta(nstep+nfilter))
@@ -2378,7 +2382,7 @@ subroutine btstep(U_in, V_in, eta_in, dt, bc_accel_u, bc_accel_v, forces, pbce, 
     !$OMP end parallel
 
     if (do_hifreq_output) then
-      time_step_end = time_bt_start + real_to_time(n*US%T_to_s*dtbt)
+      time_step_end = time_bt_start + real_to_time(n*US%T_to_s*dtbt_diag)
       call enable_averages(dtbt, time_step_end, CS%diag)
       if (CS%id_ubt_hifreq > 0) call post_data(CS%id_ubt_hifreq, ubt(IsdB:IedB,jsd:jed), CS%diag)
       if (CS%id_vbt_hifreq > 0) call post_data(CS%id_vbt_hifreq, vbt(isd:ied,JsdB:JedB), CS%diag)
@@ -4420,13 +4424,6 @@ subroutine barotropic_init(u, v, h, eta, Time, G, GV, US, param_file, diag, CS, 
 #else
   wd_halos(1) = bt_halo_sz; wd_halos(2) =  bt_halo_sz
 #endif
-  call log_param(param_file, mdl, "!BT x-halo", wd_halos(1), &
-                 "The barotropic x-halo size that is actually used.", &
-                 layoutParam=.true.)
-  call log_param(param_file, mdl, "!BT y-halo", wd_halos(2), &
-                 "The barotropic y-halo size that is actually used.", &
-                 layoutParam=.true.)
-
   call get_param(param_file, mdl, "NONLINEAR_BT_CONTINUITY", CS%Nonlinear_continuity, &
                  "If true, use nonlinear transports in the barotropic "//&
                  "continuity equation.  This does not apply if "//&
@@ -4500,7 +4497,7 @@ subroutine barotropic_init(u, v, h, eta, Time, G, GV, US, param_file, diag, CS, 
                  "If true, the tidal self-attraction and loading anomaly in the barotropic "//&
                  "solver has the wrong sign, replicating a long-standing bug with a scalar "//&
                  "self-attraction and loading term or the SAL term from a previous simulation.", &
-                 default=.true., do_not_log=(det_de==0.0))
+                 default=.false., do_not_log=(det_de==0.0))
   call get_param(param_file, mdl, "SADOURNY", CS%Sadourny, &
                  "If true, the Coriolis terms are discretized with the "//&
                  "Sadourny (1975) energy conserving scheme, otherwise "//&
@@ -4647,6 +4644,12 @@ subroutine barotropic_init(u, v, h, eta, Time, G, GV, US, param_file, diag, CS, 
       call MOM_mesg("barotropic_init: barotropic y-halo size increased.", 3)
   endif
 #endif
+  call log_param(param_file, mdl, "!BT x-halo", wd_halos(1), &
+                 "The barotropic x-halo size that is actually used.", &
+                 layoutParam=.true.)
+  call log_param(param_file, mdl, "!BT y-halo", wd_halos(2), &
+                 "The barotropic y-halo size that is actually used.", &
+                 layoutParam=.true.)
 
   CS%isdw = G%isc-wd_halos(1) ; CS%iedw = G%iec+wd_halos(1)
   CS%jsdw = G%jsc-wd_halos(2) ; CS%jedw = G%jec+wd_halos(2)
@@ -4812,7 +4815,7 @@ subroutine barotropic_init(u, v, h, eta, Time, G, GV, US, param_file, diag, CS, 
   endif
 
   CS%id_PFu_bt = register_diag_field('ocean_model', 'PFuBT', diag%axesCu1, Time, &
-      'Zonal Anomalous Barotropic Pressure Force Force Acceleration', 'm s-2', conversion=US%L_T2_to_m_s2)
+      'Zonal Anomalous Barotropic Pressure Force Acceleration', 'm s-2', conversion=US%L_T2_to_m_s2)
   CS%id_PFv_bt = register_diag_field('ocean_model', 'PFvBT', diag%axesCv1, Time, &
       'Meridional Anomalous Barotropic Pressure Force Acceleration', 'm s-2', conversion=US%L_T2_to_m_s2)
   CS%id_Coru_bt = register_diag_field('ocean_model', 'CoruBT', diag%axesCu1, Time, &
