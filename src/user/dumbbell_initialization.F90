@@ -41,14 +41,16 @@ contains
 subroutine dumbbell_initialize_topography( D, G, param_file, max_depth )
   type(dyn_horgrid_type),  intent(in)  :: G !< The dynamic horizontal grid type
   real, dimension(G%isd:G%ied,G%jsd:G%jed), &
-                           intent(out) :: D !< Ocean bottom depth in the units of depth_max
+                           intent(out) :: D !< Ocean bottom depth [Z ~> m]
   type(param_file_type),   intent(in)  :: param_file !< Parameter file structure
-  real,                    intent(in)  :: max_depth !< Maximum ocean depth in arbitrary units
+  real,                    intent(in)  :: max_depth !< Maximum ocean depth [Z ~> m]
 
   ! Local variables
-  integer   :: i, j
-  real      :: x, y, dblen, dbfrac
-  logical   :: dbrotate
+  real    :: x, y   ! Fractional x- and y- positions [nondim]
+  real    :: dblen  ! Lateral length scale for dumbbell [km] or [m]
+  real    :: dbfrac ! Meridional fraction for narrow part of dumbbell [nondim]
+  logical :: dbrotate ! If true, rotate this configuration
+  integer :: i, j
 
   call get_param(param_file, mdl, "DUMBBELL_LEN",dblen, &
                 'Lateral Length scale for dumbbell.', &
@@ -112,6 +114,7 @@ subroutine dumbbell_initialize_thickness ( h, depth_tot, G, GV, US, param_file, 
   real :: S_range         ! The range of salinities in this test case [S ~> ppt]
   real :: S_light, S_dense ! The lightest and densest salinities in the sponges [S ~> ppt].
   real :: eta_IC_quanta   ! The granularity of quantization of intial interface heights [Z-1 ~> m-1].
+  real :: x               ! Along-channel position in the axis units [m] or [km] or [deg]
   logical :: dbrotate     ! If true, rotate the domain.
   logical :: use_ALE      ! True if ALE is being used, False if in layered mode
 
@@ -119,7 +122,6 @@ subroutine dumbbell_initialize_thickness ( h, depth_tot, G, GV, US, param_file, 
 # include "version_variable.h"
   character(len=20) :: verticalCoordinate
   integer :: i, j, k, is, ie, js, je, nz
-  real :: x, y
 
   is = G%isc ; ie = G%iec ; js = G%jsc ; je = G%jec ; nz = GV%ke
 
@@ -151,37 +153,37 @@ subroutine dumbbell_initialize_thickness ( h, depth_tot, G, GV, US, param_file, 
     call get_param(param_file, mdl, "DUMBBELL_ROTATION", dbrotate, &
                 'Logical for rotation of dumbbell domain.', &
                  units='nondim', default=.false., do_not_log=just_read)
-    do j=js,je
-      do i=is,ie
-       ! Compute normalized zonal coordinates (x,y=0 at center of domain)
-        if (dbrotate) then
-          ! This is really y in the rotated case
-          x = G%geoLatT(i,j)
-        else
-          x = G%geoLonT(i,j)
-        endif
-        eta1D(1) = 0.0
-        eta1D(nz+1) = -depth_tot(i,j)
-        if (x<0.0) then
-          do k=nz,2, -1
-            eta1D(k) =  eta1D(k+1) + min_thickness
-          enddo
-        else
-          do k=2,nz
-            eta1D(k) =  eta1D(k-1) - min_thickness
-          enddo
-        endif
-        do k=1,nz
-          h(i,j,k) = GV%Z_to_H * (eta1D(k) - eta1D(k+1))
+    do j=js,je ; do i=is,ie
+      ! Compute normalized zonal coordinates (x,y=0 at center of domain)
+      if (dbrotate) then
+        ! This is really y in the rotated case
+        x = G%geoLatT(i,j)
+      else
+        x = G%geoLonT(i,j)
+      endif
+      eta1D(1) = 0.0
+      eta1D(nz+1) = -depth_tot(i,j)
+      if (x<0.0) then
+        do k=nz,2, -1
+          eta1D(k) =  eta1D(k+1) + min_thickness
         enddo
-    enddo; enddo
+      else
+        do k=2,nz
+          eta1D(k) =  eta1D(k-1) - min_thickness
+        enddo
+      endif
+      do k=1,nz
+        h(i,j,k) = GV%Z_to_H * (eta1D(k) - eta1D(k+1))
+      enddo
+    enddo ; enddo
 
   case ( REGRIDDING_RHO, REGRIDDING_HYCOM1) ! Initial thicknesses for isopycnal coordinates
     call get_param(param_file, mdl, "INITIAL_SSS", S_surf, &
                    units='1e-3', default=34., scale=US%ppt_to_S, do_not_log=.true.)
     call get_param(param_file, mdl, "INITIAL_S_RANGE", S_range, &
                    units='1e-3', default=2., scale=US%ppt_to_S, do_not_log=.true.)
-    call get_param(param_file, mdl, "S_REF", S_ref, default=35.0, do_not_log=.true.)
+    call get_param(param_file, mdl, "S_REF", S_ref, &
+                   units='1e-3', default=35.0, scale=1.0, do_not_log=.true.)
     call get_param(param_file, mdl, "TS_RANGE_S_LIGHT", S_light, &
                    units='1e-3', default=S_Ref, scale=US%ppt_to_S, do_not_log=.true.)
     call get_param(param_file, mdl, "TS_RANGE_S_DENSE", S_dense, &
@@ -263,9 +265,9 @@ subroutine dumbbell_initialize_temperature_salinity ( T, S, h, G, GV, US, param_
   real    :: S_range   ! The range of salinities in this test case [S ~> ppt]
   real    :: T_surf    ! The surface temperature [C ~> degC]
   real    :: x         ! The fractional position in the domain [nondim]
-  real    :: dblen     ! The size of the dumbbell test case [axis_units]
+  real    :: dblen     ! The size of the dumbbell test case [km] or [m]
   logical :: dbrotate  ! If true, rotate the domain.
-  logical :: use_ALE     ! If false, use layer mode.
+  logical :: use_ALE   ! If false, use layer mode.
   character(len=20) :: verticalCoordinate, density_profile
 
   is = G%isc ; ie = G%iec ; js = G%jsc ; je = G%jec ; nz = GV%ke
@@ -346,7 +348,7 @@ subroutine dumbbell_initialize_sponges(G, GV, US, tv, h_in, depth_tot, param_fil
   real, dimension(SZI_(G),SZJ_(G)) :: Idamp ! inverse damping timescale [T-1 ~> s-1]
   real, dimension(SZI_(G),SZJ_(G),SZK_(GV)) :: h ! sponge thicknesses [H ~> m or kg m-2]
   real, dimension(SZI_(G),SZJ_(G),SZK_(GV)) :: S ! sponge salinities [S ~> ppt]
-  real, dimension(SZK_(GV)+1) :: eta1D ! interface positions for ALE sponge
+  real, dimension(SZK_(GV)+1) :: eta1D ! Interface positions for ALE sponge [Z ~> m]
   real, dimension(SZI_(G),SZJ_(G),SZK_(GV)+1) :: eta ! A temporary array for interface heights [Z ~> m].
 
   integer :: i, j, k, nz
@@ -448,7 +450,7 @@ subroutine dumbbell_initialize_sponges(G, GV, US, tv, h_in, depth_tot, param_fil
     enddo ; enddo
   if (associated(tv%S)) call set_up_ALE_sponge_field(S, G, GV, tv%S, ACSp, 'salt', &
                           sp_long_name='salinity', sp_unit='g kg-1 s-1')
- else
+  else
     do j=G%jsc,G%jec ; do i=G%isc,G%iec
       eta(i,j,1) = 0.0
       do k=2,nz
@@ -466,7 +468,7 @@ subroutine dumbbell_initialize_sponges(G, GV, US, tv, h_in, depth_tot, param_fil
 
     !  The remaining calls to set_up_sponge_field can be in any order. !
     if ( associated(tv%S) ) call set_up_sponge_field(S, tv%S, G, GV, nz, CSp)
- endif
+  endif
 
 end subroutine dumbbell_initialize_sponges
 

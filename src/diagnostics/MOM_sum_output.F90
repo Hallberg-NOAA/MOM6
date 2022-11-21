@@ -220,10 +220,8 @@ subroutine MOM_sum_output_init(G, GV, US, param_file, directory, ntrnc, &
                  default=.true.)
   call get_param(param_file, mdl, "TIMEUNIT", CS%Timeunit, &
                  "The time unit in seconds a number of input fields", &
-                 units="s", default=86400.0)
+                 units="s", default=86400.0, scale=1.0)
   if (CS%Timeunit < 0.0) CS%Timeunit = 86400.0
-
-
 
   if (CS%do_APE_calc) then
     call get_param(param_file, mdl, "READ_DEPTH_LIST", CS%read_depth_list, &
@@ -259,7 +257,7 @@ subroutine MOM_sum_output_init(G, GV, US, param_file, directory, ntrnc, &
 
   call get_param(param_file, mdl, "TIMEUNIT", Time_unit, &
                  "The time unit for ENERGYSAVEDAYS.", &
-                 units="s", default=86400.0)
+                 units="s", default=86400.0, scale=1.0)
   call get_param(param_file, mdl, "ENERGYSAVEDAYS",CS%energysavedays, &
                  "The interval in units of TIMEUNIT between saves of the "//&
                  "energies of the run and other globally summed diagnostics.",&

@@ -31,7 +31,7 @@ type, public :: CVMix_conv_cs ; private
   real    :: kv_conv_const !< viscosity constant used in convective regime [m2 s-1]
   real    :: bv_sqr_conv   !< Threshold for squared buoyancy frequency
                            !! needed to trigger Brunt-Vaisala parameterization [s-2]
-  real    :: min_thickness !< Minimum thickness allowed [m]
+  real    :: min_thickness !< Minimum thickness allowed [Z ~> m]
   logical :: debug         !< If true, turn on debugging
 
   ! Daignostic handles and pointers
@@ -60,8 +60,8 @@ logical function CVMix_conv_init(Time, G, GV, US, param_file, diag, CS)
   real    :: prandtl_conv !< Turbulent Prandtl number used in convective instabilities.
   logical :: useEPBL      !< If True, use the ePBL boundary layer scheme.
 
-! This include declares and sets the variable "version".
-#include "version_variable.h"
+  ! This include declares and sets the variable "version".
+# include "version_variable.h"
 
   ! Read parameters
   call get_param(param_file, mdl, "USE_CVMix_CONVECTION", CVMix_conv_init, default=.false., do_not_log=.true.)
@@ -90,7 +90,8 @@ logical function CVMix_conv_init(Time, G, GV, US, param_file, diag, CS)
 
   call get_param(param_file, mdl, 'DEBUG', CS%debug, default=.False., do_not_log=.True.)
 
-  call get_param(param_file, mdl, 'MIN_THICKNESS', CS%min_thickness, default=0.001, do_not_log=.True.)
+  call get_param(param_file, mdl, 'MIN_THICKNESS', CS%min_thickness, &
+                 units="m", scale=US%m_to_Z, default=0.001, do_not_log=.True.)
 
   call openParameterBlock(param_file,'CVMix_CONVECTION')
 
@@ -174,7 +175,8 @@ subroutine calculate_CVMix_conv(h, tv, G, GV, US, CS, hbl, Kd, Kv, Kd_aux)
   real :: rhok, rhokm1 ! In situ densities of the layers above and below at the interface pressure [R ~> kg m-3]
   real :: hbl_KPP   ! The depth of the ocean boundary as used by KPP [m]
   real :: dz        ! A thickness [Z ~> m]
-  real :: dh, hcorr ! Two thicknesses [m]
+  real :: dh, hcorr ! Limited thicknesses and a cumulative correction [Z ~> m]
+  real :: dh_in_m   ! Limited thicknesses in MKS units, as specified for use with CVMix [m]
   integer :: i, j, k
 
   g_o_rho0 = US%L_to_Z**2*US%s_to_T**2 * GV%g_Earth / GV%Rho0
@@ -213,12 +215,12 @@ subroutine calculate_CVMix_conv(h, tv, G, GV, US, CS, hbl, Kd, Kv, Kd_aux)
       hcorr = 0.0
       ! compute heights at cell center and interfaces
       do k=1,GV%ke
-        dh = h(i,j,k) * GV%H_to_m ! Nominal thickness to use for increment, in the units used by CVMix.
+        dh = h(i,j,k) * GV%H_to_Z ! Nominal thickness to use for increment, in the units of heights
         dh = dh + hcorr ! Take away the accumulated error (could temporarily make dh<0)
         hcorr = min( dh - CS%min_thickness, 0. ) ! If inflating then hcorr<0
-        dh = max( dh, CS%min_thickness ) ! Limit increment dh>=min_thickness
-        cellHeight(k)    = iFaceHeight(k) - 0.5 * dh
-        iFaceHeight(k+1) = iFaceHeight(k) - dh
+        dh_in_m = US%Z_to_m * max(dh, CS%min_thickness) ! Limited increment dh>=min_thickness, in MKS units
+        cellHeight(k)    = iFaceHeight(k) - 0.5 * dh_in_m
+        iFaceHeight(k+1) = iFaceHeight(k) - dh_in_m
       enddo
 
       ! gets index of the level and interface above hbl

@@ -4622,7 +4622,7 @@ subroutine barotropic_init(u, v, h, eta, Time, G, GV, US, param_file, diag, CS, 
                  "Setting DTBT to 0 is the same as setting it to -0.98. "//&
                  "The value of DTBT that will actually be used is an "//&
                  "integer fraction of DT, rounding down.", units="s or nondim",&
-                 default = -0.98)
+                 default = -0.98, scale=1.0)
   call get_param(param_file, mdl, "BT_USE_OLD_CORIOLIS_BRACKET_BUG", &
                  CS%use_old_coriolis_bracket_bug , &
                  "If True, use an order of operations that is not bitwise "//&

@@ -318,13 +318,10 @@ subroutine initialize_ice_shelf_boundary_channel(u_face_mask_bdry, v_face_mask_b
   real    :: input_vel  ! The input ice velocity per  [L Z T-1 ~> m s-1]
   real    :: lenlat, len_stress, westlon, lenlon, southlat ! The input positions of the channel boundarises
 
-  call get_param(PF, mdl, "LENLAT", lenlat, fail_if_missing=.true.)
-
-  call get_param(PF, mdl, "LENLON", lenlon, fail_if_missing=.true.)
-
-  call get_param(PF, mdl, "WESTLON", westlon, fail_if_missing=.true.)
-
-  call get_param(PF, mdl, "SOUTHLAT", southlat, fail_if_missing=.true.)
+  lenlat = G%len_lat
+  lenlon = G%len_lon
+  westlon = G%west_lon
+  southlat = G%south_lat
 
   call get_param(PF, mdl, "INPUT_VEL_ICE_SHELF", input_vel, &
                  "inflow ice velocity at upstream boundary", &

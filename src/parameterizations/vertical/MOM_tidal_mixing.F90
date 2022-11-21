@@ -62,7 +62,7 @@ type, public :: tidal_mixing_diags ; private
   real, allocatable :: N2_meanz(:,:)          !< vertically averaged buoyancy frequency [T-2 ~> s-2]
   real, allocatable :: Polzin_decay_scale_scaled(:,:) !< vertical scale of decay for tidal dissipation [Z ~> m]
   real, allocatable :: Polzin_decay_scale(:,:)  !< vertical decay scale for tidal dissipation with Polzin [Z ~> m]
-  real, allocatable :: Simmons_coeff_2d(:,:)  !< The Simmons et al mixing coefficient
+  real, allocatable :: Simmons_coeff_2d(:,:)  !< The Simmons et al mixing coefficient [nondim]
 end type
 
 !> Control structure with parameters for the tidal mixing module.
@@ -129,7 +129,7 @@ type, public :: tidal_mixing_cs ; private
   logical :: use_CVMix_tidal = .false. !< true if CVMix is to be used for determining
                               !! diffusivity due to tidal mixing
 
-  real :: min_thickness       !< Minimum thickness allowed [m]
+  real :: min_thickness       !< Minimum thickness allowed [Z ~> m]
 
   ! CVMix-specific parameters
   integer                         :: CVMix_tidal_scheme = -1  !< 1 for Simmons, 2 for Schmittner
@@ -586,8 +586,8 @@ logical function tidal_mixing_init(Time, G, GV, US, param_file, int_tide_CSp, di
                    "Min allowable depth for dissipation for tidal-energy-constituent data. "//&
                    "No dissipation contribution is applied above TIDAL_DISS_LIM_TC.", &
                    units="m", default=0.0, scale=US%m_to_Z)
-    call get_param(param_file, mdl, 'MIN_THICKNESS', CS%min_thickness, default=0.001, &
-                   do_not_log=.True.)
+    call get_param(param_file, mdl, 'MIN_THICKNESS', CS%min_thickness, &
+                   units="m", default=0.001, scale=US%m_to_Z, do_not_log=.True.)
     call get_param(param_file, mdl, "PRANDTL_TIDAL", prandtl_tidal, &
                    "Prandtl number used by CVMix tidal mixing schemes "//&
                    "to convert vertical diffusivities into viscosities.", &
@@ -777,19 +777,22 @@ subroutine calculate_CVMix_tidal(h, j, N2_int, G, GV, US, CS, Kv, Kd_lay, Kd_int
   ! Local variables
   real, dimension(SZK_(GV)+1) :: Kd_tidal    ! tidal diffusivity [m2 s-1]
   real, dimension(SZK_(GV)+1) :: Kv_tidal    ! tidal viscosity [m2 s-1]
-  real, dimension(SZK_(GV)+1) :: vert_dep    ! vertical deposition
+  real, dimension(SZK_(GV)+1) :: vert_dep    ! vertical deposition [nondim]
   real, dimension(SZK_(GV)+1) :: iFaceHeight ! Height of interfaces [m]
   real, dimension(SZK_(GV)+1) :: SchmittnerSocn
   real, dimension(SZK_(GV))   :: cellHeight  ! Height of cell centers [m]
   real, dimension(SZK_(GV))   :: tidal_qe_md ! Tidal dissipation energy interpolated from 3d input
                                              ! to model coordinates
   real, dimension(SZK_(GV)+1) :: N2_int_i    ! De-scaled interface buoyancy frequency [s-2]
-  real, dimension(SZK_(GV))   :: Schmittner_coeff
+  real, dimension(SZK_(GV))   :: Schmittner_coeff  ! A coefficient in the Schmittner et al (2014) mixing
+                                             ! parameteriatin [nondim]
   real, dimension(SZK_(GV))   :: h_m         ! Cell thickness [m]
   real, allocatable, dimension(:,:) :: exp_hab_zetar
+  real :: dh, hcorr ! Limited thicknesses and a cumulative correction [Z ~> m]
+  real :: dh_in_m   ! Limited thicknesses in MKS units, as specified for use with CVMix [m]
+  real :: Simmons_coeff  ! A coefficient in the Simmons et al (2004) mixing parameteriation [nondim]
 
   integer :: i, k, is, ie
-  real :: dh, hcorr, Simmons_coeff
   real, parameter :: rho_fw = 1000.0 ! fresh water density [kg m-3]
                                      ! TODO: when coupled, get this from CESM (SHR_CONST_RHOFW)
 
@@ -803,14 +806,14 @@ subroutine calculate_CVMix_tidal(h, j, N2_int, G, GV, US, CS, Kv, Kd_lay, Kd_int
 
       iFaceHeight = 0.0 ! BBL is all relative to the surface
       hcorr = 0.0
+      ! Compute cell center depth and cell bottom in meters (negative values in the ocean)
       do k=1,GV%ke
-        ! cell center and cell bottom in meters (negative values in the ocean)
-        dh = h(i,j,k) * GV%H_to_m ! Nominal thickness to use for increment, rescaled to m for use by CVMix.
+        dh = h(i,j,k) * GV%H_to_Z ! Nominal thickness to use for increment, in the units of heights
         dh = dh + hcorr ! Take away the accumulated error (could temporarily make dh<0)
         hcorr = min( dh - CS%min_thickness, 0. ) ! If inflating then hcorr<0
-        dh = max( dh, CS%min_thickness ) ! Limit increment dh>=min_thickness
-        cellHeight(k)    = iFaceHeight(k) - 0.5 * dh
-        iFaceHeight(k+1) = iFaceHeight(k) - dh
+        dh_in_m = US%Z_to_m * max(dh, CS%min_thickness) ! Limited increment dh>=min_thickness, in MKS units
+        cellHeight(k)    = iFaceHeight(k) - 0.5 * dh_in_m
+        iFaceHeight(k+1) = iFaceHeight(k) - dh_in_m
       enddo
 
       call CVMix_compute_Simmons_invariant( nlev                    = GV%ke,               &
@@ -889,16 +892,17 @@ subroutine calculate_CVMix_tidal(h, j, N2_int, G, GV, US, CS, Kv, Kd_lay, Kd_int
 
       if (G%mask2dT(i,j)<1) cycle
 
-      iFaceHeight = 0.0 ! BBL is all relative to the surface
+      iFaceHeight(:) = 0.0 ! BBL is all relative to the surface
       hcorr = 0.0
+      ! Compute heights at cell center and interfaces, and rescale layer thicknesses
       do k=1,GV%ke
         h_m(k) = h(i,j,k)*GV%H_to_m  ! Rescale thicknesses to m for use by CVmix.
-        ! cell center and cell bottom in meters (negative values in the ocean)
-        dh = h_m(k) + hcorr ! Nominal thickness less the accumulated error (could temporarily make dh<0)
+        dh = h(i,j,k) * GV%H_to_Z ! Nominal thickness to use for increment, in the units of heights
+        dh = dh + hcorr ! Take away the accumulated error (could temporarily make dh<0)
         hcorr = min( dh - CS%min_thickness, 0. ) ! If inflating then hcorr<0
-        dh = max( dh, CS%min_thickness ) ! Limit increment dh>=min_thickness
-        cellHeight(k)    = iFaceHeight(k) - 0.5 * dh
-        iFaceHeight(k+1) = iFaceHeight(k) - dh
+        dh_in_m = US%Z_to_m * max(dh, CS%min_thickness) ! Limited increment dh>=min_thickness, in MKS units
+        cellHeight(k)    = iFaceHeight(k) - 0.5 * dh_in_m
+        iFaceHeight(k+1) = iFaceHeight(k) - dh_in_m
       enddo
 
       SchmittnerSocn = 0.0 ! TODO: compute this

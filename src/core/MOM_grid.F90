@@ -223,7 +223,7 @@ subroutine MOM_grid_init(G, param_file, US, HI, global_indexing, bathymetry_at_v
 
 
   ! Read all relevant parameters and write them to the model log.
-  call get_param(param_file, mod_nm, "REFERENCE_HEIGHT", G%Z_ref, default=0.0, do_not_log=.true.)
+  call get_param(param_file, mod_nm, "REFERENCE_HEIGHT", G%Z_ref, units="m", default=0.0, do_not_log=.true.)
   call log_version(param_file, mod_nm, version, &
                    "Parameters providing information about the lateral grid.", &
                    log_to_all=.true., layout=.true., all_default=(G%Z_ref==0.0))

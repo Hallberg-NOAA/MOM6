@@ -2158,7 +2158,7 @@ subroutine initialize_MOM(Time, Time_init, param_file, dirs, CS, restart_CSp, &
                  "at the end of the step.", default=.false.)
 
   if (CS%split) then
-    call get_param(param_file, "MOM", "DTBT", dtbt, default=-0.98)
+    call get_param(param_file, "MOM", "DTBT", dtbt, units="s or nondim", default=-0.98, scale=1.0)
     default_val = US%T_to_s*CS%dt_therm ; if (dtbt > 0.0) default_val = -1.0
     CS%dtbt_reset_period = -1.0
     call get_param(param_file, "MOM", "DTBT_RESET_PERIOD", CS%dtbt_reset_period, &
@@ -2167,7 +2167,7 @@ subroutine initialize_MOM(Time, Time_init, param_file, dirs, CS, restart_CSp, &
                  "only on information available at initialization.  If 0, "//&
                  "DTBT will be set every dynamics time step. The default "//&
                  "is set by DT_THERM.  This is only used if SPLIT is true.", &
-                 units="s", default=default_val, do_not_read=(dtbt > 0.0))
+                 units="s", default=default_val, scale=1.0, do_not_read=(dtbt > 0.0))
   endif
 
   call get_param(param_file, "MOM", "DT_OBC_SEG_UPDATE_OBGC", CS%dt_obc_seg_period, &

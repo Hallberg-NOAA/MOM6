@@ -1003,9 +1003,9 @@ subroutine mixedlayer_restrat_register_restarts(HI, GV, param_file, CS, restart_
   if (.not. mixedlayer_restrat_init) return
 
   call get_param(param_file, mdl, "MLE_MLD_DECAY_TIME", CS%MLE_MLD_decay_time, &
-                 default=0., do_not_log=.true.)
+                 units="s", default=0., do_not_log=.true.)
   call get_param(param_file, mdl, "MLE_MLD_DECAY_TIME2", CS%MLE_MLD_decay_time2, &
-                 default=0., do_not_log=.true.)
+                 units="s", default=0., do_not_log=.true.)
   if (CS%MLE_MLD_decay_time>0. .or. CS%MLE_MLD_decay_time2>0.) then
     ! CS%MLD_filtered is used to keep a running mean of the PBL's actively mixed MLD.
     allocate(CS%MLD_filtered(HI%isd:HI%ied,HI%jsd:HI%jed), source=0.)

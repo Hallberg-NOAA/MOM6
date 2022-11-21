@@ -77,7 +77,7 @@ subroutine MOM_write_cputime_init(param_file, directory, Input_start_time, CS)
   ! Read all relevant parameters and write them to the model log.
 
   ! Determine whether all paramters are set to their default values.
-  call get_param(param_file, mdl, "MAXCPU", CS%maxcpu, default=-1.0, do_not_log=.true.)
+  call get_param(param_file, mdl, "MAXCPU", CS%maxcpu, units="wall-clock seconds", default=-1.0, do_not_log=.true.)
   call get_param(param_file, mdl, "CPU_TIME_FILE", CS%CPUfile, default="CPU_stats", do_not_log=.true.)
   all_default = (CS%maxcpu == -1.0) .and. (trim(CS%CPUfile) == trim("CPU_stats"))
 

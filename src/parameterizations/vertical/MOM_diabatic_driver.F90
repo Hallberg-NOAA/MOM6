@@ -3082,7 +3082,7 @@ subroutine diabatic_driver_init(Time, G, GV, US, param_file, useALEalgorithm, di
                  "KD_MIN_TR were operating.", default=.false., do_not_log=.not.CS%useALEalgorithm)
 
   if (CS%mix_boundary_tracers .or. CS%mix_boundary_tracer_ALE) then
-    call get_param(param_file, mdl, "KD", Kd, default=0.0)
+    call get_param(param_file, mdl, "KD", Kd, units="m2 s-1", default=0.0, scale=1.0)
     call get_param(param_file, mdl, "KD_MIN_TR", CS%Kd_min_tr, &
                  "A minimal diffusivity that should always be applied to "//&
                  "tracers, especially in massless layers near the bottom. "//&

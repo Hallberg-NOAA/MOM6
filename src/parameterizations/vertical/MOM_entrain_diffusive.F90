@@ -2091,7 +2091,7 @@ subroutine entrain_diffusive_init(Time, G, GV, US, param_file, diag, CS, just_re
                  "The maximum number of iterations that may be used to "//&
                  "calculate the interior diapycnal entrainment.", default=5, do_not_log=just_read_params)
   ! In this module, KD is only used to set the default for TOLERANCE_ENT. [m2 s-1]
-  call get_param(param_file, mdl, "KD", Kd, default=0.0)
+  call get_param(param_file, mdl, "KD", Kd, units="m2 s-1", default=0.0, scale=1.0)
   call get_param(param_file, mdl, "DT", dt, &
                  "The (baroclinic) dynamics time step.", units = "s", &
                  fail_if_missing=.true., do_not_log=just_read_params)

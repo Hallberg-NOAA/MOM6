@@ -1776,7 +1776,7 @@ function kappa_shear_init(Time, G, GV, US, param_file, diag, CS)
                  "The maximum number of iterations that may be used to "//&
                  "estimate the Richardson number driven mixing.", &
                  units="nondim", default=50, do_not_log=just_read)
-  call get_param(param_file, mdl, "KD", KD_normal, default=0.0, do_not_log=.true.)
+  call get_param(param_file, mdl, "KD", KD_normal, units="m2 s-1", scale=1.0, default=0.0, do_not_log=.true.)
   call get_param(param_file, mdl, "KD_KAPPA_SHEAR_0", CS%kappa_0, &
                  "The background diffusivity that is used to smooth the "//&
                  "density and shear profiles before solving for the "//&

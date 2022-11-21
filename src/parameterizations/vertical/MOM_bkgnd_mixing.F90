@@ -151,10 +151,12 @@ subroutine bkgnd_mixing_init(Time, G, GV, US, param_file, diag, CS, physical_OBL
   CS%physical_OBL_scheme = physical_OBL_scheme
   if (CS%physical_OBL_scheme) then
     ! Check that Kdml is not set when using bulk mixed layer
-    call get_param(param_file, mdl, "KDML", CS%Kd_tot_ml, default=-1., do_not_log=.true.)
+    call get_param(param_file, mdl, "KDML", CS%Kd_tot_ml, &
+                   units="m2 s-1", default=-1., scale=1.0, do_not_log=.true.)
     if (CS%Kd_tot_ml>0.) call MOM_error(FATAL, &
                  "bkgnd_mixing_init: KDML is a depricated parameter that should not be used.")
-    call get_param(param_file, mdl, "KD_ML_TOT", CS%Kd_tot_ml, default=-1., do_not_log=.true.)
+    call get_param(param_file, mdl, "KD_ML_TOT", CS%Kd_tot_ml, &
+                   units="m2 s-1", default=-1., scale=1.0, do_not_log=.true.)
     if (CS%Kd_tot_ml>0.) call MOM_error(FATAL, &
                  "bkgnd_mixing_init: KD_ML_TOT cannot be set when using a physically based ocean "//&
                  "boundary layer mixing parameterization.")

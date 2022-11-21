@@ -379,21 +379,24 @@ subroutine set_grid_metrics_cartesian(G, param_file, US)
   call get_param(param_file, mdl, "AXIS_UNITS", units_temp, &
                  "The units for the Cartesian axes. Valid entries are: \n"//&
                  " \t degrees - degrees of latitude and longitude \n"//&
-                 " \t m - meters \n \t k - kilometers", default="degrees")
+                 " \t m or meter(s) - meters \n"//&
+                 " \t k or km or kilometer(s) - kilometers", default="degrees")
+  if (trim(units_temp) == "k") units_temp = "km"
+
   call get_param(param_file, mdl, "SOUTHLAT", G%south_lat, &
                  "The southern latitude of the domain or the equivalent "//&
-                 "starting value for the y-axis.", units=units_temp, &
+                 "starting value for the y-axis.", units=units_temp, scale=1.0, &
                  fail_if_missing=.true.)
   call get_param(param_file, mdl, "LENLAT", G%len_lat, &
                  "The latitudinal or y-direction length of the domain.", &
-                 units=units_temp, fail_if_missing=.true.)
+                 units=units_temp, scale=1.0, fail_if_missing=.true.)
   call get_param(param_file, mdl, "WESTLON", G%west_lon, &
                  "The western longitude of the domain or the equivalent "//&
-                 "starting value for the x-axis.", units=units_temp, &
+                 "starting value for the x-axis.", units=units_temp, scale=1.0, &
                  default=0.0)
   call get_param(param_file, mdl, "LENLON", G%len_lon, &
                  "The longitudinal or x-direction length of the domain.", &
-                 units=units_temp, fail_if_missing=.true.)
+                 units=units_temp, scale=1.0, fail_if_missing=.true.)
   call get_param(param_file, mdl, "RAD_EARTH", G%Rad_Earth_L, &
                  "The radius of the Earth.", units="m", default=6.378e6, scale=US%m_to_L)
 
@@ -513,16 +516,16 @@ subroutine set_grid_metrics_spherical(G, param_file, US)
   PI = 4.0*atan(1.0); PI_180 = atan(1.0)/45.
 
   call get_param(param_file, mdl, "SOUTHLAT", G%south_lat, &
-                 "The southern latitude of the domain.", units="degrees", &
+                 "The southern latitude of the domain.", units="degrees", scale=1.0, &
                  fail_if_missing=.true.)
   call get_param(param_file, mdl, "LENLAT", G%len_lat, &
-                 "The latitudinal length of the domain.", units="degrees", &
+                 "The latitudinal length of the domain.", units="degrees", scale=1.0, &
                  fail_if_missing=.true.)
   call get_param(param_file, mdl, "WESTLON", G%west_lon, &
-                 "The western longitude of the domain.", units="degrees", &
+                 "The western longitude of the domain.", units="degrees", scale=1.0, &
                  default=0.0)
   call get_param(param_file, mdl, "LENLON", G%len_lon, &
-                 "The longitudinal length of the domain.", units="degrees", &
+                 "The longitudinal length of the domain.", units="degrees", scale=1.0, &
                  fail_if_missing=.true.)
   call get_param(param_file, mdl, "RAD_EARTH", G%Rad_Earth_L, &
                  "The radius of the Earth.", units="m", default=6.378e6, scale=US%m_to_L)
@@ -668,16 +671,16 @@ subroutine set_grid_metrics_mercator(G, param_file, US)
   PI = 4.0*atan(1.0) ; PI_2 = 0.5*PI
 
   call get_param(param_file, mdl, "SOUTHLAT", GP%south_lat, &
-                 "The southern latitude of the domain.", units="degrees", &
+                 "The southern latitude of the domain.", units="degrees", scale=1.0, &
                  fail_if_missing=.true.)
   call get_param(param_file, mdl, "LENLAT", GP%len_lat, &
-                 "The latitudinal length of the domain.", units="degrees", &
+                 "The latitudinal length of the domain.", units="degrees", scale=1.0, &
                  fail_if_missing=.true.)
   call get_param(param_file, mdl, "WESTLON", GP%west_lon, &
-                 "The western longitude of the domain.", units="degrees", &
+                 "The western longitude of the domain.", units="degrees", scale=1.0, &
                  default=0.0)
   call get_param(param_file, mdl, "LENLON", GP%len_lon, &
-                 "The longitudinal length of the domain.", units="degrees", &
+                 "The longitudinal length of the domain.", units="degrees", scale=1.0, &
                  fail_if_missing=.true.)
   call get_param(param_file, mdl, "RAD_EARTH", GP%Rad_Earth_L, &
                  "The radius of the Earth.", units="m", default=6.378e6, scale=US%m_to_L)

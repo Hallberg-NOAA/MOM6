@@ -1187,7 +1187,7 @@ subroutine VarMix_init(Time, G, GV, US, param_file, diag, CS)
   ! Indicate whether to calculate the Eady growth rate
   CS%calculate_Eady_growth_rate = use_MEKE .or. (KhTr_Slope_Cff>0.) .or. (KhTh_Slope_Cff>0.)
   call get_param(param_file, mdl, "KHTR_PASSIVITY_COEFF", KhTr_passivity_coeff, &
-                 default=0., do_not_log=.true.)
+                 units="nondim", default=0., do_not_log=.true.)
   CS%calculate_Rd_dx = CS%calculate_Rd_dx .or. (KhTr_passivity_coeff>0.)
   call get_param(param_file, mdl, "MLE_FRONT_LENGTH", MLE_front_length, &
                  units="m", default=0.0, scale=US%m_to_L, do_not_log=.true.)

@@ -35,7 +35,7 @@ type, public :: CVMix_ddiff_cs ; private
   real    :: kappa_ddiff_param1 !< exterior coefficient in diffusive convection regime [nondim]
   real    :: kappa_ddiff_param2 !< middle coefficient in diffusive convection regime [nondim]
   real    :: kappa_ddiff_param3 !< interior coefficient in diffusive convection regime [nondim]
-  real    :: min_thickness      !< Minimum thickness allowed [m]
+  real    :: min_thickness      !< Minimum thickness allowed [Z ~> m]
   character(len=4) :: diff_conv_type !< type of diffusive convection to use. Options are Marmorino &
                                 !! Caldwell 1976 ("MC76"; default) and Kelley 1988, 1990 ("K90")
   logical :: debug              !< If true, turn on debugging
@@ -57,8 +57,8 @@ logical function CVMix_ddiff_init(Time, G, GV, US, param_file, diag, CS)
   type(diag_ctrl), target, intent(inout) :: diag       !< Diagnostics control structure.
   type(CVMix_ddiff_cs),    pointer       :: CS         !< This module's control structure.
 
-! This include declares and sets the variable "version".
-#include "version_variable.h"
+  ! This include declares and sets the variable "version".
+# include "version_variable.h"
 
   if (associated(CS)) then
     call MOM_error(WARNING, "CVMix_ddiff_init called with an associated "// &
@@ -82,7 +82,8 @@ logical function CVMix_ddiff_init(Time, G, GV, US, param_file, diag, CS)
 
   call get_param(param_file, mdl, 'DEBUG', CS%debug, default=.False., do_not_log=.True.)
 
-  call get_param(param_file, mdl, 'MIN_THICKNESS', CS%min_thickness, default=0.001, do_not_log=.True.)
+  call get_param(param_file, mdl, 'MIN_THICKNESS', CS%min_thickness, &
+                 units="m", scale=US%m_to_Z, default=0.001, do_not_log=.True.)
 
   call openParameterBlock(param_file,'CVMIX_DDIFF')
 
@@ -174,7 +175,8 @@ subroutine compute_ddiff_coeffs(h, tv, G, GV, US, j, Kd_T, Kd_S, CS, R_rho)
     Kd1_S          !< Diapycanal diffusivity of salinity [m2 s-1].
 
   real, dimension(SZK_(GV)+1) :: iFaceHeight !< Height of interfaces [m]
-  real :: dh, hcorr
+  real :: dh, hcorr ! Limited thicknesses and a cumulative correction [Z ~> m]
+  real :: dh_in_m   ! Limited thicknesses in MKS units, as specified for use with CVMix [m]
   integer :: i, k
 
   ! initialize dummy variables
@@ -234,16 +236,16 @@ subroutine compute_ddiff_coeffs(h, tv, G, GV, US, j, Kd_T, Kd_S, CS, R_rho)
     hcorr = 0.0
     ! compute heights at cell center and interfaces
     do k=1,GV%ke
-      dh = h(i,j,k) * GV%H_to_m ! Nominal thickness to use for increment
+      dh = h(i,j,k) * GV%H_to_Z ! Nominal thickness to use for increment, in height units
       dh = dh + hcorr ! Take away the accumulated error (could temporarily make dh<0)
       hcorr = min( dh - CS%min_thickness, 0. ) ! If inflating then hcorr<0
-      dh = max( dh, CS%min_thickness ) ! Limit increment dh>=min_thickness
-      cellHeight(k)    = iFaceHeight(k) - 0.5 * dh
-      iFaceHeight(k+1) = iFaceHeight(k) - dh
+      dh_in_m = US%Z_to_m * max( dh, CS%min_thickness ) ! Limit increment dh>=min_thickness
+      cellHeight(k)    = iFaceHeight(k) - 0.5 * dh_in_m
+      iFaceHeight(k+1) = iFaceHeight(k) - dh_in_m
     enddo
 
     ! gets index of the level and interface above hbl
-    !kOBL = CVmix_kpp_compute_kOBL_depth(iFaceHeight, cellHeight,hbl(i,j))
+    !kOBL = CVmix_kpp_compute_kOBL_depth(iFaceHeight, cellHeight, hbl(i,j))
 
     Kd1_T(:) = 0.0 ; Kd1_S(:) = 0.0
     call CVMix_coeffs_ddiff(Tdiff_out=Kd1_T(:), &

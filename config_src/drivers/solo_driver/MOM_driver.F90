@@ -331,15 +331,15 @@ program MOM6
 
   ! Read all relevant parameters and write them to the model log.
   call log_version(param_file, mod_name, version, "")
-  call get_param(param_file, mod_name, "DT", dt, fail_if_missing=.true.)
+  call get_param(param_file, mod_name, "DT", dt, units="s", scale=1.0, fail_if_missing=.true.)
   call get_param(param_file, mod_name, "DT_FORCING", dt_forcing, &
                  "The time step for changing forcing, coupling with other "//&
                  "components, or potentially writing certain diagnostics. "//&
-                 "The default value is given by DT.", units="s", default=dt)
+                 "The default value is given by DT.", units="s", default=dt, scale=1.0)
   if (offline_tracer_mode) then
     call get_param(param_file, mod_name, "DT_OFFLINE", dt_forcing, &
                    "Length of time between reading in of input fields", &
-                   units='s', fail_if_missing=.true.)
+                   units="s", scale=1.0, fail_if_missing=.true.)
     dt = dt_forcing
   endif
   ntstep = MAX(1,ceiling(dt_forcing/dt - 0.001))
@@ -352,7 +352,7 @@ program MOM6
   ! Determine the segment end time, either from the namelist file or parsed input file.
   call get_param(param_file, mod_name, "TIMEUNIT", Time_unit, &
                  "The time unit for DAYMAX, ENERGYSAVEDAYS, and RESTINT.", &
-                 units="s", default=86400.0)
+                 units="s", default=86400.0, scale=1.0)
   if (years+months+days+hours+minutes+seconds > 0) then
     Time_end = increment_date(Time, years, months, days, hours, minutes, seconds)
     call MOM_mesg('Segment run length determined from ocean_solo_nml.', 2)

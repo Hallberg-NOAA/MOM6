@@ -1945,7 +1945,7 @@ subroutine hor_visc_init(Time, G, GV, US, param_file, diag, CS, ADp)
                  "value of BOUND_CORIOLIS (or false).", default=bound_Cor_def, &
                  do_not_log=.not.CS%Smagorinsky_Ah)
   if (.not.CS%Smagorinsky_Ah) CS%bound_Coriolis = .false.
-  call get_param(param_file, mdl, "MAXVEL", maxvel, default=3.0e8)
+  call get_param(param_file, mdl, "MAXVEL", maxvel, units="m s-1", default=3.0e8, scale=1.0)
   call get_param(param_file, mdl, "BOUND_CORIOLIS_VEL", bound_Cor_vel, &
                  "The velocity scale at which BOUND_CORIOLIS_BIHARM causes "//&
                  "the biharmonic drag to have comparable magnitude to the "//&
