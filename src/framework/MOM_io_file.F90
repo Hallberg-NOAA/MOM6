@@ -1687,7 +1687,7 @@ subroutine get_field_nc(handle, label, values, rescale)
     ! Handle of netCDF file to be read
   character(len=*), intent(in) :: label
     ! Field variable name
-  real, intent(out) :: values(:,:)
+  real, intent(inout) :: values(:,:)
     ! Field values read from file
   real, optional, intent(in) :: rescale
 
