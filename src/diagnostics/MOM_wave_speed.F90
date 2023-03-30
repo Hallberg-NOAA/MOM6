@@ -38,7 +38,7 @@ type, public :: wave_speed_CS ; private
                                        !! wave speed [nondim]. This parameter controls the default behavior of
                                        !! wave_speed() which can be overridden by optional arguments.
   real :: mono_N2_depth = -1.          !< The depth below which N2 is limited as monotonic for the purposes of
-                                       !! calculating the equivalent barotropic wave speed [Z ~> m].
+                                       !! calculating the equivalent barotropic wave speed [H ~> m or kg m-2].
                                        !! This parameter controls the default behavior of wave_speed() which
                                        !! can be overridden by optional arguments.
   real :: min_speed2 = 0.              !< The minimum mode 1 internal wave speed squared [L2 T-2 ~> m2 s-2]
@@ -80,7 +80,7 @@ subroutine wave_speed(h, tv, G, GV, US, cg1, CS, full_halos, use_ebt_mode, mono_
                                           !! for the purposes of calculating vertical modal structure [nondim].
   real,                   optional, intent(in)  :: mono_N2_depth !< A depth below which N2 is limited as
                                           !! monotonic for the purposes of calculating vertical
-                                          !! modal structure [Z ~> m].
+                                          !! modal structure [H ~> m or kg m-2].
   real, dimension(SZI_(G),SZJ_(G),SZK_(GV)), &
                           optional, intent(out) :: modal_structure !< Normalized model structure [nondim]
 
@@ -177,8 +177,8 @@ subroutine wave_speed(h, tv, G, GV, US, cg1, CS, full_halos, use_ebt_mode, mono_
   if (present(use_ebt_mode)) l_use_ebt_mode = use_ebt_mode
   l_mono_N2_column_fraction = CS%mono_N2_column_fraction
   if (present(mono_N2_column_fraction)) l_mono_N2_column_fraction = mono_N2_column_fraction
-  l_mono_N2_depth = GV%Z_to_H*CS%mono_N2_depth
-  if (present(mono_N2_depth)) l_mono_N2_depth = GV%Z_to_H*mono_N2_depth
+  l_mono_N2_depth = CS%mono_N2_depth
+  if (present(mono_N2_depth)) l_mono_N2_depth = mono_N2_depth
   calc_modal_structure = l_use_ebt_mode
   if (present(modal_structure)) calc_modal_structure = .true.
   if (calc_modal_structure) then
@@ -1210,7 +1210,7 @@ subroutine wave_speed_init(CS, use_ebt_mode, mono_N2_column_fraction, mono_N2_de
                                      !! calculating the vertical modal structure [nondim].
   real,    optional, intent(in) :: mono_N2_depth !< The depth below which N2 is limited
                                      !! as monotonic for the purposes of calculating the
-                                     !! vertical modal structure [Z ~> m].
+                                     !! vertical modal structure [H ~> m or kg m-2].
   logical, optional, intent(in) :: remap_answers_2018 !< If true, use the order of arithmetic and expressions
                                      !! that recover the remapping answers from 2018.  Otherwise
                                      !! use more robust but mathematically equivalent expressions.
@@ -1261,7 +1261,7 @@ subroutine wave_speed_set_param(CS, use_ebt_mode, mono_N2_column_fraction, mono_
                                       !! calculating the vertical modal structure [nondim].
   real,    optional, intent(in) :: mono_N2_depth !< The depth below which N2 is limited
                                       !! as monotonic for the purposes of calculating the
-                                      !! vertical modal structure [Z ~> m].
+                                      !! vertical modal structure [H ~> m or kg m-2].
   logical, optional, intent(in) :: remap_answers_2018 !< If true, use the order of arithmetic and expressions
                                       !! that recover the remapping answers from 2018.  Otherwise
                                       !! use more robust but mathematically equivalent expressions.

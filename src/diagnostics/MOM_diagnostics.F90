@@ -56,7 +56,7 @@ type, public :: diagnostics_CS ; private
                                        !! monotonic for the purposes of calculating the equivalent
                                        !! barotropic wave speed [nondim].
   real :: mono_N2_depth = -1.          !< The depth below which N2 is limited as monotonic for the purposes of
-                                       !! calculating the equivalent barotropic wave speed [Z ~> m].
+                                       !! calculating the equivalent barotropic wave speed [H ~> m or kg m-2].
 
   type(diag_ctrl), pointer :: diag => NULL() !< A structure that is used to
                                        !! regulate the timing of diagnostic output.
@@ -1599,7 +1599,7 @@ subroutine MOM_diagnostics_init(MIS, ADp, CDp, Time, G, GV, US, param_file, diag
   call get_param(param_file, mdl, "DIAG_EBT_MONO_N2_DEPTH", CS%mono_N2_depth, &
                  "The depth below which N2 is limited as monotonic for the "// &
                  "purposes of calculating the equivalent barotropic wave speed.", &
-                 units='m', scale=US%m_to_Z, default=-1.)
+                 units='m', scale=GV%m_to_H, default=-1.)
   call get_param(param_file, mdl, "INTERNAL_WAVE_SPEED_TOL", wave_speed_tol, &
                  "The fractional tolerance for finding the wave speeds.", &
                  units="nondim", default=0.001)
