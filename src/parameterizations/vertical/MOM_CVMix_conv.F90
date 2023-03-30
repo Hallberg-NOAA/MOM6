@@ -31,7 +31,7 @@ type, public :: CVMix_conv_cs ; private
   real    :: kv_conv_const !< viscosity constant used in convective regime [Z2 T-1 ~> m2 s-1]
   real    :: bv_sqr_conv   !< Threshold for squared buoyancy frequency
                            !! needed to trigger Brunt-Vaisala parameterization [T-2 ~> s-2]
-  real    :: min_thickness !< Minimum thickness allowed [Z ~> m]
+  real    :: min_thickness !< Minimum thickness allowed [H ~> m or kg-2]
   logical :: debug         !< If true, turn on debugging
 
   ! Diagnostic handles and pointers
@@ -91,7 +91,7 @@ logical function CVMix_conv_init(Time, G, GV, US, param_file, diag, CS)
   call get_param(param_file, mdl, 'DEBUG', CS%debug, default=.False., do_not_log=.True.)
 
   call get_param(param_file, mdl, 'MIN_THICKNESS', CS%min_thickness, &
-                 units="m", scale=US%m_to_Z, default=0.001, do_not_log=.True.)
+                 units="m", scale=GV%m_to_H, default=0.001, do_not_log=.True.)
 
   call openParameterBlock(param_file,'CVMix_CONVECTION')
 
@@ -162,8 +162,8 @@ subroutine calculate_CVMix_conv(h, tv, G, GV, US, CS, hbl, Kd, Kv, Kd_aux)
   real, dimension(SZK_(GV)+1) :: N2    !< Squared buoyancy frequency [s-2]
   real, dimension(SZK_(GV)+1) :: kv_col !< Viscosities at interfaces in the column [m2 s-1]
   real, dimension(SZK_(GV)+1) :: kd_col !< Diffusivities at interfaces in the column [m2 s-1]
-  real, dimension(SZK_(GV)+1) :: iFaceHeight !< Height of interfaces [m]
-  real, dimension(SZK_(GV))   :: cellHeight  !< Height of cell centers [m]
+  real, dimension(SZK_(GV)+1) :: iFaceHeight !< Height of interfaces [H ~> m or kg m-2]
+  real, dimension(SZK_(GV))   :: cellHeight  !< Height of cell centers [H ~> m or kg m-2]
   real, dimension(SZI_(G),SZJ_(G),SZK_(GV)+1) :: &
     kd_conv, &                         !< Diffusivity added by convection for diagnostics [Z2 T-1 ~> m2 s-1]
     kv_conv, &                         !< Viscosity added by convection for diagnostics [Z2 T-1 ~> m2 s-1]
@@ -173,9 +173,8 @@ subroutine calculate_CVMix_conv(h, tv, G, GV, US, CS, hbl, Kd, Kv, Kd_aux)
                     ! [Z s-2 R-1 ~> m4 s-2 kg-1]
   real :: pref      ! Interface pressures [R L2 T-2 ~> Pa]
   real :: rhok, rhokm1 ! In situ densities of the layers above and below at the interface pressure [R ~> kg m-3]
-  real :: hbl_KPP   ! The depth of the ocean boundary as used by KPP [m]
   real :: dz        ! A thickness [Z ~> m]
-  real :: dh, hcorr ! Limited thicknesses and a cumulative correction [Z ~> m]
+  real :: dh, hcorr ! Limited thicknesses and a cumulative correction [H ~> m or kg m-2]
   integer :: i, j, k
 
   g_o_rho0 = US%L_to_Z**2*US%s_to_T**2 * GV%g_Earth / GV%Rho0
@@ -214,17 +213,16 @@ subroutine calculate_CVMix_conv(h, tv, G, GV, US, CS, hbl, Kd, Kv, Kd_aux)
       hcorr = 0.0
       ! compute heights at cell center and interfaces
       do k=1,GV%ke
-        dh = h(i,j,k) * GV%H_to_Z ! Nominal thickness to use for increment, in the units of heights
+        dh = h(i,j,k) ! Nominal thickness to use for increment, in the units of heights
         dh = dh + hcorr ! Take away the accumulated error (could temporarily make dh<0)
         hcorr = min( dh - CS%min_thickness, 0. ) ! If inflating then hcorr<0
         dh = max(dh, CS%min_thickness) ! Limited increment dh>=min_thickness
-        cellHeight(k)    = iFaceHeight(k) - 0.5 * US%Z_to_m*dh
-        iFaceHeight(k+1) = iFaceHeight(k) - US%Z_to_m*dh
+        cellHeight(k)    = iFaceHeight(k) - 0.5 * dh
+        iFaceHeight(k+1) = iFaceHeight(k) - dh
       enddo
 
       ! gets index of the level and interface above hbl
-      hbl_KPP = US%Z_to_m*hbl(i,j)  ! Convert to the units used by CVMix.
-      kOBL = CVMix_kpp_compute_kOBL_depth(iFaceHeight, cellHeight, hbl_KPP)
+      kOBL = CVMix_kpp_compute_kOBL_depth(iFaceHeight, cellHeight, GV%Z_to_H*hbl(i,j))
 
       kv_col(:) = 0.0 ; kd_col(:) = 0.0
       call CVMix_coeffs_conv(Mdiff_out=kv_col(:), &
