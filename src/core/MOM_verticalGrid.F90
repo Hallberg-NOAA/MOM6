@@ -175,6 +175,13 @@ subroutine verticalGridInit( param_file, GV, US )
   GV%H_to_RZ = GV%H_to_kg_m2 * US%kg_m3_to_R * US%m_to_Z
   GV%RZ_to_H = GV%kg_m2_to_H * US%R_to_kg_m3 * US%Z_to_m
 
+  ! Note based on the above that for both Boussinsq and non-Boussinesq cases that:
+  !     GV%Rho0 = GV%Z_to_H * GV%H_to_RZ
+  !     1.0/GV%Rho0 = GV%H_to_Z * GV%RZ_to_H
+  ! This is exact for power-of-2 scaling of the units, regardless of the value of Rho0, but
+  ! the first term on the right hand side is invertable in Boussinesq mode, but the second
+  ! is invertable when non-Boussinesq.
+
 ! Log derivative values.
   call log_param(param_file, mdl, "M to THICKNESS", GV%m_to_H*H_rescale_factor, units="H m-1")
   call log_param(param_file, mdl, "M to THICKNESS rescaled by 2^-n", GV%m_to_H, units="2^n H m-1")
