@@ -207,7 +207,7 @@ type, public :: MOM_control_struct ; private
                     !< free surface height or column mass time averaged over the last
                     !! baroclinic dynamics time step [H ~> m or kg m-2]
   real, dimension(:,:), pointer :: &
-    Hml => NULL()   !< active mixed layer depth [Z ~> m]
+    Hml => NULL()   !< active mixed layer depth [H ~> m or kg m-2]
   real :: time_in_cycle !< The running time of the current time-stepping cycle
                     !! in calls that step the dynamics, and also the length of
                     !! the time integral of ssh_rint [T ~> s].
@@ -3149,18 +3149,6 @@ subroutine initialize_MOM(Time, Time_init, param_file, dirs, CS, restart_CSp, &
     endif
   endif
 
-  if (use_ice_shelf .and. associated(CS%Hml)) then
-    if (query_initialized(CS%Hml, "hML", restart_CSp)) then
-      ! Test whether the dimensional rescaling has changed for depths.
-      if ((US%m_to_Z_restart /= 0.0) .and. (US%m_to_Z_restart /= 1.0) ) then
-        Z_rescale = 1.0 / US%m_to_Z_restart
-        do j=js,je ; do i=is,ie
-          CS%Hml(i,j) = Z_rescale * CS%Hml(i,j)
-        enddo ; enddo
-      endif
-    endif
-  endif
-
   if (query_initialized(CS%ave_ssh_ibc, "ave_ssh", restart_CSp)) then
     if ((US%m_to_Z_restart /= 0.0) .and. (US%m_to_Z_restart /= 1.0) ) then
       Z_rescale = 1.0 / US%m_to_Z_restart
@@ -3378,7 +3366,7 @@ subroutine set_restart_fields(GV, US, param_file, CS, restart_CSp)
                  do_not_log=.true.)
   if (use_ice_shelf .and. associated(CS%Hml)) then
     call register_restart_field(CS%Hml, "hML", .false., restart_CSp, &
-                                "Mixed layer thickness", "meter", conversion=US%Z_to_m)
+                                "Mixed layer thickness", thickness_units, conversion=GV%H_to_MKS)
   endif
 
   ! Register scalar unit conversion factors.
@@ -3530,7 +3518,7 @@ subroutine extract_surface_state(CS, sfc_state_in)
   ! copy Hml into sfc_state, so that caps can access it
   if (associated(CS%Hml)) then
     do j=js,je ; do i=is,ie
-      sfc_state%Hml(i,j) = CS%Hml(i,j)
+      sfc_state%Hml(i,j) = GV%H_to_Z*CS%Hml(i,j)
     enddo ; enddo
   endif
 

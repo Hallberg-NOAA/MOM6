@@ -460,7 +460,7 @@ contains
                                                  !! below during this call [H ~> m or kg m-2].
     type(forcing),           intent(in) :: fluxes !< A structure containing pointers to thermodynamic
                                                  !! and tracer forcing fields.
-    real, dimension(SZI_(G),SZJ_(G)), intent(in) :: Hml  !< Mixed layer depth [Z ~> m]
+    real, dimension(SZI_(G),SZJ_(G)), intent(in) :: Hml  !< Mixed layer depth [H ~> m or kg m-2]
     real,                    intent(in) :: dt    !< The amount of time covered by this call [T ~> s]
     type(unit_scale_type),   intent(in) :: US    !< A dimensional unit scaling type
     type(MOM_generic_tracer_CS), pointer :: CS   !< Pointer to the control structure for this module.
@@ -547,7 +547,7 @@ contains
     dz_ml(:,:) = 0.0
     do j=jsc,jec ; do i=isc,iec
       surface_field(i,j) = tv%S(i,j,1)
-      dz_ml(i,j) = US%Z_to_m * Hml(i,j)
+      dz_ml(i,j) = GV%H_to_m * Hml(i,j)
     enddo ; enddo
     sosga = global_area_mean(surface_field, G, scale=US%S_to_ppt)
 

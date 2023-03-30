@@ -177,7 +177,7 @@ subroutine lateral_boundary_diffusion(G, GV, US, h, Coef_x, Coef_y, dt, Reg, CS)
   call cpu_clock_begin(id_clock_lbd)
   Idt = 1./dt
   if (ASSOCIATED(CS%KPP_CSp)) call KPP_get_BLD(CS%KPP_CSp, hbl, G, GV, US, m_to_BLD_units=GV%m_to_H)
-  if (ASSOCIATED(CS%energetic_PBL_CSp)) call energetic_PBL_get_MLD(CS%energetic_PBL_CSp, hbl, G, US, &
+  if (ASSOCIATED(CS%energetic_PBL_CSp)) call energetic_PBL_get_MLD(CS%energetic_PBL_CSp, hbl, G, GV, US, &
                                                                    m_to_MLD_units=GV%m_to_H)
   call pass_var(hbl,G%Domain)
   do m = 1,Reg%ntr

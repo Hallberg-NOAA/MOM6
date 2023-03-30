@@ -442,7 +442,7 @@ subroutine call_tracer_column_fns(h_old, h_new, ea, eb, fluxes, Hml, dt, G, GV, 
   type(forcing),                         intent(in) :: fluxes !< A structure containing pointers to
                                                               !! any possible forcing fields.
                                                               !! Unused fields have NULL ptrs.
-  real, dimension(SZI_(G),SZJ_(G)),      intent(in) :: Hml    !< Mixed layer depth [Z ~> m]
+  real, dimension(SZI_(G),SZJ_(G)),      intent(in) :: Hml    !< Mixed layer depth [H ~> m or kg m-2]
   real,                                  intent(in) :: dt     !< The amount of time covered by this
                                                               !! call [T ~> s]
   type(unit_scale_type),                 intent(in) :: US     !< A dimensional unit scaling type

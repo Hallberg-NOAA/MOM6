@@ -169,7 +169,7 @@ type, public :: energetic_PBL_CS ; private
                              !! timing of diagnostic output.
 
   real, allocatable, dimension(:,:) :: &
-    ML_depth            !< The mixed layer depth determined by active mixing in ePBL [Z ~> m].
+    ML_depth            !< The mixed layer depth determined by active mixing in ePBL [H ~> m or kg m-2]
   ! These are terms in the mixed layer TKE budget, all in [R Z3 T-3 ~> W m-2 = kg s-3].
   real, allocatable, dimension(:,:) :: &
     diag_TKE_wind, &   !< The wind source of TKE [R Z3 T-3 ~> W m-2].
@@ -338,7 +338,7 @@ subroutine energetic_PBL(h_3d, u_3d, v_3d, tv, fluxes, dt, Kd_int, G, GV, US, CS
   real :: U_star    ! The surface friction velocity [Z T-1 ~> m s-1].
   real :: U_Star_Mean ! The surface friction without gustiness [Z T-1 ~> m s-1].
   real :: B_Flux    ! The surface buoyancy flux [Z2 T-3 ~> m2 s-3]
-  real :: MLD_io    ! The mixed layer depth found by ePBL_column [Z ~> m].
+  real :: MLD_io    ! The mixed layer depth found by ePBL_column [H ~> m or kg m-2]
 
   type(ePBL_column_diags) :: eCD ! A container for passing around diagnostics.
 
@@ -421,7 +421,7 @@ subroutine energetic_PBL(h_3d, u_3d, v_3d, tv, fluxes, dt, Kd_int, G, GV, US, CS
 
       ! Perhaps provide a first guess for MLD based on a stored previous value.
       MLD_io = -1.0
-      if (CS%MLD_iteration_guess .and. (CS%ML_Depth(i,j) > 0.0))  MLD_io = CS%ML_Depth(i,j)
+      if (CS%MLD_iteration_guess .and. (CS%ML_Depth(i,j) > 0.0))  MLD_io = CS%ML_depth(i,j)
 
       if (stoch_CS%pert_epbl) then ! stochastics are active
         call ePBL_column(h, u, v, T0, S0, dSV_dT_1d, dSV_dS_1d, TKE_forcing, B_flux, absf, &
@@ -526,7 +526,7 @@ subroutine ePBL_column(h, u, v, T0, S0, dSV_dT, dSV_dS, TKE_forcing, B_flux, abs
   real,                    intent(in)    :: u_star_mean !< The surface friction velocity without any
                                                    !! contribution from unresolved gustiness  [Z T-1 ~> m s-1].
   real,                    intent(inout) :: MLD_io !< A first guess at the mixed layer depth on input, and
-                                                   !! the calculated mixed layer depth on output [Z ~> m].
+                                                   !! the calculated mixed layer depth on output [H ~> m or kg m-2]
   real,                    intent(in)    :: dt     !< Time increment [T ~> s].
   real, dimension(SZK_(GV)+1), &
                            intent(out)   :: Kd     !< The diagnosed diffusivities at interfaces
@@ -765,7 +765,7 @@ subroutine ePBL_column(h, u, v, T0, S0, dSV_dT, dSV_dS, TKE_forcing, B_flux, abs
   I_dtrho = 0.0 ; if (dt*GV%Rho0 > 0.0) I_dtrho = (US%Z_to_m**3*US%s_to_T**3) / (dt*GV%Rho0)
   vstar_unit_scale = US%m_to_Z * US%T_to_s
 
-  MLD_guess = MLD_io*GV%Z_to_H
+  MLD_guess = MLD_io
 
 !   Determine the initial mech_TKE and conv_PErel, including the energy required
 ! to mix surface heating through the topmost cell, the energy released by mixing
@@ -952,7 +952,7 @@ subroutine ePBL_column(h, u, v, T0, S0, dSV_dT, dSV_dS, TKE_forcing, B_flux, abs
           ! on a curve fit from the data of Wang (GRL, 2003).
           ! Note:         Ro = 1.0 / sqrt(0.5 * dt * Rho0 * (absf*htot)**3 / conv_PErel)
           nstar_FC = CS%nstar * conv_PErel / (conv_PErel + 0.2 * &
-                     sqrt(0.5 * dt * GV%Rho0 * (absf*(htot*GV%H_to_Z))**3 * conv_PErel))
+                     GV%H_to_Z * sqrt(0.5 * dt * GV%H_to_RZ * (absf*htot)**3 * conv_PErel))
         endif
 
         if (debug) nstar_k(K) = nstar_FC
@@ -1434,7 +1434,7 @@ subroutine ePBL_column(h, u, v, T0, S0, dSV_dT, dSV_dS, TKE_forcing, B_flux, abs
     eCD%LA = 0.0 ; eCD%LAmod = 0.0 ; eCD%mstar = mstar_total ; eCD%mstar_LT = 0.0
   endif
 
-  MLD_io = GV%H_to_Z*MLD_output
+  MLD_io = MLD_output
 
 end subroutine ePBL_column
 
@@ -1917,18 +1917,20 @@ end subroutine Mstar_Langmuir
 
 
 !> Copies the ePBL active mixed layer depth into MLD, in units of [Z ~> m] unless other units are specified.
-subroutine energetic_PBL_get_MLD(CS, MLD, G, US, m_to_MLD_units)
+subroutine energetic_PBL_get_MLD(CS, MLD, G, GV, US, m_to_MLD_units)
   type(energetic_PBL_CS),           intent(in)  :: CS  !< Energetic PBL control structure
   type(ocean_grid_type),            intent(in)  :: G   !< Grid structure
+  type(verticalGrid_type),          intent(in)  :: GV  !< The ocean's vertical grid structure
   type(unit_scale_type),            intent(in)  :: US  !< A dimensional unit scaling type
-  real, dimension(SZI_(G),SZJ_(G)), intent(out) :: MLD !< Depth of ePBL active mixing layer [Z ~> m] or other units
+  real, dimension(SZI_(G),SZJ_(G)), intent(out) :: MLD !< Depth of ePBL active mixing layer [H ~> m or kg m-2]
+                                                       !! or other units
   real,                   optional, intent(in)  :: m_to_MLD_units !< A conversion factor from meters
-                                                       !! to the desired units for MLD, sometimes [m Z-1 ~> 1]
+                                                       !! to the desired units for MLD, sometimes [Z m-1 ~> 1]
   ! Local variables
   real :: scale  ! A dimensional rescaling factor, often [nondim] or [m Z-1 ~> 1]
-  integer :: i,j
+  integer :: i, j
 
-  scale = 1.0 ; if (present(m_to_MLD_units)) scale = US%Z_to_m * m_to_MLD_units
+  scale = 1.0 ; if (present(m_to_MLD_units)) scale = GV%H_to_m * m_to_MLD_units
 
   do j=G%jsc,G%jec ; do i=G%isc,G%iec
     MLD(i,j) = scale*CS%ML_Depth(i,j)
@@ -2330,11 +2332,11 @@ subroutine energetic_PBL_init(Time, G, GV, US, param_file, diag, CS)
 
 !/ Checking output flags
   CS%id_ML_depth = register_diag_field('ocean_model', 'ePBL_h_ML', diag%axesT1, &
-      Time, 'Surface boundary layer depth', 'm', conversion=US%Z_to_m, &
+      Time, 'Surface boundary layer depth', 'm', conversion=GV%H_to_m, &
       cmor_long_name='Ocean Mixed Layer Thickness Defined by Mixing Scheme')
   ! This is an alias for the same variable as ePBL_h_ML
   CS%id_hML_depth = register_diag_field('ocean_model', 'h_ML', diag%axesT1, &
-      Time, 'Surface mixed layer depth based on active turbulence', 'm', conversion=US%Z_to_m)
+      Time, 'Surface mixed layer depth based on active turbulence', 'm', conversion=GV%H_to_m)
   CS%id_TKE_wind = register_diag_field('ocean_model', 'ePBL_TKE_wind', diag%axesT1, &
       Time, 'Wind-stirring source of mixed layer TKE', 'W m-2', conversion=US%RZ3_T3_to_W_m2)
   CS%id_TKE_MKE = register_diag_field('ocean_model', 'ePBL_TKE_MKE', diag%axesT1, &

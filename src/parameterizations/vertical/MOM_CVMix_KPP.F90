@@ -1388,14 +1388,14 @@ subroutine KPP_get_BLD(CS, BLD, G, GV, US, m_to_BLD_units)
   type(ocean_grid_type),            intent(in)  :: G   !< Grid structure
   type(verticalGrid_type),          intent(in)  :: GV  !< Ocean vertical grid
   type(unit_scale_type),            intent(in)  :: US  !< A dimensional unit scaling type
-  real, dimension(SZI_(G),SZJ_(G)), intent(inout) :: BLD !< Boundary layer depth [Z ~> m] or other units
+  real, dimension(SZI_(G),SZJ_(G)), intent(inout) :: BLD !< Boundary layer depth [H ~> m or kg m-2] or other units
   real,                   optional, intent(in)  :: m_to_BLD_units !< A conversion factor from meters
                                                        !! to the desired units for BLD [various]
   ! Local variables
   real :: scale  ! A dimensional rescaling factor in [nondim] or other units.
   integer :: i,j
 
-  scale = GV%H_to_Z ; if (present(m_to_BLD_units)) scale = GV%H_to_m*m_to_BLD_units
+  scale = 1.0 ; if (present(m_to_BLD_units)) scale = GV%H_to_m*m_to_BLD_units
 
   !$OMP parallel do default(none) shared(BLD, CS, G, scale)
   do j = G%jsc, G%jec ; do i = G%isc, G%iec

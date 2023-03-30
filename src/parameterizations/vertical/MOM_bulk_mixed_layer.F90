@@ -191,7 +191,7 @@ subroutine bulkmixedlayer(h_3d, u_3d, v_3d, tv, fluxes, dt, ea, eb, G, GV, US, C
   type(optics_type),          pointer       :: optics !< The structure that can be queried for the
                                                       !! inverse of the vertical absorption decay
                                                       !! scale for penetrating shortwave radiation.
-  real, dimension(:,:),       pointer       :: Hml    !< Active mixed layer depth [Z ~> m].
+  real, dimension(:,:),       pointer       :: Hml    !< Active mixed layer depth [H ~> m or kg m-2]
   logical,                    intent(in)    :: aggregate_FW_forcing !< If true, the net incoming and
                                                      !! outgoing surface freshwater fluxes are
                                                      !! combined before being applied, instead of
@@ -545,7 +545,7 @@ subroutine bulkmixedlayer(h_3d, u_3d, v_3d, tv, fluxes, dt, ea, eb, G, GV, US, C
       CS%ML_depth(i,j) = h(i,0)  ! Store the diagnostic.
     enddo ; endif
     if (associated(Hml)) then ; do i=is,ie
-      Hml(i,j) = G%mask2dT(i,j) * (h(i,0) * GV%H_to_Z) ! Rescale the diagnostic for output.
+      Hml(i,j) = G%mask2dT(i,j) * h(i,0)
     enddo ; endif
 
 ! At this point, return water to the original layers, but constrained to
@@ -804,7 +804,7 @@ subroutine convective_adjustment(h, u, v, R0, Rcv, T, S, eps, d_eb, &
   real :: Ih    !   The inverse of a thickness [H-1 ~> m-1 or m2 kg-1].
   real :: g_H2_2Rho0  !   Half the gravitational acceleration times the square of
                       ! the conversion from H to Z divided by the mean density,
-                      ! in [L2 Z T-3 H-2 R-1 ~> m4 s-3 kg-1 or m10 s-3 kg-3].
+                      ! in [L2 Z T-2 H-2 R-1 ~> m4 s-2 kg-1 or m10 s-2 kg-3].
   integer :: is, ie, nz, i, k, k1, nzc, nkmb
 
   is = G%isc ; ie = G%iec ; nz = GV%ke
@@ -996,7 +996,7 @@ subroutine mixedlayer_convection(h, d_eb, htot, Ttot, Stot, uhtot, vhtot,      &
                        ! h_ent between iterations [H ~> m or kg m-2].
   real :: g_H2_2Rho0   !   Half the gravitational acceleration times the square of
                        ! the conversion from H to Z divided by the mean density,
-                       ! [L2 Z T-3 H-2 R-1 ~> m4 s-3 kg-1 or m10 s-3 kg-3].
+                       ! [L2 Z T-2 H-2 R-1 ~> m4 s-2 kg-1 or m10 s-2 kg-3].
   real :: Angstrom     !   The minimum layer thickness [H ~> m or kg m-2].
   real :: opacity      !   The opacity converted to inverse thickness units [H-1 ~> m-1 or m2 kg-1]
   real :: sum_Pen_En   !   The potential energy change due to penetrating
