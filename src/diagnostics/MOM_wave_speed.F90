@@ -91,24 +91,24 @@ subroutine wave_speed(h, tv, G, GV, US, cg1, CS, full_halos, use_ebt_mode, mono_
     pres, &       ! Interface pressure [R L2 T-2 ~> Pa]
     T_int, &      ! Temperature interpolated to interfaces [C ~> degC]
     S_int, &      ! Salinity interpolated to interfaces [S ~> ppt]
-    H_top, &      ! The distance of each filtered interface from the ocean surface [Z ~> m]
-    H_bot, &      ! The distance of each filtered interface from the bottom [Z ~> m]
-    gprime        ! The reduced gravity across each interface [L2 Z-1 T-2 ~> m s-2].
+    H_top, &      ! The distance of each filtered interface from the ocean surface [H ~> m or kg m-2]
+    H_bot, &      ! The distance of each filtered interface from the bottom [H ~> m or kg m-2]
+    gprime        ! The reduced gravity across each interface [L2 H-1 T-2 ~> m s-2 or m4 s-1 kg-1].
   real, dimension(SZK_(GV)) :: &
     Igl, Igu      ! The inverse of the reduced gravity across an interface times
                   ! the thickness of the layer below (Igl) or above (Igu) it, in [T2 L-2 ~> s2 m-2].
   real, dimension(SZK_(GV),SZI_(G)) :: &
-    Hf, &         ! Layer thicknesses after very thin layers are combined [Z ~> m]
+    Hf, &         ! Layer thicknesses after very thin layers are combined [H ~> m or kg m-2]
     Tf, &         ! Layer temperatures after very thin layers are combined [C ~> degC]
     Sf, &         ! Layer salinities after very thin layers are combined [S ~> ppt]
     Rf            ! Layer densities after very thin layers are combined [R ~> kg m-3]
   real, dimension(SZK_(GV)) :: &
-    Hc, &         ! A column of layer thicknesses after convective instabilities are removed [Z ~> m]
+    Hc, &         ! A column of layer thicknesses after convective instabilities are removed [H ~> m or kg m-2]
     Tc, &         ! A column of layer temperatures after convective instabilities are removed [C ~> degC]
     Sc, &         ! A column of layer salinities after convective instabilities are removed [S ~> ppt]
     Rc, &         ! A column of layer densities after convective instabilities are removed [R ~> kg m-3]
     Hc_H          ! Hc(:) rescaled from Z to thickness units [H ~> m or kg m-2]
-  real :: I_Htot  ! The inverse of the total filtered thicknesses [Z ~> m]
+  real :: I_Htot  ! The inverse of the total filtered thicknesses [H-1 ~> m-1 or m2 kg-1]
   real :: det, ddet ! Determinant of the eigen system and its derivative with lam.  Because the
                   ! units of the eigenvalue change with the number of layers and because of the
                   ! dynamic rescaling that is used to keep det in a numerically representable range,
@@ -117,18 +117,18 @@ subroutine wave_speed(h, tv, G, GV, US, cg1, CS, full_halos, use_ebt_mode, mono_
   real :: lam     ! The eigenvalue [T2 L-2 ~> s2 m-2]
   real :: dlam    ! The change in estimates of the eigenvalue [T2 L-2 ~> s2 m-2]
   real :: lam0    ! The first guess of the eigenvalue [T2 L-2 ~> s2 m-2]
-  real :: Z_to_pres  ! A conversion factor from thicknesses to pressure [R L2 T-2 Z-1 ~> Pa m-1]
+  real :: H_to_pres  ! A conversion factor from thicknesses to pressure [R L2 T-2 H-1 ~> Pa m-1 or Pa m2 kg-1]
   real, dimension(SZI_(G)) :: &
-    htot, hmin, &  ! Thicknesses [Z ~> m]
-    H_here, &      ! A thickness [Z ~> m]
-    HxT_here, &    ! A layer integrated temperature [C Z ~> degC m]
-    HxS_here, &    ! A layer integrated salinity [S Z ~> ppt m]
-    HxR_here       ! A layer integrated density [R Z ~> kg m-2]
+    htot, hmin, &  ! Thicknesses [H ~> m or kg m-2]
+    H_here, &      ! A thickness [H ~> m or kg m-2]
+    HxT_here, &    ! A layer integrated temperature [C H ~> degC m or degC kg m-2]
+    HxS_here, &    ! A layer integrated salinity [S H ~> ppt m or ppt kg m-2]
+    HxR_here       ! A layer integrated density [R H ~> kg m-2 or kg2 m-5]
   real :: speed2_tot ! overestimate of the mode-1 speed squared [L2 T-2 ~> m2 s-2]
   real :: cg1_min2 ! A floor in the squared first mode speed below which 0 is returned [L2 T-2 ~> m2 s-2]
-  real :: I_Hnew   ! The inverse of a new layer thickness [Z-1 ~> m-1]
-  real :: drxh_sum ! The sum of density differences across interfaces times thicknesses [R Z ~> kg m-2]
-  real :: g_Rho0   ! G_Earth/Rho0 [L2 T-2 Z-1 R-1 ~> m4 s-2 kg-1].
+  real :: I_Hnew   ! The inverse of a new layer thickness [H-1 ~> m-1 or m2 kg-1]
+  real :: drxh_sum ! The sum of density differences across interfaces times thicknesses [R H ~> kg m-2 or kg2 m-5]
+  real :: g_Rho0   ! G_Earth/Rho0 [L2 T-2 H-1 R-1 ~> m4 s-2 kg-1 or m7 s-2 kg-2].
   real :: c2_scale ! A scaling factor for wave speeds to help control the growth of the determinant and
                    ! its derivative with lam between rows of the Thomas algorithm solver [L2 s2 T-2 m-2 ~> nondim].
                    ! The exact value should not matter for the final result if it is an even power of 2.
@@ -152,13 +152,13 @@ subroutine wave_speed(h, tv, G, GV, US, cg1, CS, full_halos, use_ebt_mode, mono_
   logical :: merge      ! If true, merge the current layer with the one above.
   integer :: kc         ! The number of layers in the column after merging
   integer :: i, j, k, k2, itt, is, ie, js, je, nz
-  real :: hw      ! The mean of the adjacent layer thicknesses [Z ~> m]
-  real :: sum_hc  ! The sum of the layer thicknesses [Z ~> m]
-  real :: gp      ! A limited local copy of gprime [L2 Z-1 T-2 ~> m s-2]
-  real :: N2min   ! A minimum buoyancy frequency, including a slope rescaling factor [L2 Z-2 T-2 ~> s-2]
+  real :: hw      ! The mean of the adjacent layer thicknesses [H ~> m or kg m-2]
+  real :: sum_hc  ! The sum of the layer thicknesses [H ~> m or kg m-2]
+  real :: gp      ! A limited local copy of gprime [L2 H-1 T-2 ~> m s-2 or m4 s-1 kg-1]
+  real :: N2min   ! A minimum buoyancy frequency, including a slope rescaling factor [L2 H-2 T-2 ~> s-2 or m6 kg-2 s-2]
   logical :: l_use_ebt_mode, calc_modal_structure
   real :: l_mono_N2_column_fraction ! A local value of mono_N2_column_fraction [nondim]
-  real :: l_mono_N2_depth ! A local value of mono_N2_column_depth [Z ~> m]
+  real :: l_mono_N2_depth ! A local value of mono_N2_column_depth [H ~> m or kg m-2]
   real :: mode_struct(SZK_(GV)) ! The mode structure [nondim], but it is also temporarily
                          ! in units of [L2 T-2 ~> m2 s-2] after it is modified inside of tdma6.
   real :: ms_min, ms_max ! The minimum and maximum mode structure values returned from tdma6 [L2 T-2 ~> m2 s-2]
@@ -177,8 +177,8 @@ subroutine wave_speed(h, tv, G, GV, US, cg1, CS, full_halos, use_ebt_mode, mono_
   if (present(use_ebt_mode)) l_use_ebt_mode = use_ebt_mode
   l_mono_N2_column_fraction = CS%mono_N2_column_fraction
   if (present(mono_N2_column_fraction)) l_mono_N2_column_fraction = mono_N2_column_fraction
-  l_mono_N2_depth = CS%mono_N2_depth
-  if (present(mono_N2_depth)) l_mono_N2_depth = mono_N2_depth
+  l_mono_N2_depth = GV%Z_to_H*CS%mono_N2_depth
+  if (present(mono_N2_depth)) l_mono_N2_depth = GV%Z_to_H*mono_N2_depth
   calc_modal_structure = l_use_ebt_mode
   if (present(modal_structure)) calc_modal_structure = .true.
   if (calc_modal_structure) then
@@ -187,9 +187,8 @@ subroutine wave_speed(h, tv, G, GV, US, cg1, CS, full_halos, use_ebt_mode, mono_
     enddo ; enddo ; enddo
   endif
 
-  g_Rho0 = GV%g_Earth / GV%Rho0
-  ! Simplifying the following could change answers at roundoff.
-  Z_to_pres = GV%Z_to_H * (GV%H_to_RZ * GV%g_Earth)
+  g_Rho0 = GV%g_Earth*GV%H_to_Z / GV%Rho0
+  H_to_pres = GV%H_to_RZ * GV%g_Earth
   use_EOS = associated(tv%eqn_of_state)
 
   better_est = CS%better_cg1_est
@@ -216,7 +215,7 @@ subroutine wave_speed(h, tv, G, GV, US, cg1, CS, full_halos, use_ebt_mode, mono_
 !$OMP parallel do default(none) shared(is,ie,js,je,nz,h,G,GV,US,min_h_frac,use_EOS,tv,&
 !$OMP                                  calc_modal_structure,l_use_ebt_mode,modal_structure, &
 !$OMP                                  l_mono_N2_column_fraction,l_mono_N2_depth,CS,   &
-!$OMP                                  Z_to_pres,cg1,g_Rho0,rescale,I_rescale, &
+!$OMP                                  H_to_pres,cg1,g_Rho0,rescale,I_rescale, &
 !$OMP                                  better_est,cg1_min2,tol_merge,tol_solve,c2_scale) &
 !$OMP                          private(htot,hmin,kf,H_here,HxT_here,HxS_here,HxR_here, &
 !$OMP                                  Hf,Tf,Sf,Rf,pres,T_int,S_int,drho_dT,drho_dS,   &
@@ -230,7 +229,7 @@ subroutine wave_speed(h, tv, G, GV, US, cg1, CS, full_halos, use_ebt_mode, mono_
     ! at the top).  This also transposes the row order so that columns can
     ! be worked upon one at a time.
     do i=is,ie ; htot(i) = 0.0 ; enddo
-    do k=1,nz ; do i=is,ie ; htot(i) = htot(i) + h(i,j,k)*GV%H_to_Z ; enddo ; enddo
+    do k=1,nz ; do i=is,ie ; htot(i) = htot(i) + h(i,j,k) ; enddo ; enddo
 
     do i=is,ie
       hmin(i) = htot(i)*min_h_frac ; kf(i) = 1 ; H_here(i) = 0.0
@@ -238,20 +237,20 @@ subroutine wave_speed(h, tv, G, GV, US, cg1, CS, full_halos, use_ebt_mode, mono_
     enddo
     if (use_EOS) then
       do k=1,nz ; do i=is,ie
-        if ((H_here(i) > hmin(i)) .and. (h(i,j,k)*GV%H_to_Z > hmin(i))) then
+        if ((H_here(i) > hmin(i)) .and. (h(i,j,k) > hmin(i))) then
           Hf(kf(i),i) = H_here(i)
           Tf(kf(i),i) = HxT_here(i) / H_here(i)
           Sf(kf(i),i) = HxS_here(i) / H_here(i)
           kf(i) = kf(i) + 1
 
           ! Start a new layer
-          H_here(i) = h(i,j,k)*GV%H_to_Z
-          HxT_here(i) = (h(i,j,k) * GV%H_to_Z) * tv%T(i,j,k)
-          HxS_here(i) = (h(i,j,k) * GV%H_to_Z) * tv%S(i,j,k)
+          H_here(i) = h(i,j,k)
+          HxT_here(i) = h(i,j,k) * tv%T(i,j,k)
+          HxS_here(i) = h(i,j,k) * tv%S(i,j,k)
         else
-          H_here(i) = H_here(i) + h(i,j,k)*GV%H_to_Z
-          HxT_here(i) = HxT_here(i) + (h(i,j,k) * GV%H_to_Z) * tv%T(i,j,k)
-          HxS_here(i) = HxS_here(i) + (h(i,j,k) * GV%H_to_Z) * tv%S(i,j,k)
+          H_here(i) = H_here(i) + h(i,j,k)
+          HxT_here(i) = HxT_here(i) + h(i,j,k) * tv%T(i,j,k)
+          HxS_here(i) = HxS_here(i) + h(i,j,k) * tv%S(i,j,k)
         endif
       enddo ; enddo
       do i=is,ie ; if (H_here(i) > 0.0) then
@@ -261,16 +260,16 @@ subroutine wave_speed(h, tv, G, GV, US, cg1, CS, full_halos, use_ebt_mode, mono_
       endif ; enddo
     else
       do k=1,nz ; do i=is,ie
-        if ((H_here(i) > hmin(i)) .and. (h(i,j,k)*GV%H_to_Z > hmin(i))) then
+        if ((H_here(i) > hmin(i)) .and. (h(i,j,k) > hmin(i))) then
           Hf(kf(i),i) = H_here(i) ; Rf(kf(i),i) = HxR_here(i) / H_here(i)
           kf(i) = kf(i) + 1
 
           ! Start a new layer
-          H_here(i) = h(i,j,k)*GV%H_to_Z
-          HxR_here(i) = (h(i,j,k)*GV%H_to_Z)*GV%Rlay(k)
+          H_here(i) = h(i,j,k)
+          HxR_here(i) = h(i,j,k)*GV%Rlay(k)
         else
-          H_here(i) = H_here(i) + h(i,j,k)*GV%H_to_Z
-          HxR_here(i) = HxR_here(i) + (h(i,j,k)*GV%H_to_Z)*GV%Rlay(k)
+          H_here(i) = H_here(i) + h(i,j,k)
+          HxR_here(i) = HxR_here(i) + h(i,j,k)*GV%Rlay(k)
         endif
       enddo ; enddo
       do i=is,ie ; if (H_here(i) > 0.0) then
@@ -283,7 +282,7 @@ subroutine wave_speed(h, tv, G, GV, US, cg1, CS, full_halos, use_ebt_mode, mono_
       if (use_EOS) then
         pres(1) = 0.0 ; H_top(1) = 0.0
         do K=2,kf(i)
-          pres(K) = pres(K-1) + Z_to_pres*Hf(k-1,i)
+          pres(K) = pres(K-1) + H_to_pres*Hf(k-1,i)
           T_int(K) = 0.5*(Tf(k,i)+Tf(k-1,i))
           S_int(K) = 0.5*(Sf(k,i)+Sf(k-1,i))
           H_top(K) = H_top(K-1) + Hf(k-1,i)
@@ -456,7 +455,8 @@ subroutine wave_speed(h, tv, G, GV, US, cg1, CS, full_halos, use_ebt_mode, mono_
               gp = gprime(K)
               if (l_mono_N2_column_fraction>0. .or. l_mono_N2_depth>=0.) then
                 !### Change to: if ( ((htot(i) - sum_hc < l_mono_N2_column_fraction*htot(i)) .or. & ) )
-                if ( (((G%bathyT(i,j)+G%Z_ref) - sum_hc < l_mono_N2_column_fraction*(G%bathyT(i,j)+G%Z_ref)) .or. &
+                if ( (((G%bathyT(i,j)+G%Z_ref) - GV%H_to_Z*sum_hc < &
+                       l_mono_N2_column_fraction*(G%bathyT(i,j)+G%Z_ref)) .or. &
                       ((l_mono_N2_depth >= 0.) .and. (sum_hc > l_mono_N2_depth))) .and. &
                      (gp > N2min*hw) ) then
                   ! Filters out regions where N2 increases with depth but only in a lower fraction
@@ -575,7 +575,7 @@ subroutine wave_speed(h, tv, G, GV, US, cg1, CS, full_halos, use_ebt_mode, mono_
             ! Note that remapping_core_h requires that the same units be used
             ! for both the source and target grid thicknesses, here [H ~> m or kg m-2].
             do k = 1,kc
-              Hc_H(k) = GV%Z_to_H * Hc(k)
+              Hc_H(k) = Hc(k)
             enddo
             if (CS%remap_answer_date < 20190101) then
               call remapping_core_h(CS%remapping_CS, kc, Hc_H(:), mode_struct, &
@@ -670,22 +670,22 @@ subroutine wave_speeds(h, tv, G, GV, US, nmodes, cn, CS, full_halos)
     pres, &       ! Interface pressure [R L2 T-2 ~> Pa]
     T_int, &      ! Temperature interpolated to interfaces [C ~> degC]
     S_int, &      ! Salinity interpolated to interfaces [S ~> ppt]
-    H_top, &      ! The distance of each filtered interface from the ocean surface [Z ~> m]
-    H_bot, &      ! The distance of each filtered interface from the bottom [Z ~> m]
-    gprime        ! The reduced gravity across each interface [L2 Z-1 T-2 ~> m s-2].
+    H_top, &      ! The distance of each filtered interface from the ocean surface [H ~> m or kg m-2]
+    H_bot, &      ! The distance of each filtered interface from the bottom [H ~> m or kg m-2]
+    gprime        ! The reduced gravity across each interface [L2 H-1 T-2 ~> m s-2 or m4 kg-1 s-2].
   real, dimension(SZK_(GV),SZI_(G)) :: &
-    Hf, &         ! Layer thicknesses after very thin layers are combined [Z ~> m]
+    Hf, &         ! Layer thicknesses after very thin layers are combined [H ~> m or kg m-2]
     Tf, &         ! Layer temperatures after very thin layers are combined [C ~> degC]
     Sf, &         ! Layer salinities after very thin layers are combined [S ~> ppt]
     Rf            ! Layer densities after very thin layers are combined [R ~> kg m-3]
   real, dimension(SZK_(GV)) :: &
     Igl, Igu, &   ! The inverse of the reduced gravity across an interface times
                   ! the thickness of the layer below (Igl) or above (Igu) it, in [T2 L-2 ~> s2 m-2].
-    Hc, &         ! A column of layer thicknesses after convective instabilities are removed [Z ~> m]
+    Hc, &         ! A column of layer thicknesses after convective instabilities are removed [H ~> m or kg m-2]
     Tc, &         ! A column of layer temperatures after convective instabilities are removed [C ~> degC]
     Sc, &         ! A column of layer salinities after convective instabilities are removed [S ~> ppt]
     Rc            ! A column of layer densities after convective instabilities are removed [R ~> kg m-3]
-  real :: I_Htot  ! The inverse of the total filtered thicknesses [Z ~> m]
+  real :: I_Htot  ! The inverse of the total filtered thicknesses [H-1 ~> m-1 or m2 kg-1]
   real :: c2_scale ! A scaling factor for wave speeds to help control the growth of the determinant and its
                    ! derivative with lam between rows of the Thomas algorithm solver [L2 s2 T-2 m-2 ~> nondim].
                    ! The exact value should not matter for the final result if it is an even power of 2.
@@ -716,20 +716,20 @@ subroutine wave_speeds(h, tv, G, GV, US, nmodes, cn, CS, full_halos)
           xbl, xbr        ! lam guesses bracketing a zero-crossing (root) [T2 L-2 ~> s2 m-2]
   integer :: numint       ! number of widows (intervals) in root searching range
   integer :: nrootsfound  ! number of extra roots found (not including 1st root)
-  real :: Z_to_pres ! A conversion factor from thicknesses to pressure [R L2 T-2 Z-1 ~> Pa m-1]
+  real :: H_to_pres ! A conversion factor from thicknesses to pressure [R L2 T-2 H-1 ~> Pa m-1 or Pa m2 kg-1]
   real, dimension(SZI_(G)) :: &
-    htot, hmin, &  ! Thicknesses [Z ~> m]
-    H_here, &      ! A thickness [Z ~> m]
-    HxT_here, &    ! A layer integrated temperature [C Z ~> degC m]
-    HxS_here, &    ! A layer integrated salinity [S Z ~> ppt m]
-    HxR_here       ! A layer integrated density [R Z ~> kg m-2]
+    htot, hmin, &  ! Thicknesses [H ~> m or kg m-2]
+    H_here, &      ! A thickness [H ~> m or kg m-2]
+    HxT_here, &    ! A layer integrated temperature [C H ~> degC m or degC kg m-2]
+    HxS_here, &    ! A layer integrated salinity [S H ~> ppt m or ppt kg m-2]
+    HxR_here       ! A layer integrated density [R H ~> kg m-2 or kg2 m-5]
   real :: speed2_tot ! overestimate of the mode-1 speed squared [L2 T-2 ~> m2 s-2]
   real :: speed2_min ! minimum mode speed (squared) to consider in root searching [L2 T-2 ~> m2 s-2]
   real :: cg1_min2   ! A floor in the squared first mode speed below which 0 is returned [L2 T-2 ~> m2 s-2]
   real, parameter :: reduct_factor = 0.5  ! A factor used in setting speed2_min [nondim]
-  real :: I_Hnew     ! The inverse of a new layer thickness [Z-1 ~> m-1]
-  real :: drxh_sum   ! The sum of density differences across interfaces times thicknesses [R Z ~> kg m-2]
-  real :: g_Rho0     ! G_Earth/Rho0 [L2 T-2 Z-1 R-1 ~> m4 s-2 kg-1].
+  real :: I_Hnew     ! The inverse of a new layer thickness [H-1 ~> m-1 or m2 kg-1]
+  real :: drxh_sum   ! The sum of density differences across interfaces times thicknesses [R H ~> kg m-2 or kg2 m-5]
+  real :: g_Rho0     ! G_Earth/Rho0 [L2 T-2 H-1 R-1 ~> m4 s-2 kg-1 pr m7 s-2 kg-1].
   real :: tol_Hfrac  ! Layers that together are smaller than this fraction of
                      ! the total water column can be merged for efficiency [nondim].
   real :: min_h_frac ! tol_Hfrac divided by the total number of layers [nondim].
@@ -759,9 +759,8 @@ subroutine wave_speeds(h, tv, G, GV, US, nmodes, cn, CS, full_halos)
     is = G%isd ; ie = G%ied ; js = G%jsd ; je = G%jed
   endif ; endif
 
-  g_Rho0 = GV%g_Earth / GV%Rho0
-  ! Simplifying the following could change answers at roundoff.
-  Z_to_pres = GV%Z_to_H * (GV%H_to_RZ * GV%g_Earth)
+  g_Rho0 = GV%g_Earth * GV%H_to_Z / GV%Rho0
+  H_to_pres = GV%H_to_RZ * GV%g_Earth
   use_EOS = associated(tv%eqn_of_state)
   if (CS%c1_thresh < 0.0) &
     call MOM_error(FATAL, "INTERNAL_WAVE_CG1_THRESH must be set to a non-negative "//&
@@ -783,14 +782,14 @@ subroutine wave_speeds(h, tv, G, GV, US, nmodes, cn, CS, full_halos)
 
   min_h_frac = tol_Hfrac / real(nz)
   !$OMP parallel do default(private) shared(is,ie,js,je,nz,h,G,GV,US,CS,min_h_frac,use_EOS, &
-  !$OMP                                     Z_to_pres,tv,cn,g_Rho0,nmodes,cg1_min2,better_est, &
+  !$OMP                                     H_to_pres,tv,cn,g_Rho0,nmodes,cg1_min2,better_est, &
   !$OMP                                     tol_solve,tol_merge,c2_scale)
   do j=js,je
     !   First merge very thin layers with the one above (or below if they are
     ! at the top).  This also transposes the row order so that columns can
     ! be worked upon one at a time.
     do i=is,ie ; htot(i) = 0.0 ; enddo
-    do k=1,nz ; do i=is,ie ; htot(i) = htot(i) + h(i,j,k)*GV%H_to_Z ; enddo ; enddo
+    do k=1,nz ; do i=is,ie ; htot(i) = htot(i) + h(i,j,k) ; enddo ; enddo
 
     do i=is,ie
       hmin(i) = htot(i)*min_h_frac ; kf(i) = 1 ; H_here(i) = 0.0
@@ -798,20 +797,20 @@ subroutine wave_speeds(h, tv, G, GV, US, nmodes, cn, CS, full_halos)
     enddo
     if (use_EOS) then
       do k=1,nz ; do i=is,ie
-        if ((H_here(i) > hmin(i)) .and. (h(i,j,k)*GV%H_to_Z > hmin(i))) then
+        if ((H_here(i) > hmin(i)) .and. (h(i,j,k) > hmin(i))) then
           Hf(kf(i),i) = H_here(i)
           Tf(kf(i),i) = HxT_here(i) / H_here(i)
           Sf(kf(i),i) = HxS_here(i) / H_here(i)
           kf(i) = kf(i) + 1
 
           ! Start a new layer
-          H_here(i) = h(i,j,k)*GV%H_to_Z
-          HxT_here(i) = (h(i,j,k)*GV%H_to_Z)*tv%T(i,j,k)
-          HxS_here(i) = (h(i,j,k)*GV%H_to_Z)*tv%S(i,j,k)
+          H_here(i) = h(i,j,k)
+          HxT_here(i) = h(i,j,k)*tv%T(i,j,k)
+          HxS_here(i) = h(i,j,k)*tv%S(i,j,k)
         else
-          H_here(i) = H_here(i) + h(i,j,k)*GV%H_to_Z
-          HxT_here(i) = HxT_here(i) + (h(i,j,k)*GV%H_to_Z)*tv%T(i,j,k)
-          HxS_here(i) = HxS_here(i) + (h(i,j,k)*GV%H_to_Z)*tv%S(i,j,k)
+          H_here(i) = H_here(i) + h(i,j,k)
+          HxT_here(i) = HxT_here(i) + h(i,j,k)*tv%T(i,j,k)
+          HxS_here(i) = HxS_here(i) + h(i,j,k)*tv%S(i,j,k)
         endif
       enddo ; enddo
       do i=is,ie ; if (H_here(i) > 0.0) then
@@ -821,16 +820,16 @@ subroutine wave_speeds(h, tv, G, GV, US, nmodes, cn, CS, full_halos)
       endif ; enddo
     else
       do k=1,nz ; do i=is,ie
-        if ((H_here(i) > hmin(i)) .and. (h(i,j,k)*GV%H_to_Z > hmin(i))) then
+        if ((H_here(i) > hmin(i)) .and. (h(i,j,k) > hmin(i))) then
           Hf(kf(i),i) = H_here(i) ; Rf(kf(i),i) = HxR_here(i) / H_here(i)
           kf(i) = kf(i) + 1
 
           ! Start a new layer
-          H_here(i) = h(i,j,k)*GV%H_to_Z
-          HxR_here(i) = (h(i,j,k)*GV%H_to_Z)*GV%Rlay(k)
+          H_here(i) = h(i,j,k)
+          HxR_here(i) = h(i,j,k)*GV%Rlay(k)
         else
-          H_here(i) = H_here(i) + h(i,j,k)*GV%H_to_Z
-          HxR_here(i) = HxR_here(i) + (h(i,j,k)*GV%H_to_Z)*GV%Rlay(k)
+          H_here(i) = H_here(i) + h(i,j,k)
+          HxR_here(i) = HxR_here(i) + h(i,j,k)*GV%Rlay(k)
         endif
       enddo ; enddo
       do i=is,ie ; if (H_here(i) > 0.0) then
@@ -844,7 +843,7 @@ subroutine wave_speeds(h, tv, G, GV, US, nmodes, cn, CS, full_halos)
         if (use_EOS) then
           pres(1) = 0.0 ; H_top(1) = 0.0
           do K=2,kf(i)
-            pres(K) = pres(K-1) + Z_to_pres*Hf(k-1,i)
+            pres(K) = pres(K-1) + H_to_pres*Hf(k-1,i)
             T_int(K) = 0.5*(Tf(k,i)+Tf(k-1,i))
             S_int(K) = 0.5*(Sf(k,i)+Sf(k-1,i))
             H_top(K) = H_top(K-1) + Hf(k-1,i)
