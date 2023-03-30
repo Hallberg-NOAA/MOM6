@@ -104,7 +104,7 @@ type, public :: int_tide_CS ; private
   real :: cdrag         !< The bottom drag coefficient [nondim].
   real :: drag_min_depth !< The minimum total ocean thickness that will be used in the denominator
                         !! of the quadratic drag terms for internal tides when
-                        !! INTERNAL_TIDE_QUAD_DRAG is true [Z ~> m]
+                        !! INTERNAL_TIDE_QUAD_DRAG is true [H ~> m or kg m-2]
   logical :: apply_background_drag
                         !< If true, apply a drag due to background processes as a sink.
   logical :: apply_bottom_drag
@@ -202,8 +202,7 @@ subroutine propagate_int_tide(h, tv, cn, TKE_itidal_input, vel_btTide, Nb, dt, &
   real :: frac_per_sector ! The inverse of the number of angular, modal and frequency bins [nondim]
   real :: f2       ! The squared Coriolis parameter interpolated to a tracer point [T-2 ~> s-2]
   real :: Kmag2    ! A squared horizontal wavenumber [L-2 ~> m-2]
-  real :: I_D_here ! The inverse of the local depth [Z-1 ~> m-1]
-  real :: I_rho0   ! The inverse fo the Boussinesq density [R-1 ~> m3 kg-1]
+  real :: I_D_here ! The inverse of the local water column thickness [H-1 ~> m-1 or m2 kg-1]
   real :: freq2    ! The frequency squared [T-2 ~> s-2]
   real :: c_phase  ! The phase speed [L T-1 ~> m s-1]
   real :: loss_rate  ! An energy loss rate [T-1 ~> s-1]
@@ -222,7 +221,6 @@ subroutine propagate_int_tide(h, tv, cn, TKE_itidal_input, vel_btTide, Nb, dt, &
 
   is = G%isc ; ie = G%iec ; js = G%jsc ; je = G%jec
   isd = G%isd ; ied = G%ied ; jsd = G%jsd ; jed = G%jed ; nAngle = CS%NAngle
-  I_rho0 = 1.0 / GV%Rho0
   cn_subRO = 1e-30*US%m_s_to_L_T
   en_subRO = 1e-30*US%W_m2_to_RZ3_T3*US%s_to_T
 
@@ -386,9 +384,9 @@ subroutine propagate_int_tide(h, tv, cn, TKE_itidal_input, vel_btTide, Nb, dt, &
       htot(i,j) = htot(i,j) + h(i,j,k)
     enddo ; enddo ; enddo
     do j=jsd,jed ; do i=isd,ied
-      I_D_here = 1.0 / (max(GV%H_to_Z*htot(i,j), CS%drag_min_depth))
+      I_D_here = 1.0 / (max(htot(i,j), CS%drag_min_depth))
       drag_scale(i,j) = CS%cdrag * sqrt(max(0.0, US%L_to_Z**2*vel_btTide(i,j)**2 + &
-                        tot_En(i,j) * I_rho0 * I_D_here)) * I_D_here
+                        tot_En(i,j) * GV%RZ_to_H * I_D_here)) * GV%Z_to_H*I_D_here
     enddo ; enddo
     do m=1,CS%nMode ; do fr=1,CS%nFreq ; do a=1,CS%nAngle ; do j=jsd,jed ; do i=isd,ied
       ! Calculate loss rate and apply loss over the time step ; apply the same drag timescale
@@ -2361,8 +2359,8 @@ subroutine internal_tides_init(Time, G, GV, US, param_file, diag, CS)
   call get_param(param_file, mdl, "INTERNAL_TIDE_DRAG_MIN_DEPTH", CS%drag_min_depth, &
                  "The minimum total ocean thickness that will be used in the denominator "//&
                  "of the quadratic drag terms for internal tides.", &
-                 units="m", default=1.0, scale=US%m_to_Z, do_not_log=.not.CS%apply_bottom_drag)
-  CS%drag_min_depth = MAX(CS%drag_min_depth, GV%H_subroundoff * GV%H_to_Z)
+                 units="m", default=1.0, scale=GV%m_to_H, do_not_log=.not.CS%apply_bottom_drag)
+  CS%drag_min_depth = MAX(CS%drag_min_depth, GV%H_subroundoff)
   call get_param(param_file, mdl, "INTERNAL_TIDE_FROUDE_DRAG", CS%apply_Froude_drag, &
                  "If true, apply wave breaking as a sink.", &
                  default=.false.)
