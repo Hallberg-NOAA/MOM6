@@ -195,20 +195,20 @@ subroutine find_N2_bottom(h, tv, T_f, S_f, h2, fluxes, G, GV, US, N2_bot)
     Salin_int, &  ! The salinity at each interface [S ~> ppt]
     drho_bot, &   ! The density difference at the bottom of a layer [R ~> kg m-3]
     h_amp, &      ! The amplitude of topographic roughness [Z ~> m].
-    hb, &         ! The depth below a layer [Z ~> m].
-    z_from_bot, & ! The height of a layer center above the bottom [Z ~> m].
+    hb, &         ! The thickness of the water column below the midpoint of a layer [H ~> m or kg m-2]
+    z_from_bot, & ! The distance of a layer center from the bottom [H ~> m or kg m-2]
     dRho_dT, &    ! The partial derivative of density with temperature [R C-1 ~> kg m-3 degC-1]
     dRho_dS       ! The partial derivative of density with salinity [R S-1 ~> kg m-3 ppt-1].
 
-  real :: dz_int  ! The thickness associated with an interface [Z ~> m].
-  real :: G_Rho0  ! The gravitation acceleration divided by the Boussinesq
-                  ! density [Z T-2 R-1 ~> m4 s-2 kg-1].
+  real :: dz_int  ! The thickness associated with an interface [H ~> m or kg m-2]
+  real :: G_Rho0  ! The gravitational acceleration, sometimes divided by the Boussinesq
+                  ! density [H T-2 R-1 ~> m4 s-2 kg-1 or m s-2].
   logical :: do_i(SZI_(G)), do_any
   integer, dimension(2) :: EOSdom ! The i-computational domain for the equation of state
   integer :: i, j, k, is, ie, js, je, nz
 
   is = G%isc ; ie = G%iec ; js = G%jsc ; je = G%jec ; nz = GV%ke
-  G_Rho0 = (US%L_to_Z**2*GV%g_Earth) / GV%Rho0
+  G_Rho0 = (US%L_to_Z**2*GV%g_Earth) / GV%H_to_RZ
   EOSdom(:) = EOS_domain(G%HI)
 
   ! Find the (limited) density jump across each interface.
@@ -250,7 +250,7 @@ subroutine find_N2_bottom(h, tv, T_f, S_f, h2, fluxes, G, GV, US, N2_bot)
     ! Find the bottom boundary layer stratification.
     do i=is,ie
       hb(i) = 0.0 ; dRho_bot(i) = 0.0
-      z_from_bot(i) = 0.5*GV%H_to_Z*h(i,j,nz)
+      z_from_bot(i) = 0.5*h(i,j,nz)
       do_i(i) = (G%mask2dT(i,j) > 0.0)
       h_amp(i) = sqrt(h2(i,j))
     enddo
@@ -258,16 +258,16 @@ subroutine find_N2_bottom(h, tv, T_f, S_f, h2, fluxes, G, GV, US, N2_bot)
     do k=nz,2,-1
       do_any = .false.
       do i=is,ie ; if (do_i(i)) then
-        dz_int = 0.5*GV%H_to_Z*(h(i,j,k) + h(i,j,k-1))
+        dz_int = 0.5*(h(i,j,k) + h(i,j,k-1))
         z_from_bot(i) = z_from_bot(i) + dz_int ! middle of the layer above
 
         hb(i) = hb(i) + dz_int
         dRho_bot(i) = dRho_bot(i) + dRho_int(i,K)
 
-        if (z_from_bot(i) > h_amp(i)) then
+        if (z_from_bot(i) > GV%Z_to_H*h_amp(i)) then
           if (k>2) then
             ! Always include at least one full layer.
-            hb(i) = hb(i) + 0.5*GV%H_to_Z*(h(i,j,k-1) + h(i,j,k-2))
+            hb(i) = hb(i) + 0.5*(h(i,j,k-1) + h(i,j,k-2))
             dRho_bot(i) = dRho_bot(i) + dRho_int(i,K-1)
           endif
           do_i(i) = .false.
