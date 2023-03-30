@@ -68,7 +68,7 @@ type, public :: VarMix_CS
   real :: cropping_distance       !< Distance from surface or bottom to filter out outcropped or
                                   !! incropped interfaces for the Eady growth rate calc [Z ~> m]
   real :: h_min_N2                !< The minimum vertical distance to use in the denominator of the
-                                  !! bouyancy frequency used in the slope calculation [Z ~> m]
+                                  !! bouyancy frequency used in the slope calculation [H ~> m or kg m-2]
 
   real, allocatable :: SN_u(:,:)      !< S*N at u-points [T-1 ~> s-1]
   real, allocatable :: SN_v(:,:)      !< S*N at v-points [T-1 ~> s-1]
@@ -886,24 +886,24 @@ subroutine calc_slope_functions_using_just_e(h, G, GV, US, CS, e, calculate_slop
     do j=js,je ; do I=is-1,ie
       S2 = ( E_x(I,j)**2  + 0.25*( &
             (E_y(I,j)**2+E_y(I+1,j-1)**2) + (E_y(I+1,j)**2+E_y(I,j-1)**2) ) )
+      if (min(h(i,j,k-1), h(i+1,j,k-1), h(i,j,k), h(i+1,j,k)) < H_cutoff) S2 = 0.0
+
       Hdn = 2.*h(i,j,k)*h(i,j,k-1) / (h(i,j,k) + h(i,j,k-1) + h_neglect)
       Hup = 2.*h(i+1,j,k)*h(i+1,j,k-1) / (h(i+1,j,k) + h(i+1,j,k-1) + h_neglect)
       H_geom = sqrt(Hdn*Hup)
-      N2 = GV%g_prime(k) / (GV%H_to_Z * max(Hdn, Hup, CS%h_min_N2))
-      if (min(h(i,j,k-1), h(i+1,j,k-1), h(i,j,k), h(i+1,j,k)) < H_cutoff) &
-        S2 = 0.0
-      S2N2_u_local(I,j,k) = (H_geom * GV%H_to_Z) * S2 * N2
+      ! N2 = GV%g_prime(k) / (GV%H_to_Z * max(Hdn, Hup, CS%h_min_N2))
+      S2N2_u_local(I,j,k) = (H_geom * S2) * (GV%g_prime(k) / max(Hdn, Hup, CS%h_min_N2) )
     enddo ; enddo
     do J=js-1,je ; do i=is,ie
       S2 = ( E_y(i,J)**2  + 0.25*( &
             (E_x(i,J)**2+E_x(i-1,J+1)**2) + (E_x(i,J+1)**2+E_x(i-1,J)**2) ) )
+      if (min(h(i,j,k-1), h(i,j+1,k-1), h(i,j,k), h(i,j+1,k)) < H_cutoff) S2 = 0.0
+
       Hdn = 2.*h(i,j,k)*h(i,j,k-1) / (h(i,j,k) + h(i,j,k-1) + h_neglect)
       Hup = 2.*h(i,j+1,k)*h(i,j+1,k-1) / (h(i,j+1,k) + h(i,j+1,k-1) + h_neglect)
       H_geom = sqrt(Hdn*Hup)
-      N2 = GV%g_prime(k) / (GV%H_to_Z * max(Hdn, Hup, CS%h_min_N2))
-      if (min(h(i,j,k-1), h(i,j+1,k-1), h(i,j,k), h(i,j+1,k)) < H_cutoff) &
-        S2 = 0.0
-      S2N2_v_local(i,J,k) = (H_geom * GV%H_to_Z) * S2 * N2
+      ! N2 = GV%g_prime(k) / (GV%H_to_Z * max(Hdn, Hup, CS%h_min_N2))
+      S2N2_v_local(i,J,k) = (H_geom * S2) * (GV%g_prime(k) / (max(Hdn, Hup, CS%h_min_N2)))
     enddo ; enddo
 
   enddo ! k
@@ -915,7 +915,7 @@ subroutine calc_slope_functions_using_just_e(h, G, GV, US, CS, e, calculate_slop
     enddo ; enddo
     ! SN above contains S^2*N^2*H, convert to vertical average of S*N
     do I=is-1,ie
-      !### Replace G%bathT+G%Z_ref here with (e(i,j,1) - e(i,j,nz+1)).
+      !### Replace G%bathT+G%Z_ref here with the total water column thickness.
       !SN_u(I,j) = sqrt( SN_u(I,j) / ( max(G%bathyT(i,j), G%bathyT(i+1,j)) + (G%Z_ref + GV%Angstrom_Z) ) )
       !The code below behaves better than the line above. Not sure why? AJA
       if ( min(G%bathyT(i,j), G%bathyT(i+1,j)) + G%Z_ref > H_cutoff*GV%H_to_Z ) then
@@ -982,7 +982,7 @@ subroutine calc_QG_Leith_viscosity(CS, G, GV, US, h, k, div_xx_dx, div_xx_dy, vo
   real :: Ih ! The inverse of a combination of thicknesses [H-1 ~> m-1 or m2 kg-1]
   real :: f  ! A copy of the Coriolis parameter [T-1 ~> s-1]
   real :: inv_PI3 ! The inverse of pi cubed [nondim]
-  integer :: i, j, is, ie, js, je, Isq, Ieq, Jsq, Jeq,nz
+  integer :: i, j, is, ie, js, je, Isq, Ieq, Jsq, Jeq, nz
 
   is  = G%isc  ; ie  = G%iec  ; js  = G%jsc  ; je  = G%jec
   Isq = G%IscB ; Ieq = G%IecB ; Jsq = G%JscB ; Jeq = G%JecB
@@ -1002,8 +1002,8 @@ subroutine calc_QG_Leith_viscosity(CS, G, GV, US, h, k, div_xx_dx, div_xx_dy, vo
       h_at_slope_below = 2. * ( h(i,j,k) * h(i+1,j,k) ) * ( h(i,j,k+1) * h(i+1,j,k+1) ) / &
                          ( ( h(i,j,k) * h(i+1,j,k) ) * ( h(i,j,k+1) + h(i+1,j,k+1) ) &
                          + ( h(i,j,k+1) * h(i+1,j,k+1) ) * ( h(i,j,k) + h(i+1,j,k) ) + GV%H_subroundoff**2 )
-      Ih = 1./ ( ( h_at_slope_above + h_at_slope_below + GV%H_subroundoff ) * GV%H_to_Z )
-      dslopex_dz(I,j) = 2. * ( CS%slope_x(i,j,k) - CS%slope_x(i,j,k+1) ) * Ih
+      Ih = 1. / ( h_at_slope_above + h_at_slope_below + GV%H_subroundoff )
+      dslopex_dz(I,j) = 2. * ( CS%slope_x(i,j,k) - CS%slope_x(i,j,k+1) ) * (GV%Z_to_H * Ih)
       h_at_u(I,j) = 2. * ( h_at_slope_above * h_at_slope_below ) * Ih
     enddo ; enddo
 
@@ -1016,8 +1016,8 @@ subroutine calc_QG_Leith_viscosity(CS, G, GV, US, h, k, div_xx_dx, div_xx_dy, vo
       h_at_slope_below = 2. * ( h(i,j,k) * h(i,j+1,k) ) * ( h(i,j,k+1) * h(i,j+1,k+1) ) / &
                          ( ( h(i,j,k) * h(i,j+1,k) ) * ( h(i,j,k+1) + h(i,j+1,k+1) ) &
                          + ( h(i,j,k+1) * h(i,j+1,k+1) ) * ( h(i,j,k) + h(i,j+1,k) ) + GV%H_subroundoff**2 )
-      Ih = 1./ ( ( h_at_slope_above + h_at_slope_below + GV%H_subroundoff ) * GV%H_to_Z )
-      dslopey_dz(i,J) = 2. * ( CS%slope_y(i,j,k) - CS%slope_y(i,j,k+1) ) * Ih
+      Ih = 1. / ( h_at_slope_above + h_at_slope_below + GV%H_subroundoff )
+      dslopey_dz(i,J) = 2. * ( CS%slope_y(i,j,k) - CS%slope_y(i,j,k+1) ) * (GV%Z_to_H * Ih)
       h_at_v(i,J) = 2. * ( h_at_slope_above * h_at_slope_below ) * Ih
     enddo ; enddo
 
