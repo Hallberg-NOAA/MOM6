@@ -707,7 +707,7 @@ subroutine diabatic_ALE_legacy(u, v, h, tv, Hml, fluxes, visc, ADp, CDp, dt, Tim
     endif
 
     if (associated(Hml)) then
-      call KPP_get_BLD(CS%KPP_CSp, Hml(:,:), G, US)
+      call KPP_get_BLD(CS%KPP_CSp, Hml(:,:), G, GV, US)
       call pass_var(Hml, G%domain, halo=1)
       ! If visc%MLD exists, copy KPP's BLD into it
       if (associated(visc%MLD)) visc%MLD(:,:) = Hml(:,:)
@@ -1301,7 +1301,7 @@ subroutine diabatic_ALE(u, v, h, tv, Hml, fluxes, visc, ADp, CDp, dt, Time_end, 
     endif
 
     if (associated(Hml)) then
-      call KPP_get_BLD(CS%KPP_CSp, Hml(:,:), G, US)
+      call KPP_get_BLD(CS%KPP_CSp, Hml(:,:), G, GV, US)
       call pass_var(Hml, G%domain, halo=1)
       ! If visc%MLD exists, copy KPP's BLD into it
       if (associated(visc%MLD)) visc%MLD(:,:) = Hml(:,:)
@@ -1895,7 +1895,7 @@ subroutine layered_diabatic(u, v, h, tv, Hml, fluxes, visc, ADp, CDp, dt, Time_e
     endif
 
     if (associated(Hml)) then
-      call KPP_get_BLD(CS%KPP_CSp, Hml(:,:), G, US)
+      call KPP_get_BLD(CS%KPP_CSp, Hml(:,:), G, GV, US)
       call pass_var(Hml, G%domain, halo=1)
       ! If visc%MLD exists, copy KPP's BLD into it
       if (associated(visc%MLD)) visc%MLD(:,:) = Hml(:,:)

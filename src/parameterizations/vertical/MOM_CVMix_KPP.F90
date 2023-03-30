@@ -85,13 +85,13 @@ type, public :: KPP_CS ; private
   logical :: computeMoninObukhov       !< If True, compute Monin-Obukhov limit for OBLdepth
   logical :: passiveMode               !< If True, makes KPP passive meaning it does NOT alter the diffusivity
   real    :: deepOBLoffset             !< If non-zero, is a distance from the bottom that the OBL can not
-                                       !! penetrate through [Z ~> m]
-  real    :: minOBLdepth               !< If non-zero, is a minimum depth for the OBL [Z ~> m]
+                                       !! penetrate through [H ~> m or kg m-2]
+  real    :: minOBLdepth               !< If non-zero, is a minimum depth for the OBL [H ~> m or kg m-2]
   real    :: surf_layer_ext            !< Fraction of OBL depth considered in the surface layer [nondim]
   real    :: minVtsqr                  !< Min for the squared unresolved velocity used in Rib CVMix
                                        !! calculation [L2 T-2 ~> m2 s-2]
   logical :: fixedOBLdepth             !< If True, will fix the OBL depth at fixedOBLdepth_value
-  real    :: fixedOBLdepth_value       !< value for the fixed OBL depth when fixedOBLdepth==True [Z ~> m]
+  real    :: fixedOBLdepth_value       !< value for the fixed OBL depth when fixedOBLdepth==True [H ~> m or kg m-2]
   logical :: debug                     !< If True, calculate checksums and write debugging information
   character(len=30) :: MatchTechnique  !< Method used in CVMix for setting diffusivity and NLT profile functions
   integer :: NLT_shape                 !< MOM6 over-ride of CVMix NLT shape function
@@ -104,7 +104,7 @@ type, public :: KPP_CS ; private
                                        !! If False, will replace initial diffusivity wherever KPP diffusivity
                                        !! is non-zero.
   real    :: min_thickness             !< A minimum thickness used to avoid division by small numbers
-                                       !! in the vicinity of vanished layers [Z ~> m]
+                                       !! in the vicinity of vanished layers [H ~> m or kg-2]
   integer :: SW_METHOD                 !< Sets method for using shortwave radiation in surface buoyancy flux
   logical :: LT_K_Enhancement          !< Flags if enhancing mixing coefficients due to LT
   integer :: LT_K_Shape                !< Integer for constant or shape function enhancement
@@ -115,7 +115,7 @@ type, public :: KPP_CS ; private
   real    :: KPP_VT2_ENH_FAC           !< Factor to multiply by VT2 if Method is CONSTANT [nondim]
   real    :: MLD_guess_min             !< The minimum estimate of the mixed layer depth used to
                                        !! calculate the Langmuir number for Langmuir turbulence
-                                       !! enhancement with KPP [Z ~> m]
+                                       !! enhancement with KPP [H ~> m or kg m-2]
   logical :: STOKES_MIXING             !< Flag if model is mixing down Stokes gradient
                                        !! This is relevant for which current to use in RiB
 
@@ -143,10 +143,11 @@ type, public :: KPP_CS ; private
   !>@}
 
   ! Diagnostics arrays
-  real, allocatable, dimension(:,:)   :: OBLdepth  !< Depth (positive) of ocean boundary layer (OBL) [Z ~> m]
-  real, allocatable, dimension(:,:)   :: OBLdepth_original  !< Depth (positive) of OBL [Z ~> m] without smoothing
+  real, allocatable, dimension(:,:)   :: OBLdepth  !< Depth (positive) of ocean boundary layer (OBL) [H ~> m or kg m-2]
+  real, allocatable, dimension(:,:)   :: OBLdepth_original  !< Depth (positive) of OBL without
+                                                   !! smoothing [H ~> m or kg m-2]
   real, allocatable, dimension(:,:)   :: kOBL      !< Level (+fraction) of OBL extent [nondim]
-  real, allocatable, dimension(:,:)   :: OBLdepthprev !< previous Depth (positive) of OBL [Z ~> m]
+  real, allocatable, dimension(:,:)   :: OBLdepthprev !< previous Depth (positive) of OBL [H ~> m or kg m-2]
   real, allocatable, dimension(:,:)   :: La_SL     !< Langmuir number used in KPP [nondim]
   real, allocatable, dimension(:,:,:) :: dRho      !< Bulk difference in density [R ~> kg m-3]
   real, allocatable, dimension(:,:,:) :: Uz2       !< Square of bulk difference in resolved velocity [L2 T-2 ~> m2 s-2]
@@ -278,7 +279,7 @@ logical function KPP_init(paramFile, G, GV, US, diag, Time, CS, passive)
   call get_param(paramFile, mdl, 'DEEP_OBL_OFFSET', CS%deepOBLoffset,                             &
                  'If non-zero, the distance above the bottom to which the OBL is clipped '//     &
                  'if it would otherwise reach the bottom. The smaller of this and 0.1D is used.', &
-                 units='m', default=0., scale=US%m_to_Z)
+                 units='m', default=0., scale=GV%m_to_H)
   call get_param(paramFile, mdl, 'FIXED_OBLDEPTH', CS%fixedOBLdepth,       &
                  'If True, fix the OBL depth to FIXED_OBLDEPTH_VALUE '//  &
                  'rather than using the OBL depth from CVMix. '//         &
@@ -288,14 +289,14 @@ logical function KPP_init(paramFile, G, GV, US, diag, Time, CS, passive)
                  'Value for the fixed OBL depth when fixedOBLdepth==True. '//   &
                  'This parameter is for just for testing purposes. '//          &
                  'It will over-ride the OBLdepth computed from CVMix.',           &
-                 units='m', default=30.0, scale=US%m_to_Z)
+                 units='m', default=30.0, scale=GV%m_to_H)
   call get_param(paramFile, mdl, 'SURF_LAYER_EXTENT', CS%surf_layer_ext,   &
                  'Fraction of OBL depth considered in the surface layer.', &
                  units='nondim', default=0.10)
   call get_param(paramFile, mdl, 'MINIMUM_OBL_DEPTH', CS%minOBLdepth,                            &
                  'If non-zero, a minimum depth to use for KPP OBL depth. Independent of '//     &
                  'this parameter, the OBL depth is always at least as deep as the first layer.', &
-                 units='m', default=0., scale=US%m_to_Z)
+                 units='m', default=0., scale=GV%m_to_H)
   call get_param(paramFile, mdl, 'MINIMUM_VT2', CS%minVtsqr,                                   &
                  'Min of the unresolved velocity Vt2 used in Rib CVMix calculation.\n'//  &
                  'Scaling: MINIMUM_VT2 = const1*d*N*ws, with d=1m, N=1e-5/s, ws=1e-6 m/s.',    &
@@ -369,7 +370,7 @@ logical function KPP_init(paramFile, G, GV, US, diag, Time, CS, passive)
   call get_param(paramFile, mdl, 'CVMix_ZERO_H_WORK_AROUND', CS%min_thickness,                           &
                  'A minimum thickness used to avoid division by small numbers in the vicinity '//       &
                  'of vanished layers. This is independent of MIN_THICKNESS used in other parts of MOM.', &
-                 units='m', default=0., scale=US%m_to_Z)
+                 units='m', default=0., scale=GV%m_to_H)
 
 !/BGR: New options for including Langmuir effects
 !/ 1. Options related to enhancing the mixing coefficient
@@ -467,7 +468,7 @@ logical function KPP_init(paramFile, G, GV, US, diag, Time, CS, passive)
     call get_param(paramFile, mdl, "KPP_LT_MLD_GUESS_MIN", CS%MLD_guess_min,     &
                    "The minimum estimate of the mixed layer depth used to calculate "//&
                    "the Langmuir number for Langmuir turbulence enhancement with KPP.", &
-                   units="m", default=1.0, scale=US%m_to_Z)
+                   units="m", default=1.0, scale=GV%m_to_H)
   endif
 
   call closeParameterBlock(paramFile)
@@ -475,7 +476,7 @@ logical function KPP_init(paramFile, G, GV, US, diag, Time, CS, passive)
   call get_param(paramFile, mdl, 'DEBUG', CS%debug, default=.False., do_not_log=.True.)
 
   call CVMix_init_kpp( Ri_crit=CS%Ri_crit,                 &
-                       minOBLdepth=US%Z_to_m*CS%minOBLdepth, &
+                       minOBLdepth=GV%H_to_m*CS%minOBLdepth, &
                        minVtsqr=US%L_T_to_m_s**2*CS%minVtsqr, &
                        vonKarman=CS%vonKarman,             &
                        surf_layer_ext=CS%surf_layer_ext,   &
@@ -495,7 +496,7 @@ logical function KPP_init(paramFile, G, GV, US, diag, Time, CS, passive)
   CS%diag => diag
   CS%id_OBLdepth = register_diag_field('ocean_model', 'KPP_OBLdepth', diag%axesT1, Time, &
       'Thickness of the surface Ocean Boundary Layer calculated by [CVMix] KPP', &
-      'meter', conversion=US%Z_to_m, &
+      'meter', conversion=GV%H_to_m, &
       cmor_field_name='oml', cmor_long_name='ocean_mixed_layer_thickness_defined_by_mixing_scheme', &
       cmor_units='m', cmor_standard_name='Ocean Mixed Layer Thickness Defined by Mixing Scheme')
       ! CMOR names are placeholders; must be modified by time period
@@ -504,7 +505,7 @@ logical function KPP_init(paramFile, G, GV, US, diag, Time, CS, passive)
   if (CS%n_smooth > 0) then
     CS%id_OBLdepth_original = register_diag_field('ocean_model', 'KPP_OBLdepth_original', diag%axesT1, Time, &
         'Thickness of the surface Ocean Boundary Layer without smoothing calculated by [CVMix] KPP', &
-        'meter', conversion=US%Z_to_m, &
+        'meter', conversion=GV%H_to_m, &
         cmor_field_name='oml', cmor_long_name='ocean_mixed_layer_thickness_defined_by_mixing_scheme', &
         cmor_units='m', cmor_standard_name='Ocean Mixed Layer Thickness Defined by Mixing Scheme')
   endif
@@ -623,8 +624,10 @@ subroutine KPP_calculate(CS, G, GV, US, h, uStar, buoyFlux, Kt, Ks, Kv, &
 
   ! Local variables
   integer :: i, j, k                            ! Loop indices
-  real, dimension( GV%ke )     :: cellHeight    ! Cell center heights referenced to surface [Z ~> m] (negative in ocean)
-  real, dimension( GV%ke+1 )   :: iFaceHeight   ! Interface heights referenced to surface [Z ~> m] (negative in ocean)
+  real, dimension( GV%ke )     :: cellHeight    ! Cell center heights referenced to surface [H ~> m or kg m-2]
+                                                ! (negative in ocean)
+  real, dimension( GV%ke+1 )   :: iFaceHeight   ! Interface heights referenced to surface [H ~> m or kg m-2]
+                                                ! (negative in ocean)
   real, dimension( GV%ke )     :: z_cell        ! Cell center heights referenced to surface [m] (negative in ocean)
   real, dimension( GV%ke+1 )   :: z_inter       ! Cell interface heights referenced to surface [m] (negative in ocean)
   real, dimension( GV%ke+1, 2) :: Kdiffusivity  ! Vertical diffusivity at interfaces in MKS units [m2 s-1]
@@ -636,8 +639,8 @@ subroutine KPP_calculate(CS, G, GV, US, h, uStar, buoyFlux, Kt, Ks, Kv, &
   real :: sigma      ! Fractional vertical position within the boundary layer [nondim]
   real :: sigmaRatio ! A cubic function of sigma [nondim]
   real :: buoy_scale ! A unit conversion factor for buoyancy fluxes [m2 T3 L-2 s-3 ~> 1]
-  real :: dh    ! The local thickness used for calculating interface positions [Z ~> m]
-  real :: hcorr ! A cumulative correction arising from inflation of vanished layers [Z ~> m]
+  real :: dh    ! The local thickness used for calculating interface positions [H ~> m or kg m-2]
+  real :: hcorr ! A cumulative correction arising from inflation of vanished layers [H ~> m or kg m-2]
 
   ! For Langmuir Calculations
   real :: LangEnhK     ! Langmuir enhancement for mixing coefficient [nondim]
@@ -678,7 +681,7 @@ subroutine KPP_calculate(CS, G, GV, US, h, uStar, buoyFlux, Kt, Ks, Kv, &
       do k=1,GV%ke
 
         ! cell center and cell bottom in meters (negative values in the ocean)
-        dh = h(i,j,k) * GV%H_to_Z ! Nominal thickness to use for increment
+        dh = h(i,j,k) ! Nominal thickness to use for increment
         dh = dh + hcorr ! Take away the accumulated error (could temporarily make dh<0)
         hcorr = min( dh - CS%min_thickness, 0. ) ! If inflating then hcorr<0
         dh = max( dh, CS%min_thickness ) ! Limit increment dh>=min_thickness
@@ -759,10 +762,10 @@ subroutine KPP_calculate(CS, G, GV, US, h, uStar, buoyFlux, Kt, Ks, Kv, &
 
       ! Convert columns to MKS units for passing to CVMix
       do k = 1, GV%ke
-        z_cell(k) = US%Z_to_m*cellHeight(k)
+        z_cell(k) = GV%H_to_m*cellHeight(k)
       enddo
       do K = 1, GV%ke+1
-        z_inter(K) = US%Z_to_m*iFaceHeight(K)
+        z_inter(K) = GV%H_to_m*iFaceHeight(K)
       enddo
 
       call CVMix_coeffs_kpp(Kviscosity(:),     & ! (inout) Total viscosity [m2 s-1]
@@ -773,7 +776,7 @@ subroutine KPP_calculate(CS, G, GV, US, h, uStar, buoyFlux, Kt, Ks, Kv, &
                             Kviscosity(:),     & ! (in) Original viscosity [m2 s-1]
                             Kdiffusivity(:,1), & ! (in) Original heat diffusivity [m2 s-1]
                             Kdiffusivity(:,2), & ! (in) Original salt diffusivity [m2 s-1]
-                            US%Z_to_m*CS%OBLdepth(i,j),  & ! (in) OBL depth [m]
+                            GV%H_to_m*CS%OBLdepth(i,j),  & ! (in) OBL depth [m]
                             CS%kOBL(i,j),      & ! (in) level (+fraction) of OBL extent
                             nonLocalTrans(:,1),& ! (out) Non-local heat transport [nondim]
                             nonLocalTrans(:,2),& ! (out) Non-local salt transport [nondim]
@@ -946,35 +949,38 @@ subroutine KPP_compute_BLD(CS, G, GV, US, h, Temp, Salt, u, v, tv, uStar, buoyFl
   real, dimension( 3*GV%ke )   :: Temp_1D  ! A column of temperatures [C ~> degC]
   real, dimension( 3*GV%ke )   :: Salt_1D  ! A column of salinities [S ~> ppt]
 
-  real, dimension( GV%ke )     :: cellHeight   ! Cell center heights referenced to surface [Z ~> m] (negative in ocean)
-  real, dimension( GV%ke+1 )   :: iFaceHeight  ! Interface heights referenced to surface [Z ~> m] (negative in ocean)
+  real, dimension( GV%ke )     :: cellHeight   ! Cell center heights referenced to surface [H ~> m or kg m-2]
+                                               ! (negative in ocean)
+  real, dimension( GV%ke+1 )   :: iFaceHeight  ! Interface heights referenced to surface [H ~> m or kg m-2]
+                                               ! (negative in ocean)
   real, dimension( GV%ke+1 )   :: N2_1d        ! Brunt-Vaisala frequency squared, at interfaces [T-2 ~> s-2]
-  real :: zBottomMinusOffset    ! Height of bottom plus a little bit [Z ~> m]
+  real :: zBottomMinusOffset    ! Height of bottom plus a little bit [H ~> m or kg m-2]
   real :: GoRho         ! Gravitational acceleration in MKS units divided by density [m s-2 R-1 ~> m4 kg-1 s-2]
   real :: GoRho_Z_L2    ! Gravitational acceleration divided by density times aspect ratio
                         ! rescaling [Z T-2 R-1 ~> m4 kg-1 s-2]
   real :: pRef          ! The interface pressure [R L2 T-2 ~> Pa]
   real :: Uk, Vk        ! Layer velocities relative to their averages in the surface layer [L T-1 ~> m s-1]
-  real :: SLdepth_0d    ! Surface layer depth = surf_layer_ext*OBLdepth [Z ~> m]
-  real :: hTot          ! Running sum of thickness used in the surface layer average [Z ~> m]
+  real :: SLdepth_0d    ! Surface layer depth = surf_layer_ext*OBLdepth [H ~> m or kg m-2]
+  real :: hTot          ! Running sum of thickness used in the surface layer average [H ~> m or kg m-2]
   real :: buoy_scale    ! A unit conversion factor for buoyancy fluxes [m2 T3 L-2 s-3 ~> 1]
-  real :: delH          ! Thickness of a layer [Z ~> m]
+  real :: delH          ! Thickness of a layer [H ~> m or kg m-2]
   real :: surfTemp      ! Average of temperature over the surface layer [C ~> degC]
-  real :: surfHtemp     ! Integral of temperature over the surface layer [Z C ~> m degC]
+  real :: surfHtemp     ! Integral of temperature over the surface layer [H C ~> m degC or kg degC m-2]
   real :: surfSalt      ! Average of salinity over the surface layer [S ~> ppt]
-  real :: surfHsalt     ! Integral of salinity over the surface layer [Z S ~> m ppt]
-  real :: surfHu, surfHv  ! Integral of u and v over the surface layer [Z L T-1 ~> m2 s-1]
-  real :: surfU, surfV  ! Average of u and v over the surface layer [Z T-1 ~> m s-1]
-  real :: dh            ! The local thickness used for calculating interface positions [Z ~> m]
-  real :: hcorr         ! A cumulative correction arising from inflation of vanished layers [Z ~> m]
+  real :: surfHsalt     ! Integral of salinity over the surface layer [H S ~> m ppt or kg ppt m-2]
+  real :: surfHu, surfHv  ! Integral of u and v over the surface layer [H L T-1 ~> m2 s-1 or kg m-1 s-1]
+  real :: surfU, surfV  ! Average of u and v over the surface layer [L T-1 ~> m s-1]
+  real :: dh            ! The local thickness used for calculating interface positions [H ~> m or kg m-2]
+  real :: hcorr         ! A cumulative correction arising from inflation of vanished layers [H ~> m or kg m-2]
 
   ! For Langmuir Calculations
   real :: LangEnhVt2   ! Langmuir enhancement for unresolved shear [nondim]
   real, dimension(GV%ke) :: U_H, V_H ! Velocities at tracer points [L T-1 ~> m s-1]
-  real :: MLD_guess    ! A guess at the mixed layer depth for calculating the Langmuir number [Z ~> m]
+  real :: MLD_guess    ! A guess at the mixed layer depth for calculating the Langmuir number [H ~> m or kg m-2]
   real :: LA           ! The local Langmuir number [nondim]
-  real :: surfHuS, surfHvS ! Stokes drift velocities integrated over the boundary layer [Z L T-1 ~> m2 s-1]
-  real :: surfUs, surfVs   ! Stokes drift velocities averaged over the boundary layer [Z T-1 ~> m s-1]
+  real :: surfHuS, surfHvS ! Stokes drift velocities integrated over the boundary
+                           ! layer [H L T-1 ~> m2 s-1 or kg m-1 s-1]
+  real :: surfUs, surfVs   ! Stokes drift velocities averaged over the boundary layer [L T-1 ~> m s-1]
 
   integer :: i, j, k, km1, kk, ksfc, ktmp    ! Loop indices
 
@@ -1031,7 +1037,7 @@ subroutine KPP_compute_BLD(CS, G, GV, US, h, Temp, Salt, u, v, tv, uStar, buoyFl
       do k=1,GV%ke
 
         ! cell center and cell bottom in meters (negative values in the ocean)
-        dh = h(i,j,k) * GV%H_to_Z ! Nominal thickness to use for increment
+        dh = h(i,j,k) ! Nominal thickness to use for increment
         dh = dh + hcorr ! Take away the accumulated error (could temporarily make dh<0)
         hcorr = min( dh - CS%min_thickness, 0. ) ! If inflating then hcorr<0
         dh = max( dh, CS%min_thickness ) ! Limit increment dh>=min_thickness
@@ -1060,7 +1066,7 @@ subroutine KPP_compute_BLD(CS, G, GV, US, h, Temp, Salt, u, v, tv, uStar, buoyFl
         do ktmp = 1,ksfc
 
           ! SLdepth_0d can be between cell interfaces
-          delH = min( max(0.0, SLdepth_0d - hTot), h(i,j,ktmp)*GV%H_to_Z )
+          delH = min( max(0.0, SLdepth_0d - hTot), h(i,j,ktmp) )
 
           ! surface layer thickness
           hTot = hTot + delH
@@ -1125,7 +1131,7 @@ subroutine KPP_compute_BLD(CS, G, GV, US, h, Temp, Salt, u, v, tv, uStar, buoyFl
 
       if ( (CS%LT_K_ENHANCEMENT .or. CS%LT_VT2_ENHANCEMENT) .and. .not. present(lamult)) then
         MLD_guess = max( CS%MLD_guess_min, abs(CS%OBLdepthprev(i,j) ) )
-        call get_Langmuir_Number(LA, G, GV, US, MLD_guess, uStar(i,j), i, j, &
+        call get_Langmuir_Number(LA, G, GV, US, GV%H_to_Z*MLD_guess, uStar(i,j), i, j, &
                                  H=H(i,j,:), U_H=U_H, V_H=V_H, WAVES=WAVES)
         CS%La_SL(i,j) = LA
       endif
@@ -1150,12 +1156,12 @@ subroutine KPP_compute_BLD(CS, G, GV, US, h, Temp, Salt, u, v, tv, uStar, buoyFl
 
       ! Convert columns to MKS units for passing to CVMix
       do k = 1, GV%ke
-        OBL_depth(k) = -US%Z_to_m * cellHeight(k)
-        z_cell(k) = US%Z_to_m*cellHeight(k)
+        OBL_depth(k) = -GV%H_to_m * cellHeight(k)
+        z_cell(k) = GV%H_to_m*cellHeight(k)
       enddo
       do K = 1, GV%ke+1
         N_col(K) = US%s_to_T*CS%N(i,j,K)
-        z_inter(K) = US%Z_to_m*iFaceHeight(K)
+        z_inter(K) = GV%H_to_m*iFaceHeight(K)
       enddo
 
       ! turbulent velocity scales w_s and w_m computed at the cell centers.
@@ -1217,7 +1223,7 @@ subroutine KPP_compute_BLD(CS, G, GV, US, h, Temp, Salt, u, v, tv, uStar, buoyFl
             surf_buoy=surfBuoyFlux, & ! (in) Buoyancy flux at surface [m2 s-3]
             Coriolis=Coriolis,      & ! (in) Coriolis parameter [s-1]
             CVMix_kpp_params_user=CS%KPP_params ) ! KPP parameters
-      CS%OBLdepth(i,j) = US%m_to_Z * KPP_OBL_depth
+      CS%OBLdepth(i,j) = GV%m_to_H * KPP_OBL_depth
 
       ! A hack to avoid KPP reaching the bottom. It was needed during development
       ! because KPP was unable to handle vanishingly small layers near the bottom.
@@ -1250,8 +1256,8 @@ subroutine KPP_compute_BLD(CS, G, GV, US, h, Temp, Salt, u, v, tv, uStar, buoyFl
       !BGR consider if LTEnhancement is wanted for diagnostics
       if (CS%id_Ws > 0) then
         call CVMix_kpp_compute_turbulent_scales( &
-            -cellHeight(:)/CS%OBLdepth(i,j),       & ! (in)  Normalized boundary layer coordinate
-            US%Z_to_m*CS%OBLdepth(i,j),            & ! (in)  OBL depth [m]
+            -cellHeight(:)/CS%OBLdepth(i,j),       & ! (in)  Normalized boundary layer coordinate [nondim]
+            GV%H_to_m*CS%OBLdepth(i,j),            & ! (in)  OBL depth [m]
             surfBuoyFlux,                          & ! (in)  Buoyancy flux at surface [m2 s-3]
             surfFricVel,                           & ! (in)  Turbulent friction velocity at surface [m s-1]
             w_s=Ws_1d,                             & ! (out) Turbulent velocity scale profile [m s-1]
@@ -1305,14 +1311,14 @@ subroutine KPP_smooth_BLD(CS, G, GV, US, h)
   real, dimension(SZI_(G),SZJ_(G),SZK_(GV)), intent(in) :: h    !< Layer/level thicknesses [H ~> m or kg m-2]
 
   ! local
-  real, dimension(SZI_(G),SZJ_(G)) :: OBLdepth_prev     ! OBLdepth before s.th smoothing iteration [Z ~> m]
-  real, dimension( GV%ke )         :: cellHeight        ! Cell center heights referenced to surface [Z ~> m]
+  real, dimension(SZI_(G),SZJ_(G)) :: OBLdepth_prev     ! OBLdepth before s.th smoothing iteration [H ~> m or kg m-2]
+  real, dimension( GV%ke )         :: cellHeight        ! Cell center heights referenced to surface [H ~> m or kg m-2]
                                                         ! (negative in the ocean)
-  real, dimension( GV%ke+1 )       :: iFaceHeight       ! Interface heights referenced to surface [Z ~> m]
+  real, dimension( GV%ke+1 )       :: iFaceHeight       ! Interface heights referenced to surface [H ~> m or kg m-2]
                                                         ! (negative in the ocean)
   real :: wc, ww, we, wn, ws ! averaging weights for smoothing [nondim]
-  real :: dh                 ! The local thickness used for calculating interface positions [Z ~> m]
-  real :: hcorr              ! A cumulative correction arising from inflation of vanished layers [Z ~> m]
+  real :: dh                 ! The local thickness used for calculating interface positions [H ~> m or kg m-2]
+  real :: hcorr              ! A cumulative correction arising from inflation of vanished layers [H ~> m or kg-2]
   integer :: i, j, k, s
 
   call cpu_clock_begin(id_clock_KPP_smoothing)
@@ -1337,7 +1343,7 @@ subroutine KPP_smooth_BLD(CS, G, GV, US, h)
         do k=1,GV%ke
 
           ! cell center and cell bottom in meters (negative values in the ocean)
-          dh = h(i,j,k) * GV%H_to_Z ! Nominal thickness to use for increment
+          dh = h(i,j,k) ! Nominal thickness to use for increment
           dh = dh + hcorr ! Take away the accumulated error (could temporarily make dh<0)
           hcorr = min( dh - CS%min_thickness, 0. ) ! If inflating then hcorr<0
           dh = max( dh, CS%min_thickness ) ! Limit increment dh>=min_thickness
@@ -1361,7 +1367,7 @@ subroutine KPP_smooth_BLD(CS, G, GV, US, h)
         ! Apply OBLdepth smoothing at a cell only if the OBLdepth gets deeper via smoothing.
         if (CS%deepen_only) CS%OBLdepth(i,j) = max(CS%OBLdepth(i,j), OBLdepth_prev(i,j))
 
-        ! prevent OBL depths deeper than the bathymetric depth
+        ! prevent OBL depths deeper than the total thickness of the water column
         CS%OBLdepth(i,j) = min( CS%OBLdepth(i,j), -iFaceHeight(GV%ke+1) ) ! no deeper than bottom
         CS%kOBL(i,j)     = CVMix_kpp_compute_kOBL_depth( iFaceHeight, cellHeight, CS%OBLdepth(i,j) )
       endif ; enddo
@@ -1376,10 +1382,11 @@ end subroutine KPP_smooth_BLD
 
 
 !> Copies KPP surface boundary layer depth into BLD, in units of [Z ~> m] unless other units are specified.
-subroutine KPP_get_BLD(CS, BLD, G, US, m_to_BLD_units)
+subroutine KPP_get_BLD(CS, BLD, G, GV, US, m_to_BLD_units)
   type(KPP_CS),                     pointer     :: CS  !< Control structure for
                                                        !! this module
   type(ocean_grid_type),            intent(in)  :: G   !< Grid structure
+  type(verticalGrid_type),          intent(in)  :: GV  !< Ocean vertical grid
   type(unit_scale_type),            intent(in)  :: US  !< A dimensional unit scaling type
   real, dimension(SZI_(G),SZJ_(G)), intent(inout) :: BLD !< Boundary layer depth [Z ~> m] or other units
   real,                   optional, intent(in)  :: m_to_BLD_units !< A conversion factor from meters
@@ -1388,7 +1395,7 @@ subroutine KPP_get_BLD(CS, BLD, G, US, m_to_BLD_units)
   real :: scale  ! A dimensional rescaling factor in [nondim] or other units.
   integer :: i,j
 
-  scale = 1.0 ; if (present(m_to_BLD_units)) scale = US%Z_to_m*m_to_BLD_units
+  scale = GV%H_to_Z ; if (present(m_to_BLD_units)) scale = GV%H_to_m*m_to_BLD_units
 
   !$OMP parallel do default(none) shared(BLD, CS, G, scale)
   do j = G%jsc, G%jec ; do i = G%isc, G%iec
