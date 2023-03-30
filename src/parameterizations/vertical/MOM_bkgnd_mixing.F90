@@ -66,7 +66,7 @@ type, public :: bkgnd_mixing_cs ; private
   real    :: Kd_tot_ml              !< The mixed layer diapycnal diffusivity [Z2 T-1 ~> m2 s-1]
                                     !! when no other physically based mixed layer turbulence
                                     !! parameterization is being used.
-  real    :: Hmix                   !< mixed layer thickness [Z ~> m] when no physically based
+  real    :: Hmix                   !< mixed layer thickness [H ~> m or kg m-2] when no physically based
                                     !! ocean surface boundary layer parameterization is used.
   logical :: Kd_tanh_lat_fn         !< If true, use the tanh dependence of Kd_sfc on
                                     !! latitude, like GFDL CM2.1/CM2M.  There is no
@@ -185,7 +185,7 @@ subroutine bkgnd_mixing_init(Time, G, GV, US, param_file, diag, CS, physical_OBL
     call get_param(param_file, mdl, "HMIX_FIXED", CS%Hmix, &
                  "The prescribed depth over which the near-surface "//&
                  "viscosity and diffusivity are elevated when the bulk "//&
-                 "mixed layer is not used.", units="m", scale=US%m_to_Z, fail_if_missing=.true.)
+                 "mixed layer is not used.", units="m", scale=GV%m_to_H, fail_if_missing=.true.)
   endif
 
   call get_param(param_file, mdl, 'DEBUG', CS%debug, default=.False., do_not_log=.True.)
@@ -334,9 +334,9 @@ subroutine calculate_bkgnd_mixing(h, tv, N2_lay, Kd_lay, Kd_int, Kv_bkgnd, j, G,
   real, dimension(SZK_(GV)+1) :: Kd_col     !< Diffusivities at the interfaces [m2 s-1]
   real, dimension(SZK_(GV)+1) :: Kv_col     !< Viscosities at the interfaces [m2 s-1]
   real, dimension(SZI_(G))    :: Kd_sfc     !< Surface value of the diffusivity [Z2 T-1 ~> m2 s-1]
-  real, dimension(SZI_(G))    :: depth      !< Distance from surface of an interface [Z ~> m]
-  real :: depth_c    !< depth of the center of a layer [Z ~> m]
-  real :: I_Hmix     !< inverse of fixed mixed layer thickness [Z-1 ~> m-1]
+  real, dimension(SZI_(G))    :: depth      !< Distance from surface of an interface [H ~> m or kg m-2]
+  real :: depth_c    !< depth of the center of a layer [H ~> m or kg m-2]
+  real :: I_Hmix     !< inverse of fixed mixed layer thickness [H-1 ~> m-1 or m2 kg-1]
   real :: I_2Omega   !< 1/(2 Omega) [T ~> s]
   real :: N_2Omega   !  The ratio of the stratification to the Earth's rotation rate [nondim]
   real :: N02_N2     !  The ratio a reference stratification to the actual stratification [nondim]
@@ -461,10 +461,10 @@ subroutine calculate_bkgnd_mixing(h, tv, N2_lay, Kd_lay, Kd_int, Kv_bkgnd, j, G,
     if ((.not.CS%physical_OBL_scheme) .and. (CS%Kd /= CS%Kd_tot_ml)) then
       ! This is a crude way to put in a diffusive boundary layer without an explicit boundary
       ! layer turbulence scheme.  It should not be used for any realistic ocean models.
-      I_Hmix = 1.0 / (CS%Hmix + GV%H_subroundoff*GV%H_to_Z)
+      I_Hmix = 1.0 / (CS%Hmix + GV%H_subroundoff)
       do i=is,ie ; depth(i) = 0.0 ; enddo
       do k=1,nz ; do i=is,ie
-        depth_c = depth(i) + 0.5*GV%H_to_Z*h(i,j,k)
+        depth_c = depth(i) + 0.5*h(i,j,k)
         if (CS%Kd_via_Kdml_bug) then
           ! These two lines should update Kd_lay, not Kd_int.  They were correctly working on the
           ! same variables until MOM6 commit 7a818716 (PR#750), which was added on March 26, 2018.
@@ -481,7 +481,7 @@ subroutine calculate_bkgnd_mixing(h, tv, N2_lay, Kd_lay, Kd_int, Kv_bkgnd, j, G,
           endif
         endif
 
-        depth(i) = depth(i) + GV%H_to_Z*h(i,j,k)
+        depth(i) = depth(i) + h(i,j,k)
       enddo ; enddo
 
     else ! There is no vertical structure to the background diffusivity.
