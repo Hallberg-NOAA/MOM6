@@ -681,19 +681,20 @@ subroutine diagnoseMLDbyDensityDifference(id_MLD, h, tv, densityDiff, G, GV, US,
   ! Local variables
   real, dimension(SZI_(G)) :: deltaRhoAtKm1, deltaRhoAtK ! Density differences [R ~> kg m-3].
   real, dimension(SZI_(G)) :: pRef_MLD, pRef_N2 ! Reference pressures [R L2 T-2 ~> Pa].
-  real, dimension(SZI_(G)) :: H_subML, dH_N2    ! Summed thicknesses used in N2 calculation [H ~> m].
+  real, dimension(SZI_(G)) :: H_subML, dH_N2    ! Summed thicknesses used in N2 calculation [H ~> m or kg m-2]
   real, dimension(SZI_(G)) :: T_subML, T_deeper ! Temperatures used in the N2 calculation [C ~> degC].
   real, dimension(SZI_(G)) :: S_subML, S_deeper ! Salinities used in the N2 calculation [S ~> ppt].
   real, dimension(SZI_(G)) :: rho_subML, rho_deeper ! Densities used in the N2 calculation [R ~> kg m-3].
-  real, dimension(SZI_(G)) :: dK, dKm1          ! Depths [Z ~> m].
+  real, dimension(SZI_(G)) :: dK, dKm1         ! Layer thicknesses [H ~> m or kg m-2]
   real, dimension(SZI_(G)) :: rhoSurf          ! Density used in finding the mixed layer depth [R ~> kg m-3].
   real, dimension(SZI_(G), SZJ_(G)) :: MLD     ! Diagnosed mixed layer depth [Z ~> m].
   real, dimension(SZI_(G), SZJ_(G)) :: subMLN2 ! Diagnosed stratification below ML [T-2 ~> s-2].
   real, dimension(SZI_(G), SZJ_(G)) :: MLD2    ! Diagnosed MLD^2 [Z2 ~> m2].
   logical, dimension(SZI_(G)) :: N2_region_set ! If true, all necessary values for calculating N2
                                                ! have been stored already.
-  real :: gE_Rho0          ! The gravitational acceleration divided by a mean density [Z T-2 R-1 ~> m4 s-2 kg-1].
-  real :: dH_subML         ! Depth below ML over which to diagnose stratification [H ~> m].
+  real :: gE_Rho0          ! The gravitational acceleration, sometimes divided by the Boussinesq
+                           ! reference density [H T-2 R-1 ~> m4 s-2 kg-1 or m s-2].
+  real :: dH_subML         ! Depth below ML over which to diagnose stratification [H ~> m or kg m-2]
   real :: aFac             ! A nondimensional factor [nondim]
   real :: ddRho            ! A density difference [R ~> kg m-3]
   integer, dimension(2) :: EOSdom ! The i-computational domain for the equation of state
@@ -713,14 +714,14 @@ subroutine diagnoseMLDbyDensityDifference(id_MLD, h, tv, densityDiff, G, GV, US,
     endif
   endif
 
-  gE_rho0 = US%L_to_Z**2*GV%g_Earth / GV%Rho0
+  gE_rho0 = (US%L_to_Z**2 * GV%g_Earth) / GV%H_to_RZ
 
   is = G%isc ; ie = G%iec ; js = G%jsc ; je = G%jec ; nz = GV%ke
 
   pRef_MLD(:) = 0.0
   EOSdom(:) = EOS_domain(G%HI)
   do j=js,je
-    do i=is,ie ; dK(i) = 0.5 * h(i,j,1) * GV%H_to_Z ; enddo ! Depth of center of surface layer
+    do i=is,ie ; dK(i) = 0.5 * h(i,j,1) ; enddo ! Depth of center of surface layer
     call calculate_density(tv%T(:,j,1), tv%S(:,j,1), pRef_MLD, rhoSurf, tv%eqn_of_state, EOSdom)
     do i=is,ie
       deltaRhoAtK(i) = 0.
@@ -735,7 +736,7 @@ subroutine diagnoseMLDbyDensityDifference(id_MLD, h, tv, densityDiff, G, GV, US,
     do k=2,nz
       do i=is,ie
         dKm1(i) = dK(i) ! Depth of center of layer K-1
-        dK(i) = dK(i) + 0.5 * ( h(i,j,k) + h(i,j,k-1) ) * GV%H_to_Z ! Depth of center of layer K
+        dK(i) = dK(i) + 0.5 * ( h(i,j,k) + h(i,j,k-1) ) ! Depth of center of layer K
       enddo
 
       ! Prepare to calculate stratification, N2, immediately below the mixed layer by finding
@@ -769,13 +770,13 @@ subroutine diagnoseMLDbyDensityDifference(id_MLD, h, tv, densityDiff, G, GV, US,
         if ((MLD(i,j) == 0.) .and. (ddRho > 0.) .and. &
             (deltaRhoAtKm1(i) < densityDiff) .and. (deltaRhoAtK(i) >= densityDiff)) then
           aFac = ( densityDiff - deltaRhoAtKm1(i) ) / ddRho
-          MLD(i,j) = dK(i) * aFac + dKm1(i) * (1. - aFac)
+          MLD(i,j) = GV%H_to_Z*(dK(i) * aFac + dKm1(i) * (1. - aFac))
         endif
         if (id_SQ > 0) MLD2(i,j) = MLD(i,j)**2
       enddo ! i-loop
     enddo ! k-loop
     do i=is,ie
-      if ((MLD(i,j) == 0.) .and. (deltaRhoAtK(i) < densityDiff)) MLD(i,j) = dK(i) ! Assume mixing to the bottom
+      if ((MLD(i,j) == 0.) .and. (deltaRhoAtK(i) < densityDiff)) MLD(i,j) = GV%H_to_Z*dK(i) ! Mixing goes to the bottom
     enddo
 
     if (id_N2>0) then  ! Now actually calculate stratification, N2, below the mixed layer.
@@ -788,7 +789,7 @@ subroutine diagnoseMLDbyDensityDifference(id_MLD, h, tv, densityDiff, G, GV, US,
       call calculate_density(T_subML, S_subML, pRef_N2, rho_subML, tv%eqn_of_state, EOSdom)
       call calculate_density(T_deeper, S_deeper, pRef_N2, rho_deeper, tv%eqn_of_state, EOSdom)
       do i=is,ie ; if ((G%mask2dT(i,j) > 0.0) .and. N2_region_set(i)) then
-        subMLN2(i,j) =  gE_rho0 * (rho_deeper(i) - rho_subML(i)) / (GV%H_to_z * dH_N2(i))
+        subMLN2(i,j) =  gE_rho0 * (rho_deeper(i) - rho_subML(i)) / dH_N2(i)
       endif ; enddo
     endif
   enddo ! j-loop
