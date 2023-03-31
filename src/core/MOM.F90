@@ -341,8 +341,8 @@ type, public :: MOM_control_struct ; private
                                 !! average surface tracer properties when a bulk
                                 !! mixed layer is not used [Z ~> m], or a negative value
                                 !! if a bulk mixed layer is being used.
-  real :: HFrz                  !< If HFrz > 0, the nominal depth over which melt potential is
-                                !! computed [Z ~> m]. The actual depth over which melt potential is
+  real :: HFrz                  !< If HFrz > 0, the nominal depth over which melt potential is computed
+                                !! [Z ~> m].  The actual depth over which melt potential is
                                 !! computed is min(HFrz, OBLD), where OBLD is the boundary layer depth.
                                 !! If HFrz <= 0 (default), melt potential will not be computed.
   real :: Hmix_UV               !< Depth scale over which to average surface flow to
@@ -2171,7 +2171,8 @@ subroutine initialize_MOM(Time, Time_init, param_file, dirs, CS, restart_CSp, &
                  "If HFREEZE > 0, melt potential will be computed. The actual depth "//&
                  "over which melt potential is computed will be min(HFREEZE, OBLD), "//&
                  "where OBLD is the boundary layer depth. If HFREEZE <= 0 (default), "//&
-                 "melt potential will not be computed.", units="m", default=-1.0, scale=US%m_to_Z)
+                 "melt potential will not be computed.", &
+                 units="m", default=-1.0, scale=US%m_to_Z)
   call get_param(param_file, "MOM", "INTERPOLATE_P_SURF", CS%interp_p_surf, &
                  "If true, linearly interpolate the surface pressure "//&
                  "over the coupling time step, using the specified value "//&
@@ -3460,7 +3461,7 @@ subroutine extract_surface_state(CS, sfc_state_in)
                              !  After the ANSWERS_2018 flag has been obsoleted, H_rescale will be 1.
   real :: T_freeze(SZI_(CS%G)) !< freezing temperature [C ~> degC]
   real :: pres(SZI_(CS%G))   !< Pressure to use for the freezing temperature calculation [R L2 T-2 ~> Pa]
-  real :: delT(SZI_(CS%G))   !< Depth integral of T-T_freeze [Z C ~> m degC]
+  real :: delT(SZI_(CS%G))   !< Depth integral of T-T_freeze [H C ~> m degC or degC kg m-2]
   logical :: use_temperature !< If true, temperature and salinity are used as state variables.
   integer :: i, j, k, is, ie, js, je, nz, numberOfErrors, ig, jg
   integer :: isd, ied, jsd, jed
@@ -3682,9 +3683,9 @@ subroutine extract_surface_state(CS, sfc_state_in)
       do k=1,nz
         call calculate_TFreeze(CS%tv%S(is:ie,j,k), pres(is:ie), T_freeze(is:ie), CS%tv%eqn_of_state)
         do i=is,ie
-          depth_ml = min(CS%HFrz, CS%visc%MLD(i,j))
-          if (depth(i) + h(i,j,k)*GV%H_to_Z < depth_ml) then
-            dh = h(i,j,k)*GV%H_to_Z
+          depth_ml = min(GV%Z_to_H*CS%HFrz, CS%visc%MLD(i,j))
+          if (depth(i) + h(i,j,k) < depth_ml) then
+            dh = h(i,j,k)
           elseif (depth(i) < depth_ml) then
             dh = depth_ml - depth(i)
           else
@@ -3706,7 +3707,7 @@ subroutine extract_surface_state(CS, sfc_state_in)
 
         if (G%mask2dT(i,j)>0.) then
           ! instantaneous melt_potential [Q R Z ~> J m-2]
-          sfc_state%melt_potential(i,j) = CS%tv%C_p * GV%Rho0 * delT(i)
+          sfc_state%melt_potential(i,j) = CS%tv%C_p * GV%H_to_RZ * delT(i)
         endif
       enddo
     enddo ! end of j loop

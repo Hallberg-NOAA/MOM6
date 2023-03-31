@@ -597,7 +597,7 @@ subroutine set_diffusivity(u, v, h, u_h, v_h, tv, fluxes, optics, visc, dt, Kd_i
 
     if (allocated(visc%bbl_thick_u) .and. allocated(visc%bbl_thick_v)) then
       call uvchksum("BBL bbl_thick_[uv]", visc%bbl_thick_u, visc%bbl_thick_v, &
-                    G%HI, haloshift=0, symmetric=.true., scale=US%Z_to_m, &
+                    G%HI, haloshift=0, symmetric=.true., scale=GV%H_to_m, &
                     scalar_pair=.true.)
     endif
 
@@ -1691,8 +1691,8 @@ subroutine set_BBL_TKE(u, v, h, fluxes, visc, G, GV, US, CS, OBC)
     vstar, & ! ustar at at v-points [Z T-1 ~> m s-1].
     v2_bbl   ! square of average meridional velocity in BBL [L2 T-2 ~> m2 s-2]
 
-  real :: cdrag_sqrt  ! square root of the drag coefficient [nondim]
-  real :: I_cdrag_sqrt  ! The inverse of the square root of the drag coefficient [nondim]
+  real :: cdrag_sqrt_H  ! Square root of the drag coefficient, times a unit conversion
+                      ! factor from thicknesses to vertical depths [Z H-1 ~> nondim or m3 kg-1]
   real :: hvel        ! thickness at velocity points [H ~> m or kg m-2]
 
   logical :: domore, do_i(SZI_(G))
@@ -1726,8 +1726,7 @@ subroutine set_BBL_TKE(u, v, h, fluxes, visc, G, GV, US, CS, OBC)
     return
   endif
 
-  cdrag_sqrt = sqrt(CS%cdrag)
-  I_cdrag_sqrt = 0.0 ; if (cdrag_sqrt > 0.0) I_cdrag_sqrt = 1.0 / cdrag_sqrt
+  cdrag_sqrt_H = GV%H_to_Z*sqrt(CS%cdrag)
 
   !$OMP parallel default(shared) private(do_i,vhtot,htot,domore,hvel,uhtot,ustar,u2_bbl)
   !$OMP do
@@ -1738,9 +1737,9 @@ subroutine set_BBL_TKE(u, v, h, fluxes, visc, G, GV, US, CS, OBC)
       do_i(i) = .false. ; vstar(i,J) = 0.0 ; vhtot(i) = 0.0 ; htot(i) = 0.0
     enddo
     if (allocated(visc%Kv_bbl_v)) then
-      do i=is,ie ; if ((G%mask2dCv(i,J) > 0.0) .and. (cdrag_sqrt*visc%bbl_thick_v(i,J) > 0.0)) then
+      do i=is,ie ; if ((G%mask2dCv(i,J) > 0.0) .and. (cdrag_sqrt_H*visc%bbl_thick_v(i,J) > 0.0)) then
         do_i(i) = .true.
-        vstar(i,J) = visc%Kv_bbl_v(i,J) / (cdrag_sqrt*visc%bbl_thick_v(i,J))
+        vstar(i,J) = visc%Kv_bbl_v(i,J) / (cdrag_sqrt_H*visc%bbl_thick_v(i,J))
       endif ; enddo
     endif
     !### What about terms from visc%Ray?
@@ -1768,9 +1767,9 @@ subroutine set_BBL_TKE(u, v, h, fluxes, visc, G, GV, US, CS, OBC)
           hvel = 0.5*(h(i,j,k) + h(i,j+1,k))
         endif
 
-        if ((htot(i) + hvel) >= GV%Z_to_H*visc%bbl_thick_v(i,J)) then
-          vhtot(i) = vhtot(i) + (GV%Z_to_H*visc%bbl_thick_v(i,J) - htot(i))*v(i,J,k)
-          htot(i) = GV%Z_to_H*visc%bbl_thick_v(i,J)
+        if ((htot(i) + hvel) >= visc%bbl_thick_v(i,J)) then
+          vhtot(i) = vhtot(i) + (visc%bbl_thick_v(i,J) - htot(i))*v(i,J,k)
+          htot(i) = visc%bbl_thick_v(i,J)
           do_i(i) = .false.
         else
           vhtot(i) = vhtot(i) + hvel*v(i,J,k)
@@ -1792,9 +1791,9 @@ subroutine set_BBL_TKE(u, v, h, fluxes, visc, G, GV, US, CS, OBC)
       do_i(I) = .false. ; ustar(I) = 0.0 ; uhtot(I) = 0.0 ; htot(I) = 0.0
     enddo
     if (allocated(visc%bbl_thick_u)) then
-      do I=is-1,ie ; if ((G%mask2dCu(I,j) > 0.0) .and. (cdrag_sqrt*visc%bbl_thick_u(I,j) > 0.0))  then
+      do I=is-1,ie ; if ((G%mask2dCu(I,j) > 0.0) .and. (cdrag_sqrt_H*visc%bbl_thick_u(I,j) > 0.0))  then
         do_i(I) = .true.
-        ustar(I) = visc%Kv_bbl_u(I,j) / (cdrag_sqrt*visc%bbl_thick_u(I,j))
+        ustar(I) = visc%Kv_bbl_u(I,j) / (cdrag_sqrt_H*visc%bbl_thick_u(I,j))
       endif ; enddo
     endif
 
@@ -1820,9 +1819,9 @@ subroutine set_BBL_TKE(u, v, h, fluxes, visc, G, GV, US, CS, OBC)
           hvel = 0.5*(h(i,j,k) + h(i+1,j,k))
         endif
 
-        if ((htot(I) + hvel) >= GV%Z_to_H*visc%bbl_thick_u(I,j)) then
-          uhtot(I) = uhtot(I) + (GV%Z_to_H*visc%bbl_thick_u(I,j) - htot(I))*u(I,j,k)
-          htot(I) = GV%Z_to_H*visc%bbl_thick_u(I,j)
+        if ((htot(I) + hvel) >= visc%bbl_thick_u(I,j)) then
+          uhtot(I) = uhtot(I) + (visc%bbl_thick_u(I,j) - htot(I))*u(I,j,k)
+          htot(I) = visc%bbl_thick_u(I,j)
           do_i(I) = .false.
         else
           uhtot(I) = uhtot(I) + hvel*u(I,j,k)

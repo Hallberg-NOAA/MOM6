@@ -710,7 +710,7 @@ subroutine diabatic_ALE_legacy(u, v, h, tv, Hml, fluxes, visc, ADp, CDp, dt, Tim
       call KPP_get_BLD(CS%KPP_CSp, Hml(:,:), G, GV, US)
       call pass_var(Hml, G%domain, halo=1)
       ! If visc%MLD exists, copy KPP's BLD into it
-      if (associated(visc%MLD)) visc%MLD(:,:) = GV%H_to_Z*Hml(:,:)
+      if (associated(visc%MLD)) visc%MLD(:,:) = Hml(:,:)
     endif
 
     if (.not.CS%KPPisPassive) then
@@ -849,9 +849,9 @@ subroutine diabatic_ALE_legacy(u, v, h, tv, Hml, fluxes, visc, ADp, CDp, dt, Tim
       call energetic_PBL_get_MLD(CS%ePBL, Hml(:,:), G, GV, US)
       call pass_var(Hml, G%domain, halo=1)
       ! If visc%MLD exists, copy ePBL's MLD into it
-      if (associated(visc%MLD)) visc%MLD(:,:) = GV%H_to_Z*Hml(:,:)
+      if (associated(visc%MLD)) visc%MLD(:,:) = Hml(:,:)
     elseif (associated(visc%MLD)) then
-      call energetic_PBL_get_MLD(CS%ePBL, visc%MLD, G, GV, US, m_to_MLD_units=US%m_to_Z)
+      call energetic_PBL_get_MLD(CS%ePBL, visc%MLD, G, GV, US)
       call pass_var(visc%MLD, G%domain, halo=1)
     endif
 
@@ -1304,7 +1304,7 @@ subroutine diabatic_ALE(u, v, h, tv, Hml, fluxes, visc, ADp, CDp, dt, Time_end, 
       call KPP_get_BLD(CS%KPP_CSp, Hml(:,:), G, GV, US)
       call pass_var(Hml, G%domain, halo=1)
       ! If visc%MLD exists, copy KPP's BLD into it
-      if (associated(visc%MLD)) visc%MLD(:,:) = GV%H_to_Z*Hml(:,:)
+      if (associated(visc%MLD)) visc%MLD(:,:) = Hml(:,:)
     endif
 
     if (showCallTree) call callTree_waypoint("done with KPP_calculate (diabatic)")
@@ -1386,9 +1386,9 @@ subroutine diabatic_ALE(u, v, h, tv, Hml, fluxes, visc, ADp, CDp, dt, Time_end, 
       call energetic_PBL_get_MLD(CS%ePBL, Hml(:,:), G, GV, US)
       call pass_var(Hml, G%domain, halo=1)
       ! If visc%MLD exists, copy ePBL's MLD into it
-      if (associated(visc%MLD)) visc%MLD(:,:) = GV%H_to_Z*Hml(:,:)
+      if (associated(visc%MLD)) visc%MLD(:,:) = Hml(:,:)
     elseif (associated(visc%MLD)) then
-      call energetic_PBL_get_MLD(CS%ePBL, visc%MLD, G, GV, US, m_to_MLD_units=US%m_to_Z)
+      call energetic_PBL_get_MLD(CS%ePBL, visc%MLD, G, GV, US)
       call pass_var(visc%MLD, G%domain, halo=1)
     endif
 
@@ -1898,7 +1898,7 @@ subroutine layered_diabatic(u, v, h, tv, Hml, fluxes, visc, ADp, CDp, dt, Time_e
       call KPP_get_BLD(CS%KPP_CSp, Hml(:,:), G, GV, US)
       call pass_var(Hml, G%domain, halo=1)
       ! If visc%MLD exists, copy KPP's BLD into it
-      if (associated(visc%MLD)) visc%MLD(:,:) = GV%H_to_Z*Hml(:,:)
+      if (associated(visc%MLD)) visc%MLD(:,:) = Hml(:,:)
     endif
 
     if (.not. CS%KPPisPassive) then
