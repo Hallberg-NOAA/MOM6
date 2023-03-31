@@ -964,8 +964,7 @@ subroutine Update_Stokes_Drift(G, GV, US, CS, h, ustar, dt, dynamics_step)
   ! in the routine it is needed by (e.g. KPP or ePBL).
   do jj = G%jsc, G%jec
     do ii = G%isc,G%iec
-      Top = h(ii,jj,1)*GV%H_to_Z
-      call get_Langmuir_Number( La, G, GV, US, Top, ustar(ii,jj), ii, jj, &
+      call get_Langmuir_Number( La, G, GV, US, h(ii,jj,1), ustar(ii,jj), ii, jj, &
              h(ii,jj,:), CS, Override_MA=.false.)
       CS%La_turb(ii,jj) = La
     enddo
@@ -1143,7 +1142,7 @@ subroutine get_Langmuir_Number( LA, G, GV, US, HBL, ustar, i, j, h, Waves, &
   type(verticalGrid_type),   intent(in)  :: GV    !< Ocean vertical grid structure
   real,                      intent(out) :: LA    !< Langmuir number [nondim]
   type(unit_scale_type),     intent(in)  :: US    !< A dimensional unit scaling type
-  real,                      intent(in)  :: HBL   !< (Positive) thickness of boundary layer [Z ~> m]
+  real,                      intent(in)  :: HBL   !< (Positive) thickness of boundary layer [H ~> m or kg m-2]
   real,                      intent(in)  :: ustar !< Friction velocity [Z T-1 ~> m s-1]
   integer,                   intent(in)  :: i     !< Meridional index of h-point
   integer,                   intent(in)  :: j     !< Zonal index of h-point
@@ -1171,7 +1170,7 @@ subroutine get_Langmuir_Number( LA, G, GV, US, HBL, ustar, i, j, h, Waves, &
   integer :: KK, BB
 
   ! Compute averaging depth for Stokes drift (negative)
-  Dpt_LASL = -1.0*max(Waves%LA_FracHBL*HBL*GV%Z_to_H, Waves%LA_HBL_min)
+  Dpt_LASL = -1.0*max(Waves%LA_FracHBL*HBL, Waves%LA_HBL_min)
 
   USE_MA = Waves%LA_Misalignment
   if (present(Override_MA)) USE_MA = Override_MA
@@ -1222,7 +1221,7 @@ subroutine get_Langmuir_Number( LA, G, GV, US, HBL, ustar, i, j, h, Waves, &
     call Get_SL_Average_Prof( GV, Dpt_LASL, h, VS_H, LA_STKy)
     LA_STK = sqrt(LA_STKX**2 + LA_STKY**2)
   elseif (Waves%WaveMethod==LF17) then
-    call get_StokesSL_LiFoxKemper(ustar, hbl*Waves%LA_FracHBL, GV, US, Waves, LA_STK, LA)
+    call get_StokesSL_LiFoxKemper(ustar, HBL*Waves%LA_FracHBL, GV, US, Waves, LA_STK, LA)
   elseif (Waves%WaveMethod==Null_WaveMethod) then
     call MOM_error(FATAL, "Get_Langmuir_number called without defining a WaveMethod. "//&
                           "Suggest to make sure USE_LT is set/overridden to False or choose "//&
@@ -1286,7 +1285,7 @@ end function get_wave_method
 !! - BGR note: fixed parameter values should be changed to "get_params"
 subroutine get_StokesSL_LiFoxKemper(ustar, hbl, GV, US, CS, UStokes_SL, LA)
   real, intent(in)  :: ustar !< water-side surface friction velocity [Z T-1 ~> m s-1].
-  real, intent(in)  :: hbl   !< boundary layer depth [Z ~> m].
+  real, intent(in)  :: hbl   !< boundary layer depth [H ~> m or kg m-2].
   type(verticalGrid_type), intent(in) :: GV !< Ocean vertical grid structure
   type(unit_scale_type),   intent(in) :: US !< A dimensional unit scaling type
   type(wave_parameters_CS), pointer   :: CS  !< Wave parameter Control structure
@@ -1352,7 +1351,7 @@ subroutine get_StokesSL_LiFoxKemper(ustar, hbl, GV, US, CS, UStokes_SL, LA)
     !         (GV%g_Earth * u10**2)
 
     ! surface layer
-    z0 = abs(hbl)
+    z0 = abs(GV%H_to_Z*hbl)
 
     if (CS%answer_date < 20230102) then
       z0i = 1.0 / z0
