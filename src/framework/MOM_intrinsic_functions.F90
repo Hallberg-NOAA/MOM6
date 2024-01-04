@@ -40,8 +40,10 @@ elemental function cuberoot(x) result(root)
               ! in arbitrary units that can grow or shrink with each iteration [B C]
   real :: den ! The denominator of an expression for the evolving estimate of the cube root of asx
               ! in arbitrary units that can grow or shrink with each iteration [C]
-  real :: np2 ! The previous value of num squared [B2 C2]
-  logical :: last_itt ! If true, one more iteration will be enough to converge to roundoff.
+  real :: num_prev ! The numerator of an expression for the previous iteration of the evolving estimate
+              ! of the cube root of asx in arbitrary units that can grow or shrink with each iteration [B D]
+  real :: den_prev ! The denominator of an expression for the previous iteration of the evolving estimate of
+              ! the cube root of asx in arbitrary units that can grow or shrink with each iteration [D]
   integer :: ex_3 ! One third of the exponent part of x, used to rescale x to get a.
   integer :: itt
 
@@ -53,8 +55,8 @@ elemental function cuberoot(x) result(root)
     asx = scale(abs(x), -3*ex_3)
     if (asx > 1.0) then
       asx = 0.125 * asx ; ex_3 = ex_3 + 1
-    elseif (asx <= 0.125) then
-      asx = 8.0 * asx ; ex_3 = ex_3 - 1
+!    elseif (asx <= 0.125) then
+!      asx = 8.0 * asx ; ex_3 = ex_3 - 1
     endif
 
     num = (2.0 + asx)
@@ -63,7 +65,7 @@ elemental function cuberoot(x) result(root)
       ! Iteratively determine R = asx**1/3 using Newton's method, noting that in this case Newton's
       ! method converges monotonically from above and needs no bounding.  For the range of asx from
       ! 0.125 to 1.0 with a first guess of 1.0, 6 iterations suffice to converge to roundoff.
-      do itt=1,6
+      do itt=1,9
         ! Newton's method iterates estimates as Root = Root - (Root**3 - asx) / (3.0 * Root**2).
         ! Keeping the estimates in a fractional form Root = num / den allows this calculation with
         ! fewer (or no) real divisions during the iterations before doing a single real division
@@ -72,19 +74,30 @@ elemental function cuberoot(x) result(root)
         ! Because successive estimates of the numerator and denominator tend to be the cube of their
         ! predecessors, the numerator and denominator need to be rescaled by division when they get
         ! too large or small to avoid overflow or underflow.  Were this being done for 32 bit reals,
-        ! the values to compare with would be about 1.0e12 and 1.0e-12.
-        if ((den > 1.0e100) .or. (den < 1.0e-100)) then
+        ! the values to compare with would be about 1.0e9 and 1.0e-9.
+        if ((den > 1.0e75) .or. (den < 1.0e-75)) then
           num = num / den ; den = 1.0
         endif
 
-        ! Test whether one more iteration is enough to converge to roundoff with 64 bit reals.
-        last_itt = (abs(num**3 - asx * den**3) < 1.e-12 * num**3)
+        num_prev = num ; den_prev = den
+        num = (2.0 * num_prev**3 + asx * den_prev**3)
+        den = 3.0 * (den_prev * num_prev**2)
 
-        np2 = num**2
-        num = (2.0 * num**3 + asx * den**3)
-        den = 3.0 * (den * np2)
+        if (num * den_prev == num_prev * den) &
+          exit  ! This is an exact or converged solution, so stop.
 
-        if (last_itt) exit
+        if (itt > 1) then
+          if ((abs(num*den_prev - num_prev*den) <= 3.0*epsilon(num)*num*den_prev) .and. &
+              (num * den_prev >= num_prev * den)) then
+            ! Because Newton's method converges monotonically from above after the first iteration,
+            ! if the answer has increased slightly (at the last bit) from the previous iteration, the
+            ! answers may have converged to a roundoff-level limit cycle around an irrational solution,
+            ! so take the previous estimate and stop iterating.  (The test above for whether the two
+            ! solutions are within 1e-15 of each other might not actually be needed.)
+            num = num_prev ; den = den_prev
+            exit
+          endif
+        endif
       enddo
     endif
     root = sign(scale(num / den, ex_3), x)
