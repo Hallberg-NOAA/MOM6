@@ -17,69 +17,69 @@ real, parameter :: I_Ts = 0.025           ! The inverse of a plausible range of 
 
 ! The following are the coefficients of the fit to the reference density profile (rho00p) as a function of
 ! pressure (P), with a contribution R0c * P**(c+1).  The nomenclature follows Roquet.
-real, parameter :: R00 = 4.6494977072e+01*Pa2kb     ! rho00p P coef.    [kg m-3 Pa-1]
-real, parameter :: R01 = -5.2099962525*Pa2kb**2     ! rho00p P**2 coef. [kg m-3 Pa-2]
-real, parameter :: R02 = 2.2601900708e-01*Pa2kb**3  ! rho00p P**3 coef. [kg m-3 Pa-3]
-real, parameter :: R03 = 6.4326772569e-02*Pa2kb**4  ! rho00p P**4 coef. [kg m-3 Pa-4]
-real, parameter :: R04 = 1.5616995503e-02*Pa2kb**5  ! rho00p P**5 coef. [kg m-3 Pa-5]
-real, parameter :: R05 = -1.7243708991e-03*Pa2kb**6 ! rho00p P**6 coef. [kg m-3 Pa-6]
+real, parameter :: R00 = 4.6494977072e+01*Pa2kb       ! rho00p P coef.    [kg m-3 Pa-1]
+real, parameter :: R01 = -5.2099962525*(Pa2kb**2)     ! rho00p P**2 coef. [kg m-3 Pa-2]
+real, parameter :: R02 = 2.2601900708e-01*(Pa2kb**3)  ! rho00p P**3 coef. [kg m-3 Pa-3]
+real, parameter :: R03 = 6.4326772569e-02*(Pa2kb**4)  ! rho00p P**4 coef. [kg m-3 Pa-4]
+real, parameter :: R04 = 1.5616995503e-02*(Pa2kb**5)  ! rho00p P**5 coef. [kg m-3 Pa-5]
+real, parameter :: R05 = -1.7243708991e-03*(Pa2kb**6) ! rho00p P**6 coef. [kg m-3 Pa-6]
 
 ! The following are coefficients of contributions to density as a function of the square root
 ! of normalized salinity with an offset (zs), temperature (T) and pressure (P), with a contribution
 ! EOSabc * zs**a * T**b * P**c.  The numbers here are copied directly from Roquet et al. (2015), but
 ! the expressions here do not use the same nondimensionalization for pressure or temperature as they do.
-real, parameter :: EOS000 = 8.0189615746e+02                  ! A constant density contribution [kg m-3]
-real, parameter :: EOS100 = 8.6672408165e+02                  ! EoS zs coef.                [kg m-3]
-real, parameter :: EOS200 = -1.7864682637e+03                 ! EoS zs**2 coef.             [kg m-3]
-real, parameter :: EOS300 = 2.0375295546e+03                  ! EoS zs**3 coef.             [kg m-3]
-real, parameter :: EOS400 = -1.2849161071e+03                 ! EoS zs**4 coef.             [kg m-3]
-real, parameter :: EOS500 = 4.3227585684e+02                  ! EoS zs**5 coef.             [kg m-3]
-real, parameter :: EOS600 = -6.0579916612e+01                 ! EoS zs**6 coef.             [kg m-3]
-real, parameter :: EOS010 = 2.6010145068e+01*I_Ts             ! EoS T coef.          [kg m-3 degC-1]
-real, parameter :: EOS110 = -6.5281885265e+01*I_Ts            ! EoS zs * T coef.     [kg m-3 degC-1]
-real, parameter :: EOS210 = 8.1770425108e+01*I_Ts             ! EoS zs**2 * T coef.  [kg m-3 degC-1]
-real, parameter :: EOS310 = -5.6888046321e+01*I_Ts            ! EoS zs**3 * T coef.  [kg m-3 degC-1]
-real, parameter :: EOS410 = 1.7681814114e+01*I_Ts             ! EoS zs**2 * T coef.  [kg m-3 degC-1]
-real, parameter :: EOS510 = -1.9193502195*I_Ts                ! EoS zs**5 * T coef.  [kg m-3 degC-1]
-real, parameter :: EOS020 = -3.7074170417e+01*I_Ts**2         ! EoS T**2 coef.       [kg m-3 degC-2]
-real, parameter :: EOS120 = 6.1548258127e+01*I_Ts**2          ! EoS zs * T**2 coef.  [kg m-3 degC-2]
-real, parameter :: EOS220 = -6.0362551501e+01*I_Ts**2         ! EoS zs**2 * T**2 coef. [kg m-3 degC-2]
-real, parameter :: EOS320 = 2.9130021253e+01*I_Ts**2          ! EoS zs**3 * T**2 coef. [kg m-3 degC-2]
-real, parameter :: EOS420 = -5.4723692739*I_Ts**2             ! EoS zs**4 * T**2 coef. [kg m-3 degC-2]
-real, parameter :: EOS030 = 2.1661789529e+01*I_Ts**3          ! EoS T**3 coef.       [kg m-3 degC-3]
-real, parameter :: EOS130 = -3.3449108469e+01*I_Ts**3         ! EoS zs * T**3 coef.  [kg m-3 degC-3]
-real, parameter :: EOS230 = 1.9717078466e+01*I_Ts**3          ! EoS zs**2 * T**3 coef. [kg m-3 degC-3]
-real, parameter :: EOS330 = -3.1742946532*I_Ts**3             ! EoS zs**3 * T**3 coef. [kg m-3 degC-3]
-real, parameter :: EOS040 = -8.3627885467*I_Ts**4             ! EoS T**4 coef.       [kg m-3 degC-4]
-real, parameter :: EOS140 = 1.1311538584e+01*I_Ts**4          ! EoS zs * T**4 coef.  [kg m-3 degC-4]
-real, parameter :: EOS240 = -5.3563304045*I_Ts**4             ! EoS zs**2 * T**4 coef. [kg m-3 degC-4]
-real, parameter :: EOS050 = 5.4048723791e-01*I_Ts**5          ! EoS T**5 coef.       [kg m-3 degC-5]
-real, parameter :: EOS150 = 4.8169980163e-01*I_Ts**5          ! EoS zs * T**5 coef.  [kg m-3 degC-5]
-real, parameter :: EOS060 = -1.9083568888e-01*I_Ts**6         ! EoS T**6             [kg m-3 degC-6]
-real, parameter :: EOS001 = 1.9681925209e+01*Pa2kb            ! EoS P coef.            [kg m-3 Pa-1]
-real, parameter :: EOS101 = -4.2549998214e+01*Pa2kb           ! EoS zs * P coef.       [kg m-3 Pa-1]
-real, parameter :: EOS201 = 5.0774768218e+01*Pa2kb            ! EoS zs**2 * P coef.    [kg m-3 Pa-1]
-real, parameter :: EOS301 = -3.0938076334e+01*Pa2kb           ! EoS zs**3 * P coef.    [kg m-3 Pa-1]
-real, parameter :: EOS401 = 6.6051753097*Pa2kb                ! EoS zs**4 * P coef.    [kg m-3 Pa-1]
-real, parameter :: EOS011 = -1.3336301113e+01*(I_Ts*Pa2kb)    ! EoS T * P coef. [kg m-3 degC-1 Pa-1]
-real, parameter :: EOS111 = -4.4870114575*(I_Ts*Pa2kb)        ! EoS zs * T * P coef. [kg m-3 degC-1 Pa-1]
-real, parameter :: EOS211 = 5.0042598061*(I_Ts*Pa2kb)         ! EoS zs**2 * T * P coef. [kg m-3 degC-1 Pa-1]
-real, parameter :: EOS311 = -6.5399043664e-01*(I_Ts*Pa2kb)    ! EoS zs**3 * T * P coef. [kg m-3 degC-1 Pa-1]
-real, parameter :: EOS021 = 6.7080479603*(I_Ts**2*Pa2kb)      ! EoS T**2 * P coef. [kg m-3 degC-2 Pa-1]
-real, parameter :: EOS121 = 3.5063081279*(I_Ts**2*Pa2kb)      ! EoS zs * T**2 * P coef. [kg m-3 degC-2 Pa-1]
-real, parameter :: EOS221 = -1.8795372996*(I_Ts**2*Pa2kb)     ! EoS zs**2 * T**2 * P coef. [kg m-3 degC-2 Pa-1]
-real, parameter :: EOS031 = -2.4649669534*(I_Ts**3*Pa2kb)     ! EoS T**3 * P coef. [kg m-3 degC-3 Pa-1]
-real, parameter :: EOS131 = -5.5077101279e-01*(I_Ts**3*Pa2kb) ! EoS zs * T**3 * P coef. [kg m-3 degC-3 Pa-1]
-real, parameter :: EOS041 = 5.5927935970e-01*(I_Ts**4*Pa2kb)  ! EoS T**4 * P coef. [kg m-3 degC-4 Pa-1]
-real, parameter :: EOS002 = 2.0660924175*Pa2kb**2             ! EoS P**2 coef.         [kg m-3 Pa-2]
-real, parameter :: EOS102 = -4.9527603989*Pa2kb**2            ! EoS zs * P**2 coef.    [kg m-3 Pa-2]
-real, parameter :: EOS202 = 2.5019633244*Pa2kb**2             ! EoS zs**2 * P**2 coef. [kg m-3 Pa-2]
-real, parameter :: EOS012 = 2.0564311499*(I_Ts*Pa2kb**2)      ! EoS T * P**2 coef. [kg m-3 degC-1 Pa-2]
-real, parameter :: EOS112 = -2.1311365518e-01*(I_Ts*Pa2kb**2) ! EoS zs * T * P**2 coef. [kg m-3 degC-1 Pa-2]
-real, parameter :: EOS022 = -1.2419983026*(I_Ts**2*Pa2kb**2)  ! EoS T**2 * P**2 coef. [kg m-3 degC-2 Pa-2]
-real, parameter :: EOS003 = -2.3342758797e-02*Pa2kb**3        ! EoS P**3 coef.         [kg m-3 Pa-3]
-real, parameter :: EOS103 = -1.8507636718e-02*Pa2kb**3        ! EoS zs * P**3 coef.    [kg m-3 Pa-3]
-real, parameter :: EOS013 = 3.7969820455e-01*(I_Ts*Pa2kb**3)  ! EoS T * P**3 coef. [kg m-3 degC-1 Pa-3]
+real, parameter :: EOS000 = 8.0189615746e+02                    ! A constant density contribution [kg m-3]
+real, parameter :: EOS100 = 8.6672408165e+02                    ! EoS zs coef.                [kg m-3]
+real, parameter :: EOS200 = -1.7864682637e+03                   ! EoS zs**2 coef.             [kg m-3]
+real, parameter :: EOS300 = 2.0375295546e+03                    ! EoS zs**3 coef.             [kg m-3]
+real, parameter :: EOS400 = -1.2849161071e+03                   ! EoS zs**4 coef.             [kg m-3]
+real, parameter :: EOS500 = 4.3227585684e+02                    ! EoS zs**5 coef.             [kg m-3]
+real, parameter :: EOS600 = -6.0579916612e+01                   ! EoS zs**6 coef.             [kg m-3]
+real, parameter :: EOS010 = 2.6010145068e+01*I_Ts               ! EoS T coef.          [kg m-3 degC-1]
+real, parameter :: EOS110 = -6.5281885265e+01*I_Ts              ! EoS zs * T coef.     [kg m-3 degC-1]
+real, parameter :: EOS210 = 8.1770425108e+01*I_Ts               ! EoS zs**2 * T coef.  [kg m-3 degC-1]
+real, parameter :: EOS310 = -5.6888046321e+01*I_Ts              ! EoS zs**3 * T coef.  [kg m-3 degC-1]
+real, parameter :: EOS410 = 1.7681814114e+01*I_Ts               ! EoS zs**2 * T coef.  [kg m-3 degC-1]
+real, parameter :: EOS510 = -1.9193502195*I_Ts                  ! EoS zs**5 * T coef.  [kg m-3 degC-1]
+real, parameter :: EOS020 = -3.7074170417e+01*(I_Ts**2)         ! EoS T**2 coef.       [kg m-3 degC-2]
+real, parameter :: EOS120 = 6.1548258127e+01*(I_Ts**2)          ! EoS zs * T**2 coef.  [kg m-3 degC-2]
+real, parameter :: EOS220 = -6.0362551501e+01*(I_Ts**2)         ! EoS zs**2 * T**2 coef. [kg m-3 degC-2]
+real, parameter :: EOS320 = 2.9130021253e+01*(I_Ts**2)          ! EoS zs**3 * T**2 coef. [kg m-3 degC-2]
+real, parameter :: EOS420 = -5.4723692739*(I_Ts**2)             ! EoS zs**4 * T**2 coef. [kg m-3 degC-2]
+real, parameter :: EOS030 = 2.1661789529e+01*(I_Ts**3)          ! EoS T**3 coef.       [kg m-3 degC-3]
+real, parameter :: EOS130 = -3.3449108469e+01*(I_Ts**3)         ! EoS zs * T**3 coef.  [kg m-3 degC-3]
+real, parameter :: EOS230 = 1.9717078466e+01*(I_Ts**3)          ! EoS zs**2 * T**3 coef. [kg m-3 degC-3]
+real, parameter :: EOS330 = -3.1742946532*(I_Ts**3)             ! EoS zs**3 * T**3 coef. [kg m-3 degC-3]
+real, parameter :: EOS040 = -8.3627885467*(I_Ts**4)             ! EoS T**4 coef.       [kg m-3 degC-4]
+real, parameter :: EOS140 = 1.1311538584e+01*(I_Ts**4)          ! EoS zs * T**4 coef.  [kg m-3 degC-4]
+real, parameter :: EOS240 = -5.3563304045*(I_Ts**4)             ! EoS zs**2 * T**4 coef. [kg m-3 degC-4]
+real, parameter :: EOS050 = 5.4048723791e-01*(I_Ts**5)          ! EoS T**5 coef.       [kg m-3 degC-5]
+real, parameter :: EOS150 = 4.8169980163e-01*(I_Ts**5)          ! EoS zs * T**5 coef.  [kg m-3 degC-5]
+real, parameter :: EOS060 = -1.9083568888e-01*(I_Ts**6)         ! EoS T**6             [kg m-3 degC-6]
+real, parameter :: EOS001 = 1.9681925209e+01*Pa2kb              ! EoS P coef.            [kg m-3 Pa-1]
+real, parameter :: EOS101 = -4.2549998214e+01*Pa2kb             ! EoS zs * P coef.       [kg m-3 Pa-1]
+real, parameter :: EOS201 = 5.0774768218e+01*Pa2kb              ! EoS zs**2 * P coef.    [kg m-3 Pa-1]
+real, parameter :: EOS301 = -3.0938076334e+01*Pa2kb             ! EoS zs**3 * P coef.    [kg m-3 Pa-1]
+real, parameter :: EOS401 = 6.6051753097*Pa2kb                  ! EoS zs**4 * P coef.    [kg m-3 Pa-1]
+real, parameter :: EOS011 = -1.3336301113e+01*(I_Ts*Pa2kb)      ! EoS T * P coef. [kg m-3 degC-1 Pa-1]
+real, parameter :: EOS111 = -4.4870114575*(I_Ts*Pa2kb)          ! EoS zs * T * P coef. [kg m-3 degC-1 Pa-1]
+real, parameter :: EOS211 = 5.0042598061*(I_Ts*Pa2kb)           ! EoS zs**2 * T * P coef. [kg m-3 degC-1 Pa-1]
+real, parameter :: EOS311 = -6.5399043664e-01*(I_Ts*Pa2kb)      ! EoS zs**3 * T * P coef. [kg m-3 degC-1 Pa-1]
+real, parameter :: EOS021 = 6.7080479603*((I_Ts**2)*Pa2kb)      ! EoS T**2 * P coef. [kg m-3 degC-2 Pa-1]
+real, parameter :: EOS121 = 3.5063081279*((I_Ts**2)*Pa2kb)      ! EoS zs * T**2 * P coef. [kg m-3 degC-2 Pa-1]
+real, parameter :: EOS221 = -1.8795372996*((I_Ts**2)*Pa2kb)     ! EoS zs**2 * T**2 * P coef. [kg m-3 degC-2 Pa-1]
+real, parameter :: EOS031 = -2.4649669534*((I_Ts**3)*Pa2kb)     ! EoS T**3 * P coef. [kg m-3 degC-3 Pa-1]
+real, parameter :: EOS131 = -5.5077101279e-01*((I_Ts**3)*Pa2kb) ! EoS zs * T**3 * P coef. [kg m-3 degC-3 Pa-1]
+real, parameter :: EOS041 = 5.5927935970e-01*((I_Ts**4)*Pa2kb)  ! EoS T**4 * P coef. [kg m-3 degC-4 Pa-1]
+real, parameter :: EOS002 = 2.0660924175*(Pa2kb**2)             ! EoS P**2 coef.         [kg m-3 Pa-2]
+real, parameter :: EOS102 = -4.9527603989*(Pa2kb**2)            ! EoS zs * P**2 coef.    [kg m-3 Pa-2]
+real, parameter :: EOS202 = 2.5019633244*(Pa2kb**2)             ! EoS zs**2 * P**2 coef. [kg m-3 Pa-2]
+real, parameter :: EOS012 = 2.0564311499*(I_Ts*(Pa2kb**2))      ! EoS T * P**2 coef. [kg m-3 degC-1 Pa-2]
+real, parameter :: EOS112 = -2.1311365518e-01*(I_Ts*(Pa2kb**2)) ! EoS zs * T * P**2 coef. [kg m-3 degC-1 Pa-2]
+real, parameter :: EOS022 = -1.2419983026*((I_Ts**2)*(Pa2kb**2))  ! EoS T**2 * P**2 coef. [kg m-3 degC-2 Pa-2]
+real, parameter :: EOS003 = -2.3342758797e-02*(Pa2kb**3)        ! EoS P**3 coef.         [kg m-3 Pa-3]
+real, parameter :: EOS103 = -1.8507636718e-02*(Pa2kb**3)        ! EoS zs * P**3 coef.    [kg m-3 Pa-3]
+real, parameter :: EOS013 = 3.7969820455e-01*(I_Ts*(Pa2kb**3))  ! EoS T * P**3 coef. [kg m-3 degC-1 Pa-3]
 
 real, parameter :: ALP000 =    EOS010   ! Constant in the drho_dT fit                [kg m-3 degC-1]
 real, parameter :: ALP100 =    EOS110   ! drho_dT fit zs coef.                       [kg m-3 degC-1]
@@ -452,15 +452,15 @@ elemental subroutine calculate_density_second_derivs_elem_Roquet_rho(this, T, S,
   I_s = 1.0 / zs
 
   ! Find drho_ds_ds
-  d2R_p3 = -EOS103*I_s**2
-  d2R_p2 = -(EOS102 + zt*EOS112)*I_s**2
+  d2R_p3 = -EOS103*(I_s**2)
+  d2R_p2 = -(EOS102 + zt*EOS112)*(I_s**2)
   d2R_p1 = (3.*EOS301 + (zt*(3.*EOS311) + zs*(8.*EOS401))) &
-           - ( EOS101 + zt*(EOS111 + zt*(EOS121 + zt*EOS131)) )*I_s**2
+           - ( EOS101 + zt*(EOS111 + zt*(EOS121 + zt*EOS131)) )*(I_s**2)
   d2R_p0 = (3.*EOS300 + (zs*(8.*EOS400 + zs*(15.*EOS500 + zs*(24.*EOS600))) &
                        + zt*(3.*EOS310 + (zs*(8.*EOS410 + zs*(15.*EOS510)) &
                                         + zt*(3.*EOS320 + (zs*(8.*EOS420) + zt*(3.*EOS330))) )) )) &
-           - (EOS100 + zt*(EOS110 + zt*(EOS120 + zt*(EOS130 + zt*(EOS140 + zt*EOS150)))) )*I_s**2
-  drho_dS_dS = (0.5*r1_S0)**2 * ((d2R_p0 + zp*(d2R_p1 + zp*(d2R_p2 + zp*d2R_p3))) * I_s)
+           - (EOS100 + zt*(EOS110 + zt*(EOS120 + zt*(EOS130 + zt*(EOS140 + zt*EOS150)))) )*(I_s**2)
+  drho_dS_dS = ((0.5*r1_S0)**2) * ((d2R_p0 + zp*(d2R_p1 + zp*(d2R_p2 + zp*d2R_p3))) * I_s)
 
   ! Find drho_ds_dt
   d2R_p2 = EOS112

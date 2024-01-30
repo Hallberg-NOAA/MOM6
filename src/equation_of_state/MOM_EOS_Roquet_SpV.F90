@@ -17,68 +17,68 @@ real, parameter :: I_Ts = 0.025           ! The inverse of a plausible range of 
 ! The following are the coefficients of the fit to the reference density profile (rho00p) as a function of
 ! pressure (P), with a contribution R0c * P**(c+1).  The nomenclature follows Roquet.
 real, parameter :: V00 = -4.4015007269e-05*Pa2kb    ! SpV00p P coef.    [m3 kg-1 Pa-1]
-real, parameter :: V01 = 6.9232335784e-06*Pa2kb**2  ! SpV00p P**2 coef. [m3 kg-1 Pa-2]
-real, parameter :: V02 = -7.5004675975e-07*Pa2kb**3 ! SpV00p P**3 coef. [m3 kg-1 Pa-3]
-real, parameter :: V03 = 1.7009109288e-08*Pa2kb**4  ! SpV00p P**4 coef. [m3 kg-1 Pa-4]
-real, parameter :: V04 = -1.6884162004e-08*Pa2kb**5 ! SpV00p P**5 coef. [m3 kg-1 Pa-5]
-real, parameter :: V05 = 1.9613503930e-09*Pa2kb**6  ! SpV00p P**6 coef. [m3 kg-1 Pa-6]
+real, parameter :: V01 = 6.9232335784e-06*(Pa2kb**2)  ! SpV00p P**2 coef. [m3 kg-1 Pa-2]
+real, parameter :: V02 = -7.5004675975e-07*(Pa2kb**3) ! SpV00p P**3 coef. [m3 kg-1 Pa-3]
+real, parameter :: V03 = 1.7009109288e-08*(Pa2kb**4)  ! SpV00p P**4 coef. [m3 kg-1 Pa-4]
+real, parameter :: V04 = -1.6884162004e-08*(Pa2kb**5) ! SpV00p P**5 coef. [m3 kg-1 Pa-5]
+real, parameter :: V05 = 1.9613503930e-09*(Pa2kb**6)  ! SpV00p P**6 coef. [m3 kg-1 Pa-6]
 
 ! The following terms are contributions to specific volume (SpV) as a function of the square root of
 ! normalized absolute salinity with an offset (zs), temperature (T) and pressure (P), with a contribution
 ! SPVabc * zs**a * T**b * P**c.  The numbers here are copied directly from Roquet et al. (2015), but
 ! the expressions here do not use the same nondimensionalization for pressure or temperature as they do.
-real, parameter :: SPV000 = 1.0772899069e-03                  ! Constant SpV contribution  [m3 kg-1]
-real, parameter :: SPV100 = -3.1263658781e-04                 ! SpV zs coef.               [m3 kg-1]
-real, parameter :: SPV200 = 6.7615860683e-04                  ! SpV zs**2 coef.            [m3 kg-1]
-real, parameter :: SPV300 = -8.6127884515e-04                 ! SpV zs**3 coef.            [m3 kg-1]
-real, parameter :: SPV400 = 5.9010812596e-04                  ! SpV zs**4 coef.            [m3 kg-1]
-real, parameter :: SPV500 = -2.1503943538e-04                 ! SpV zs**5 coef.            [m3 kg-1]
-real, parameter :: SPV600 = 3.2678954455e-05                  ! SpV zs**6 coef.            [m3 kg-1]
-real, parameter :: SPV010 = -1.4949652640e-05*I_Ts            ! SpV T coef.         [m3 kg-1 degC-1]
-real, parameter :: SPV110 = 3.1866349188e-05*I_Ts             ! SpV zs * T coef.    [m3 kg-1 degC-1]
-real, parameter :: SPV210 = -3.8070687610e-05*I_Ts            ! SpV zs**2 * T coef. [m3 kg-1 degC-1]
-real, parameter :: SPV310 = 2.9818473563e-05*I_Ts             ! SpV zs**3 * T coef. [m3 kg-1 degC-1]
-real, parameter :: SPV410 = -1.0011321965e-05*I_Ts            ! SpV zs**4 * T coef. [m3 kg-1 degC-1]
-real, parameter :: SPV510 = 1.0751931163e-06*I_Ts             ! SpV zs**5 * T coef. [m3 kg-1 degC-1]
-real, parameter :: SPV020 = 2.7546851539e-05*I_Ts**2          ! SpV T**2 coef.      [m3 kg-1 degC-2]
-real, parameter :: SPV120 = -3.6597334199e-05*I_Ts**2         ! SpV zs * T**2 coef. [m3 kg-1 degC-2]
-real, parameter :: SPV220 = 3.4489154625e-05*I_Ts**2          ! SpV zs**2 * T**2 coef. [m3 kg-1 degC-2]
-real, parameter :: SPV320 = -1.7663254122e-05*I_Ts**2         ! SpV zs**3 * T**2 coef. [m3 kg-1 degC-2]
-real, parameter :: SPV420 = 3.5965131935e-06*I_Ts**2          ! SpV zs**4 * T**2 coef. [m3 kg-1 degC-2]
-real, parameter :: SPV030 = -1.6506828994e-05*I_Ts**3         ! SpV T**3 coef.      [m3 kg-1 degC-3]
-real, parameter :: SPV130 = 2.4412359055e-05*I_Ts**3          ! SpV zs * T**3 coef. [m3 kg-1 degC-3]
-real, parameter :: SPV230 = -1.4606740723e-05*I_Ts**3         ! SpV zs**2 * T**3 coef. [m3 kg-1 degC-3]
-real, parameter :: SPV330 = 2.3293406656e-06*I_Ts**3          ! SpV zs**3 * T**3 coef. [m3 kg-1 degC-3]
-real, parameter :: SPV040 = 6.7896174634e-06*I_Ts**4          ! SpV T**4 coef.      [m3 kg-1 degC-4]
-real, parameter :: SPV140 = -8.7951832993e-06*I_Ts**4         ! SpV zs * T**4 coef. [m3 kg-1 degC-4]
-real, parameter :: SPV240 = 4.4249040774e-06*I_Ts**4          ! SpV zs**2 * T**4 coef. [m3 kg-1 degC-4]
-real, parameter :: SPV050 = -7.2535743349e-07*I_Ts**5         ! SpV T**5 coef.      [m3 kg-1 degC-5]
-real, parameter :: SPV150 = -3.4680559205e-07*I_Ts**5         ! SpV zs * T**5 coef. [m3 kg-1 degC-5]
-real, parameter :: SPV060 = 1.9041365570e-07*I_Ts**6          ! SpV T**6 coef.      [m3 kg-1 degC-6]
-real, parameter :: SPV001 = -1.6889436589e-05*Pa2kb           ! SpV P coef.           [m3 kg-1 Pa-1]
-real, parameter :: SPV101 = 2.1106556158e-05*Pa2kb            ! SpV zs * P coef.      [m3 kg-1 Pa-1]
-real, parameter :: SPV201 = -2.1322804368e-05*Pa2kb           ! SpV zs**2 * P coef.   [m3 kg-1 Pa-1]
-real, parameter :: SPV301 = 1.7347655458e-05*Pa2kb            ! SpV zs**3 * P coef.   [m3 kg-1 Pa-1]
-real, parameter :: SPV401 = -4.3209400767e-06*Pa2kb           ! SpV zs**4 * P coef.   [m3 kg-1 Pa-1]
-real, parameter :: SPV011 = 1.5355844621e-05*(I_Ts*Pa2kb)     ! SpV T * P coef. [m3 kg-1 degC-1 Pa-1]
-real, parameter :: SPV111 = 2.0914122241e-06*(I_Ts*Pa2kb)     ! SpV zs * T * P coef. [m3 kg-1 degC-1 Pa-1]
-real, parameter :: SPV211 = -5.7751479725e-06*(I_Ts*Pa2kb)    ! SpV zs**2 * T * P coef. [m3 kg-1 degC-1 Pa-1]
-real, parameter :: SPV311 = 1.0767234341e-06*(I_Ts*Pa2kb)     ! SpV zs**3 * T * P coef. [m3 kg-1 degC-1 Pa-1]
-real, parameter :: SPV021 = -9.6659393016e-06*(I_Ts**2*Pa2kb) ! SpV T**2 * P coef. [m3 kg-1 degC-2 Pa-1]
-real, parameter :: SPV121 = -7.0686982208e-07*(I_Ts**2*Pa2kb) ! SpV zs * T**2 * P coef. [m3 kg-1 degC-2 Pa-1]
-real, parameter :: SPV221 = 1.4488066593e-06*(I_Ts**2*Pa2kb)  ! SpV zs**2 * T**2 * P coef. [m3 kg-1 degC-2 Pa-1]
-real, parameter :: SPV031 = 3.1134283336e-06*(I_Ts**3*Pa2kb)  ! SpV T**3 * P coef. [m3 kg-1 degC-3 Pa-1]
-real, parameter :: SPV131 = 7.9562529879e-08*(I_Ts**3*Pa2kb)  ! SpV zs * T**3 * P coef. [m3 kg-1 degC-3 Pa-1]
-real, parameter :: SPV041 = -5.6590253863e-07*(I_Ts**4*Pa2kb) ! SpV T**4 * P coef. [m3 kg-1 degC-4 Pa-1]
-real, parameter :: SPV002 = 1.0500241168e-06*Pa2kb**2         ! SpV P**2 coef.        [m3 kg-1 Pa-2]
-real, parameter :: SPV102 = 1.9600661704e-06*Pa2kb**2         ! SpV zs * P**2 coef.   [m3 kg-1 Pa-2]
-real, parameter :: SPV202 = -2.1666693382e-06*Pa2kb**2        ! SpV zs**2 * P**2 coef. [m3 kg-1 Pa-2]
-real, parameter :: SPV012 = -3.8541359685e-06*(I_Ts*Pa2kb**2) ! SpV T * P**2 coef. [m3 kg-1 degC-1 Pa-2]
-real, parameter :: SPV112 = 1.0157632247e-06*(I_Ts*Pa2kb**2)  ! SpV zs * T * P**2 coef. [m3 kg-1 degC-1 Pa-2]
-real, parameter :: SPV022 = 1.7178343158e-06*(I_Ts**2*Pa2kb**2) ! SpV T**2 * P**2 coef. [m3 kg-1 degC-2 Pa-2]
-real, parameter :: SPV003 = -4.1503454190e-07*Pa2kb**3        ! SpV P**3 coef.        [m3 kg-1 Pa-3]
-real, parameter :: SPV103 = 3.5627020989e-07*Pa2kb**3         ! SpV zs * P**3 coef.   [m3 kg-1 Pa-3]
-real, parameter :: SPV013 = -1.1293871415e-07*(I_Ts*Pa2kb**3) ! SpV T * P**3 coef. [m3 kg-1 degC-1 Pa-3]
+real, parameter :: SPV000 = 1.0772899069e-03                    ! Constant SpV contribution  [m3 kg-1]
+real, parameter :: SPV100 = -3.1263658781e-04                   ! SpV zs coef.               [m3 kg-1]
+real, parameter :: SPV200 = 6.7615860683e-04                    ! SpV zs**2 coef.            [m3 kg-1]
+real, parameter :: SPV300 = -8.6127884515e-04                   ! SpV zs**3 coef.            [m3 kg-1]
+real, parameter :: SPV400 = 5.9010812596e-04                    ! SpV zs**4 coef.            [m3 kg-1]
+real, parameter :: SPV500 = -2.1503943538e-04                   ! SpV zs**5 coef.            [m3 kg-1]
+real, parameter :: SPV600 = 3.2678954455e-05                    ! SpV zs**6 coef.            [m3 kg-1]
+real, parameter :: SPV010 = -1.4949652640e-05*I_Ts              ! SpV T coef.         [m3 kg-1 degC-1]
+real, parameter :: SPV110 = 3.1866349188e-05*I_Ts               ! SpV zs * T coef.    [m3 kg-1 degC-1]
+real, parameter :: SPV210 = -3.8070687610e-05*I_Ts              ! SpV zs**2 * T coef. [m3 kg-1 degC-1]
+real, parameter :: SPV310 = 2.9818473563e-05*I_Ts               ! SpV zs**3 * T coef. [m3 kg-1 degC-1]
+real, parameter :: SPV410 = -1.0011321965e-05*I_Ts              ! SpV zs**4 * T coef. [m3 kg-1 degC-1]
+real, parameter :: SPV510 = 1.0751931163e-06*I_Ts               ! SpV zs**5 * T coef. [m3 kg-1 degC-1]
+real, parameter :: SPV020 = 2.7546851539e-05*(I_Ts**2)          ! SpV T**2 coef.      [m3 kg-1 degC-2]
+real, parameter :: SPV120 = -3.6597334199e-05*(I_Ts**2)         ! SpV zs * T**2 coef. [m3 kg-1 degC-2]
+real, parameter :: SPV220 = 3.4489154625e-05*(I_Ts**2)          ! SpV zs**2 * T**2 coef. [m3 kg-1 degC-2]
+real, parameter :: SPV320 = -1.7663254122e-05*(I_Ts**2)         ! SpV zs**3 * T**2 coef. [m3 kg-1 degC-2]
+real, parameter :: SPV420 = 3.5965131935e-06*(I_Ts**2)          ! SpV zs**4 * T**2 coef. [m3 kg-1 degC-2]
+real, parameter :: SPV030 = -1.6506828994e-05*(I_Ts**3)         ! SpV T**3 coef.      [m3 kg-1 degC-3]
+real, parameter :: SPV130 = 2.4412359055e-05*(I_Ts**3)          ! SpV zs * T**3 coef. [m3 kg-1 degC-3]
+real, parameter :: SPV230 = -1.4606740723e-05*(I_Ts**3)         ! SpV zs**2 * T**3 coef. [m3 kg-1 degC-3]
+real, parameter :: SPV330 = 2.3293406656e-06*(I_Ts**3)          ! SpV zs**3 * T**3 coef. [m3 kg-1 degC-3]
+real, parameter :: SPV040 = 6.7896174634e-06*(I_Ts**4)          ! SpV T**4 coef.      [m3 kg-1 degC-4]
+real, parameter :: SPV140 = -8.7951832993e-06*(I_Ts**4)         ! SpV zs * T**4 coef. [m3 kg-1 degC-4]
+real, parameter :: SPV240 = 4.4249040774e-06*(I_Ts**4)          ! SpV zs**2 * T**4 coef. [m3 kg-1 degC-4]
+real, parameter :: SPV050 = -7.2535743349e-07*(I_Ts**5)         ! SpV T**5 coef.      [m3 kg-1 degC-5]
+real, parameter :: SPV150 = -3.4680559205e-07*(I_Ts**5)         ! SpV zs * T**5 coef. [m3 kg-1 degC-5]
+real, parameter :: SPV060 = 1.9041365570e-07*(I_Ts**6)          ! SpV T**6 coef.      [m3 kg-1 degC-6]
+real, parameter :: SPV001 = -1.6889436589e-05*Pa2kb             ! SpV P coef.           [m3 kg-1 Pa-1]
+real, parameter :: SPV101 = 2.1106556158e-05*Pa2kb              ! SpV zs * P coef.      [m3 kg-1 Pa-1]
+real, parameter :: SPV201 = -2.1322804368e-05*Pa2kb             ! SpV zs**2 * P coef.   [m3 kg-1 Pa-1]
+real, parameter :: SPV301 = 1.7347655458e-05*Pa2kb              ! SpV zs**3 * P coef.   [m3 kg-1 Pa-1]
+real, parameter :: SPV401 = -4.3209400767e-06*Pa2kb             ! SpV zs**4 * P coef.   [m3 kg-1 Pa-1]
+real, parameter :: SPV011 = 1.5355844621e-05*(I_Ts*Pa2kb)       ! SpV T * P coef. [m3 kg-1 degC-1 Pa-1]
+real, parameter :: SPV111 = 2.0914122241e-06*(I_Ts*Pa2kb)       ! SpV zs * T * P coef. [m3 kg-1 degC-1 Pa-1]
+real, parameter :: SPV211 = -5.7751479725e-06*(I_Ts*Pa2kb)      ! SpV zs**2 * T * P coef. [m3 kg-1 degC-1 Pa-1]
+real, parameter :: SPV311 = 1.0767234341e-06*(I_Ts*Pa2kb)       ! SpV zs**3 * T * P coef. [m3 kg-1 degC-1 Pa-1]
+real, parameter :: SPV021 = -9.6659393016e-06*((I_Ts**2)*Pa2kb) ! SpV T**2 * P coef. [m3 kg-1 degC-2 Pa-1]
+real, parameter :: SPV121 = -7.0686982208e-07*((I_Ts**2)*Pa2kb) ! SpV zs * T**2 * P coef. [m3 kg-1 degC-2 Pa-1]
+real, parameter :: SPV221 = 1.4488066593e-06*((I_Ts**2)*Pa2kb)  ! SpV zs**2 * T**2 * P coef. [m3 kg-1 degC-2 Pa-1]
+real, parameter :: SPV031 = 3.1134283336e-06*((I_Ts**3)*Pa2kb)  ! SpV T**3 * P coef. [m3 kg-1 degC-3 Pa-1]
+real, parameter :: SPV131 = 7.9562529879e-08*((I_Ts**3)*Pa2kb)  ! SpV zs * T**3 * P coef. [m3 kg-1 degC-3 Pa-1]
+real, parameter :: SPV041 = -5.6590253863e-07*((I_Ts**4)*Pa2kb) ! SpV T**4 * P coef. [m3 kg-1 degC-4 Pa-1]
+real, parameter :: SPV002 = 1.0500241168e-06*(Pa2kb**2)         ! SpV P**2 coef.        [m3 kg-1 Pa-2]
+real, parameter :: SPV102 = 1.9600661704e-06*(Pa2kb**2)         ! SpV zs * P**2 coef.   [m3 kg-1 Pa-2]
+real, parameter :: SPV202 = -2.1666693382e-06*(Pa2kb**2)        ! SpV zs**2 * P**2 coef. [m3 kg-1 Pa-2]
+real, parameter :: SPV012 = -3.8541359685e-06*(I_Ts*(Pa2kb**2)) ! SpV T * P**2 coef. [m3 kg-1 degC-1 Pa-2]
+real, parameter :: SPV112 = 1.0157632247e-06*(I_Ts*(Pa2kb**2))  ! SpV zs * T * P**2 coef. [m3 kg-1 degC-1 Pa-2]
+real, parameter :: SPV022 = 1.7178343158e-06*((I_Ts**2)*(Pa2kb**2)) ! SpV T**2 * P**2 coef. [m3 kg-1 degC-2 Pa-2]
+real, parameter :: SPV003 = -4.1503454190e-07*(Pa2kb**3)        ! SpV P**3 coef.        [m3 kg-1 Pa-3]
+real, parameter :: SPV103 = 3.5627020989e-07*(Pa2kb**3)         ! SpV zs * P**3 coef.   [m3 kg-1 Pa-3]
+real, parameter :: SPV013 = -1.1293871415e-07*(I_Ts*(Pa2kb**3)) ! SpV T * P**3 coef. [m3 kg-1 degC-1 Pa-3]
 
 real, parameter :: ALP000 =    SPV010   ! Constant in the dSpV_dT fit               [m3 kg-1 degC-1]
 real, parameter :: ALP100 =    SPV110   ! dSpV_dT fit zs coef.                      [m3 kg-1 degC-1]
@@ -343,7 +343,7 @@ real elemental function density_anomaly_elem_Roquet_SpV(this, T, S, pressure, rh
   real :: spv ! The specific volume [m3 kg-1]
 
   spv = spec_vol_anomaly_elem_Roquet_SpV(this, T, S, pressure, spv_ref=1.0/rho_ref)
-  density_anomaly_elem_Roquet_SpV = -rho_ref**2*spv / (rho_ref*spv + 1.0)  ! In situ density [kg m-3]
+  density_anomaly_elem_Roquet_SpV = -(rho_ref**2)*spv / (rho_ref*spv + 1.0)  ! In situ density [kg m-3]
 
 end function density_anomaly_elem_Roquet_SpV
 
@@ -446,8 +446,8 @@ elemental subroutine calculate_density_derivs_elem_Roquet_SpV(this, T, S, pressu
 
   specvol = this%spec_vol_elem(T, S, pressure)
   rho = 1.0 / specvol
-  drho_dT = -dSv_dT * rho**2
-  drho_dS = -dSv_dS * rho**2
+  drho_dT = -dSv_dT * (rho**2)
+  drho_dS = -dSv_dS * (rho**2)
 
 end subroutine calculate_density_derivs_elem_Roquet_SpV
 
@@ -527,7 +527,7 @@ elemental subroutine calculate_compress_elem_Roquet_SpV(this, T, S, pressure, rh
   dSV_00p_dp = V00 + zp*(2.*V01 + zp*(3.*V02 + zp*(4.*V03 + zp*(5.*V04 + zp*(6.*V05)))))
   dSV_TS_dp  = SV_TS1 + zp*(2.*SV_TS2 + zp*(3.*SV_TS3))
   dSpecVol_dp = dSV_TS_dp + dSV_00p_dp  !  [m3 kg-1 Pa-1]
-  drho_dp = -dSpecVol_dp * rho**2 ! Compressibility [s2 m-2]
+  drho_dp = -dSpecVol_dp * (rho**2) ! Compressibility [s2 m-2]
 
 end subroutine calculate_compress_elem_Roquet_SpV
 
@@ -572,15 +572,15 @@ elemental subroutine calc_spec_vol_second_derivs_elem_Roquet_SpV(T, S, P, &
   I_s = 1.0 / zs
 
   ! Find dSV_ds_ds
-  d2SV_p3 = -SPV103*I_s**2
-  d2SV_p2 = -(SPV102 + zt*SPV112)*I_s**2
+  d2SV_p3 = -SPV103*(I_s**2)
+  d2SV_p2 = -(SPV102 + zt*SPV112)*(I_s**2)
   d2SV_p1 = (3.*SPV301 + (zt*(3.*SPV311) + zs*(8.*SPV401))) &
-            - ( SPV101 + zt*(SPV111 + zt*(SPV121 + zt*SPV131)) )*I_s**2
+            - ( SPV101 + zt*(SPV111 + zt*(SPV121 + zt*SPV131)) )*(I_s**2)
   d2SV_p0 = (3.*SPV300 + (zs*(8.*SPV400 + zs*(15.*SPV500 + zs*(24.*SPV600))) &
                         + zt*(3.*SPV310 + (zs*(8.*SPV410 + zs*(15.*SPV510)) &
                                          + zt*(3.*SPV320 + (zs*(8.*SPV420) + zt*(3.*SPV330))) )) )) &
-            - (SPV100 + zt*(SPV110 + zt*(SPV120 + zt*(SPV130 + zt*(SPV140 + zt*SPV150)))) )*I_s**2
-  dSV_dS_dS = (0.5*r1_S0)**2 * ((d2SV_p0 + zp*(d2SV_p1 + zp*(d2SV_p2 + zp*d2SV_p3))) * I_s)
+            - (SPV100 + zt*(SPV110 + zt*(SPV120 + zt*(SPV130 + zt*(SPV140 + zt*SPV150)))) )*(I_s**2)
+  dSV_dS_dS = ((0.5*r1_S0)**2) * ((d2SV_p0 + zp*(d2SV_p1 + zp*(d2SV_p2 + zp*d2SV_p3))) * I_s)
 
   ! Find dSV_ds_dt
   d2SV_p2 = SPV112
@@ -666,13 +666,13 @@ elemental subroutine calculate_density_second_derivs_elem_Roquet_SpV(this, T, S,
   call this%calculate_compress_elem(T, S, pressure, rho, drho_dp)
 
   ! Find drho_ds_ds
-  drho_dS_dS = rho**2 * (2.0*rho*dSV_dS**2 - dSV_dS_dS)
+  drho_dS_dS = (rho**2) * (2.0*rho*dSV_dS**2 - dSV_dS_dS)
 
   ! Find drho_ds_dt
-  drho_ds_dt = rho**2 * (2.0*rho*(dSV_dT*dSV_dS) - dSV_dS_dT)
+  drho_ds_dt = (rho**2) * (2.0*rho*(dSV_dT*dSV_dS) - dSV_dS_dT)
 
   ! Find drho_dt_dt
-  drho_dT_dT = rho**2 * (2.0*rho*dSV_dT**2 - dSV_dT_dT)
+  drho_dT_dT = (rho**2) * (2.0*rho*dSV_dT**2 - dSV_dT_dT)
 
   ! Find drho_ds_dp
   drho_ds_dp =  -rho * (2.0*dSV_dS * drho_dp + rho * dSV_dS_dp)

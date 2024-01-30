@@ -249,7 +249,7 @@ elemental subroutine calculate_density_derivs_elem_Jackett06(this, T, S, pressur
   dnum_dS = (RN100 + (T*RN110 + S*(2.*RN200))) + pressure*RN101
   dden_dT = ((RD010 + T*((2.*RD020) + T*((3.*RD030) + T*(4.*RD040)))) + &
              S*((RD110 + T2*(3.*RD130)) + S1_2*T*(2.*RD620)) ) + &
-            pressure**2*(T2*3.*RD032 + pressure*RD013)
+            (pressure**2)*(T2*3.*RD032 + pressure*RD013)
   dden_dS = RD100 + (T*(RD110 + T2*RD130) + S1_2*(1.5*RD600 + T2*(1.5*RD620)))
   I_denom2 = 1.0 / den**2
 
@@ -333,12 +333,12 @@ elemental subroutine calculate_density_second_derivs_elem_Jackett06(this, T, S, 
 
   dden_dT = ((RD010 + T*((2.*RD020) + T*((3.*RD030) + T*(4.*RD040)))) + &
              S*((RD110 + T2*(3.*RD130)) + S1_2*T*(2.*RD620)) ) + &
-            pressure**2*(T2*3.*RD032 + pressure*RD013)
+            (pressure**2)*(T2*3.*RD032 + pressure*RD013)
   dden_dS = RD100 + (T*(RD110 + T2*RD130) + S1_2*(1.5*RD600 + T2*(1.5*RD620)))
   dden_dp = RD001 + pressure*T*(T2*(2.*RD032) + pressure*(3.*RD013))
 
   d2den_dT2 = (((2.*RD020) + T*((6.*RD030) + T*(12.*RD040))) + &
-               S*(T*(6.*RD130) + S1_2*(2.*RD620)) ) + pressure**2*(T*(6.*RD032))
+               S*(T*(6.*RD130) + S1_2*(2.*RD620)) ) + (pressure**2)*(T*(6.*RD032))
   d2den_dT_dS = (RD110 + T2*3.*RD130) + (T*S1_2)*(3.0*RD620)
   d2den_dT_dp = pressure*(T2*(6.*RD032) + pressure*(3.*RD013))
   d2den_dS_dp = 0.0
@@ -408,7 +408,7 @@ elemental subroutine calculate_specvol_derivs_elem_Jackett06(this, T, S, pressur
   dnum_dS = (RN100 + (T*RN110 + S*(2.*RN200))) + pressure*RN101
   dden_dT = ((RD010 + T*((2.*RD020) + T*((3.*RD030) + T*(4.*RD040)))) + &
              S*((RD110 + T2*(3.*RD130)) + S1_2*T*(2.*RD620)) ) + &
-            pressure**2*(T2*3.*RD032 + pressure*RD013)
+            (pressure**2)*(T2*3.*RD032 + pressure*RD013)
   dden_dS = RD100 + (T*(RD110 + T2*RD130) + S1_2*(1.5*RD600 + T2*(1.5*RD620)))
   I_num2 = 1.0 / num**2
 
@@ -453,7 +453,7 @@ elemental subroutine calculate_compress_elem_Jackett06(this, T, S, pressure, rho
 
   I_den  = 1.0 / den
   rho = num * I_den
-  drho_dp = (dnum_dp * den - num * dden_dp) * I_den**2
+  drho_dp = (dnum_dp * den - num * dden_dp) * (I_den**2)
 
 end subroutine calculate_compress_elem_Jackett06
 

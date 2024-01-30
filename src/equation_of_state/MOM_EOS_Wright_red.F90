@@ -328,7 +328,7 @@ elemental subroutine calculate_compress_elem_Wright_red(this, T, S, pressure, rh
 
   I_denom = 1.0 / (lambda + al0*(pressure + p0))
   rho = (pressure + p0) * I_denom
-  drho_dp = lambda * I_denom**2
+  drho_dp = lambda * (I_denom**2)
 
 end subroutine calculate_compress_elem_Wright_red
 
@@ -558,10 +558,10 @@ subroutine int_density_dz_wright_red(T, S, z_t, z_b, rho_ref, rho_0, G_e, HI, &
 !     rho(j) = (pressure(j) + p0) / (lambda + al0*(pressure(j) + p0))
 
     rho_anom = (p0 + p_ave)*(I_Lzz*I_al0) - rho_ref_mks
-    rem = (I_Rho * (lambda * I_al0**2)) * (eps2 * (C1_3 + eps2*(0.2 + eps2*(C1_7 + C1_9*eps2))))
+    rem = (I_Rho * (lambda * (I_al0**2))) * (eps2 * (C1_3 + eps2*(0.2 + eps2*(C1_7 + C1_9*eps2))))
     dpa(i,j) = Pa_to_RL2_T2 * ((g_Earth*rho_anom)*dz - 2.0*eps*rem)
     if (present(intz_dpa)) &
-      intz_dpa(i,j) = Pa_to_RL2_T2 * (0.5*(g_Earth*rho_anom)*dz**2 - dz*((1.0+eps)*rem))
+      intz_dpa(i,j) = Pa_to_RL2_T2 * (0.5*(g_Earth*rho_anom)*(dz**2) - dz*((1.0+eps)*rem))
   enddo ; enddo
 
   if (present(intx_dpa)) then ; do j=js,je ; do I=Isq,Ieq
@@ -574,7 +574,7 @@ subroutine int_density_dz_wright_red(T, S, z_t, z_b, rho_ref, rho_0, G_e, HI, &
     if (hWght > 0.) then
       hL = (z_t(i,j) - z_b(i,j)) + dz_neglect
       hR = (z_t(i+1,j) - z_b(i+1,j)) + dz_neglect
-      hWght = hWght * ( (hL-hR)/(hL+hR) )**2
+      hWght = hWght * (( (hL-hR)/(hL+hR) )**2)
       iDenom = 1.0 / ( hWght*(hR + hL) + hL*hR )
       hWt_LL = (hWght*hL + hR*hL) * iDenom ; hWt_LR = (hWght*hR) * iDenom
       hWt_RR = (hWght*hR + hR*hL) * iDenom ; hWt_RL = (hWght*hL) * iDenom
@@ -599,7 +599,7 @@ subroutine int_density_dz_wright_red(T, S, z_t, z_b, rho_ref, rho_0, G_e, HI, &
       eps = 0.5*(GxRho*dz)*I_Lzz ; eps2 = eps*eps
 
       intz(m) = Pa_to_RL2_T2 * ( (g_Earth*dz) * ((p0 + p_ave)*(I_Lzz*I_al0) - rho_ref_mks) - 2.0*eps * &
-                  (I_Rho * (lambda * I_al0**2)) * (eps2 * (C1_3 + eps2*(0.2 + eps2*(C1_7 + C1_9*eps2)))) )
+                  (I_Rho * (lambda * (I_al0**2))) * (eps2 * (C1_3 + eps2*(0.2 + eps2*(C1_7 + C1_9*eps2)))) )
     enddo
     ! Use Boole's rule to integrate the values.
     intx_dpa(i,j) = C1_90*(7.0*(intz(1)+intz(5)) + 32.0*(intz(2)+intz(4)) + 12.0*intz(3))
@@ -615,7 +615,7 @@ subroutine int_density_dz_wright_red(T, S, z_t, z_b, rho_ref, rho_0, G_e, HI, &
     if (hWght > 0.) then
       hL = (z_t(i,j) - z_b(i,j)) + dz_neglect
       hR = (z_t(i,j+1) - z_b(i,j+1)) + dz_neglect
-      hWght = hWght * ( (hL-hR)/(hL+hR) )**2
+      hWght = hWght * (( (hL-hR)/(hL+hR) )**2)
       iDenom = 1.0 / ( hWght*(hR + hL) + hL*hR )
       hWt_LL = (hWght*hL + hR*hL) * iDenom ; hWt_LR = (hWght*hR) * iDenom
       hWt_RR = (hWght*hR + hR*hL) * iDenom ; hWt_RL = (hWght*hL) * iDenom
@@ -640,7 +640,7 @@ subroutine int_density_dz_wright_red(T, S, z_t, z_b, rho_ref, rho_0, G_e, HI, &
       eps = 0.5*(GxRho*dz)*I_Lzz ; eps2 = eps*eps
 
       intz(m) = Pa_to_RL2_T2 * ( (g_Earth*dz) * ((p0 + p_ave)*(I_Lzz*I_al0) - rho_ref_mks) - 2.0*eps * &
-                  (I_Rho * (lambda * I_al0**2)) * (eps2 * (C1_3 + eps2*(0.2 + eps2*(C1_7 + C1_9*eps2)))) )
+                  (I_Rho * (lambda * (I_al0**2))) * (eps2 * (C1_3 + eps2*(0.2 + eps2*(C1_7 + C1_9*eps2)))) )
     enddo
     ! Use Boole's rule to integrate the values.
     inty_dpa(i,j) = C1_90*(7.0*(intz(1)+intz(5)) + 32.0*(intz(2)+intz(4)) + 12.0*intz(3))
@@ -803,7 +803,7 @@ subroutine int_spec_vol_dp_wright_red(T, S, p_t, p_b, spv_ref, HI, dza, &
     rem = (lambda * eps2) * (C1_3 + eps2*(0.2 + eps2*(C1_7 + C1_9*eps2)))
     dza(i,j) = alpha_anom*dp + 2.0*eps*rem
     if (present(intp_dza)) &
-      intp_dza(i,j) = 0.5*alpha_anom*dp**2 - dp*((1.0-eps)*rem)
+      intp_dza(i,j) = 0.5*alpha_anom*(dp**2) - dp*((1.0-eps)*rem)
   enddo ; enddo
 
   if (present(intx_dza)) then ; do j=HI%jsc,HI%jec ; do I=Isq,Ieq
@@ -816,7 +816,7 @@ subroutine int_spec_vol_dp_wright_red(T, S, p_t, p_b, spv_ref, HI, dza, &
     if (hWght > 0.) then
       hL = (p_b(i,j) - p_t(i,j)) + dP_neglect
       hR = (p_b(i+1,j) - p_t(i+1,j)) + dP_neglect
-      hWght = hWght * ( (hL-hR)/(hL+hR) )**2
+      hWght = hWght * (( (hL-hR)/(hL+hR) )**2)
       iDenom = 1.0 / ( hWght*(hR + hL) + hL*hR )
       hWt_LL = (hWght*hL + hR*hL) * iDenom ; hWt_LR = (hWght*hR) * iDenom
       hWt_RR = (hWght*hR + hR*hL) * iDenom ; hWt_RL = (hWght*hL) * iDenom
@@ -858,7 +858,7 @@ subroutine int_spec_vol_dp_wright_red(T, S, p_t, p_b, spv_ref, HI, dza, &
     if (hWght > 0.) then
       hL = (p_b(i,j) - p_t(i,j)) + dP_neglect
       hR = (p_b(i,j+1) - p_t(i,j+1)) + dP_neglect
-      hWght = hWght * ( (hL-hR)/(hL+hR) )**2
+      hWght = hWght * (( (hL-hR)/(hL+hR) )**2)
       iDenom = 1.0 / ( hWght*(hR + hL) + hL*hR )
       hWt_LL = (hWght*hL + hR*hL) * iDenom ; hWt_LR = (hWght*hR) * iDenom
       hWt_RR = (hWght*hR + hR*hL) * iDenom ; hWt_RL = (hWght*hL) * iDenom

@@ -400,18 +400,18 @@ elemental subroutine calculate_density_second_derivs_elem_UNESCO(this, T, S, pre
 
   ! Finally calculate the second derivatives
   drho_dS_dS = I_denom * ( ks*d2rho0_dS2 - (p1*I_denom) * &
-                    (2.0*drho0_dS*dks_dS + rho0*(d2ks_dS2 - 2.0*dks_dS**2*I_denom)) )
+                    (2.0*drho0_dS*dks_dS + rho0*(d2ks_dS2 - 2.0*(dks_dS**2)*I_denom)) )
   drho_dS_dT = I_denom * (ks * d2rho0_dSdT - (p1*I_denom) * &
                       ((drho0_dT*dks_dS + drho0_dS*dks_dT) + &
                        rho0*(d2ks_dSdT - 2.0*(dks_dS*dks_dT)*I_denom)) )
   drho_dT_dT = I_denom * ( ks*d2rho0_dT2 - (p1*I_denom) * &
-                    (2.0*drho0_dT*dks_dT + rho0*(d2ks_dT2 - 2.0*dks_dT**2*I_denom)) )
+                    (2.0*drho0_dT*dks_dT + rho0*(d2ks_dT2 - 2.0*(dks_dT**2)*I_denom)) )
 
   ! The factor of 1.0e-5 is because pressure here is in bars, not Pa.
-  drho_dS_dp = (1.0e-5 * I_denom**2) * ( (ks*drho0_dS - rho0*dks_dS) - &
+  drho_dS_dp = (1.0e-5 * (I_denom**2)) * ( (ks*drho0_dS - rho0*dks_dS) - &
                     p1*( (dks_dp*drho0_dS + rho0*d2ks_dSdp) - &
                          2.0*(rho0*dks_dS) * ((dks_dp - 1.0)*I_denom) ) )
-  drho_dT_dp = (1.0e-5 * I_denom**2) * ( (ks*drho0_dT - rho0*dks_dT) - &
+  drho_dT_dp = (1.0e-5 * (I_denom**2)) * ( (ks*drho0_dT - rho0*dks_dT) - &
                     p1*( (dks_dp*drho0_dT + rho0*d2ks_dTdp) - &
                          2.0*(rho0*dks_dT) * ((dks_dp - 1.0)*I_denom) ) )
 
@@ -523,7 +523,7 @@ elemental subroutine calculate_compress_elem_UNESCO(this, T, S, pressure, rho, d
   ! Compute the in situ density, rho(s,theta,p), and its derivative with pressure.
   rho = rho0*ks * I_denom
   ! The factor of 1.0e-5 is because pressure here is in bars, not Pa.
-  drho_dp = 1.0e-5 * ((rho0 * (ks - p1*dks_dp)) * I_denom**2)
+  drho_dp = 1.0e-5 * ((rho0 * (ks - p1*dks_dp)) * (I_denom**2))
 
 end subroutine calculate_compress_elem_UNESCO
 
