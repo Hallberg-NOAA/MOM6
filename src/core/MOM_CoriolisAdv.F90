@@ -238,7 +238,7 @@ subroutine CorAdCalc(u, v, h, uh, vh, CAu, CAv, OBC, AD, G, GV, US, CS, pbv, Wav
 
   is = G%isc ; ie = G%iec ; js = G%jsc ; je = G%jec
   Isq = G%IscB ; Ieq = G%IecB ; Jsq = G%JscB ; Jeq = G%JecB ; nz = GV%ke
-  vol_neglect = GV%H_subroundoff * (1e-4 * US%m_to_L)**2
+  vol_neglect = GV%H_subroundoff * ((1e-4 * US%m_to_L)**2)
   eps_vel = 1.0e-10*US%m_s_to_L_T
   h_tiny = GV%Angstrom_H  ! Perhaps this should be set to h_neglect instead.
 

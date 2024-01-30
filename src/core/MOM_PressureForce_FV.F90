@@ -283,7 +283,7 @@ subroutine PressureForce_FV_nonBouss(h, tv, PFu, PFv, G, GV, US, CS, ALE_CSp, p_
       do j=Jsq,Jeq+1 ; do i=Isq,Ieq+1
         dp(i,j) = H_to_RL2_T2 * h(i,j,k)
         dza(i,j,k) = alpha_anom * dp(i,j)
-        intp_dza(i,j,k) = 0.5 * alpha_anom * dp(i,j)**2
+        intp_dza(i,j,k) = 0.5 * alpha_anom * (dp(i,j)**2)
       enddo ; enddo
       do j=js,je ; do I=Isq,Ieq
         intx_dza(i,j,k) = 0.5 * alpha_anom * (dp(i,j)+dp(i+1,j))

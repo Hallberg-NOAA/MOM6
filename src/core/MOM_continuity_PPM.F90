@@ -2607,10 +2607,10 @@ subroutine PPM_limit_pos(h_in, h_L, h_R, h_min, G, iis, iie, jis, jie)
       if (abs(dh) < curv) then ! The parabola's minimum is within the cell.
         if (h_in(i,j) <= h_min) then
           h_L(i,j) = h_in(i,j) ; h_R(i,j) = h_in(i,j)
-        elseif (12.0*curv*(h_in(i,j) - h_min) < (curv**2 + 3.0*dh**2)) then
+        elseif (12.0*curv*(h_in(i,j) - h_min) < (curv**2 + 3.0*(dh**2))) then
           ! The minimum value is h_in - (curv^2 + 3*dh^2)/(12*curv), and must
           ! be limited in this case.  0 < scale < 1.
-          scale = 12.0*curv*(h_in(i,j) - h_min) / (curv**2 + 3.0*dh**2)
+          scale = 12.0*curv*(h_in(i,j) - h_min) / (curv**2 + 3.0*(dh**2))
           h_L(i,j) = h_in(i,j) + scale*(h_L(i,j) - h_in(i,j))
           h_R(i,j) = h_in(i,j) + scale*(h_R(i,j) - h_in(i,j))
         endif

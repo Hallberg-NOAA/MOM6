@@ -1650,18 +1650,18 @@ subroutine btstep(U_in, V_in, eta_in, dt, bc_accel_u, bc_accel_v, forces, pbce, 
              (gtot_N(i,j) * (Datv(i,J)*G%IdyCv(i,J)) + &
               gtot_S(i,j) * (Datv(i,J-1)*G%IdyCv(i,J-1)))) + &
             ((G%CoriolisBu(I,J)**2 + G%CoriolisBu(I-1,J-1)**2) + &
-             (G%CoriolisBu(I-1,J)**2 + G%CoriolisBu(I,J-1)**2)) * CS%BT_Coriolis_scale**2 )
+             (G%CoriolisBu(I-1,J)**2 + G%CoriolisBu(I,J-1)**2)) * (CS%BT_Coriolis_scale**2) )
       H_eff_dx2 = max(H_min_dyn * ((G%IdxT(i,j))**2 + (G%IdyT(i,j))**2), &
                       G%IareaT(i,j) * &
                         ((Datu(I,j)*G%IdxCu(I,j) + Datu(I-1,j)*G%IdxCu(I-1,j)) + &
                          (Datv(i,J)*G%IdyCv(i,J) + Datv(i,J-1)*G%IdyCv(i,J-1)) ) )
-      dyn_coef_max = CS%const_dyn_psurf * max(0.0, 1.0 - dtbt**2 * Idt_max2) / &
-                     (dtbt**2 * H_eff_dx2)
+      dyn_coef_max = CS%const_dyn_psurf * max(0.0, 1.0 - (dtbt**2) * Idt_max2) / &
+                     ((dtbt**2) * H_eff_dx2)
 
       ! ice_strength has units of [L2 Z-1 T-2 ~> m s-2]. rigidity_ice_[uv] has units of [L4 Z-1 T-1 ~> m3 s-1].
       ice_strength = ((forces%rigidity_ice_u(I,j) + forces%rigidity_ice_u(I-1,j)) + &
                       (forces%rigidity_ice_v(i,J) + forces%rigidity_ice_v(i,J-1))) / &
-                      (CS%ice_strength_length**2 * dtbt)
+                      ((CS%ice_strength_length**2) * dtbt)
 
       ! Units of dyn_coef: [L2 T-2 H-1 ~> m s-2 or m4 s-2 kg-1]
       dyn_coef_eta(i,j) = min(dyn_coef_max, ice_strength * H_to_Z)
@@ -3694,9 +3694,9 @@ function find_uhbt(u, BTC) result(uhbt)
   elseif (u < BTC%uBT_EE) then
     uhbt = (u - BTC%uBT_EE) * BTC%FA_u_EE + BTC%uh_EE
   elseif (u < 0.0) then
-    uhbt = u * (BTC%FA_u_E0 + BTC%uh_crvE * u**2)
+    uhbt = u * (BTC%FA_u_E0 + BTC%uh_crvE * (u**2))
   elseif (u <= BTC%uBT_WW) then
-    uhbt = u * (BTC%FA_u_W0 + BTC%uh_crvW * u**2)
+    uhbt = u * (BTC%FA_u_W0 + BTC%uh_crvW * (u**2))
   else ! (u > BTC%uBT_WW)
     uhbt = (u - BTC%uBT_WW) * BTC%FA_u_WW + BTC%uh_WW
   endif
@@ -3718,9 +3718,9 @@ function find_duhbt_du(u, BTC) result(duhbt_du)
   elseif (u < BTC%uBT_EE) then
     duhbt_du = BTC%FA_u_EE
   elseif (u < 0.0) then
-    duhbt_du = (BTC%FA_u_E0 + 3.0*BTC%uh_crvE * u**2)
+    duhbt_du = (BTC%FA_u_E0 + 3.0*BTC%uh_crvE * (u**2))
   elseif (u <= BTC%uBT_WW) then
-    duhbt_du = (BTC%FA_u_W0 + 3.0*BTC%uh_crvW * u**2)
+    duhbt_du = (BTC%FA_u_W0 + 3.0*BTC%uh_crvW * (u**2))
   else ! (u > BTC%uBT_WW)
     duhbt_du = BTC%FA_u_WW
   endif
@@ -3766,13 +3766,13 @@ function uhbt_to_ubt(uhbt, BTC) result(ubt)
     ! Use a false-position method first guess.
     ubt = BTC%uBT_EE * (uhbt / BTC%uh_EE)
     do itt = 1, max_itt
-      uhbt_err = ubt * (BTC%FA_u_E0 + BTC%uh_crvE * ubt**2) - uhbt
+      uhbt_err = ubt * (BTC%FA_u_E0 + BTC%uh_crvE * (ubt**2)) - uhbt
 
       if (abs(uhbt_err) < tol*abs(uhbt)) exit
       if (uhbt_err > 0.0) then ; ubt_max = ubt ; uherr_max = uhbt_err ; endif
       if (uhbt_err < 0.0) then ; ubt_min = ubt ; uherr_min = uhbt_err ; endif
 
-      derr_du = BTC%FA_u_E0 + 3.0 * BTC%uh_crvE * ubt**2
+      derr_du = BTC%FA_u_E0 + 3.0 * BTC%uh_crvE * (ubt**2)
       if ((uhbt_err >= derr_du*(ubt - ubt_min)) .or. &
           (-uhbt_err >= derr_du*(ubt_max - ubt)) .or. (derr_du <= 0.0)) then
         ! Use a false-position method guess.
@@ -3789,13 +3789,13 @@ function uhbt_to_ubt(uhbt, BTC) result(ubt)
     ! Use a false-position method first guess.
     ubt = BTC%uBT_WW * (uhbt / BTC%uh_WW)
     do itt = 1, max_itt
-      uhbt_err = ubt * (BTC%FA_u_W0 + BTC%uh_crvW * ubt**2) - uhbt
+      uhbt_err = ubt * (BTC%FA_u_W0 + BTC%uh_crvW * (ubt**2)) - uhbt
 
       if (abs(uhbt_err) < tol*abs(uhbt)) exit
       if (uhbt_err > 0.0) then ; ubt_max = ubt ; uherr_max = uhbt_err ; endif
       if (uhbt_err < 0.0) then ; ubt_min = ubt ; uherr_min = uhbt_err ; endif
 
-      derr_du = BTC%FA_u_W0 + 3.0 * BTC%uh_crvW * ubt**2
+      derr_du = BTC%FA_u_W0 + 3.0 * BTC%uh_crvW * (ubt**2)
       if ((uhbt_err >= derr_du*(ubt - ubt_min)) .or. &
           (-uhbt_err >= derr_du*(ubt_max - ubt)) .or. (derr_du <= 0.0)) then
         ! Use a false-position method guess.
@@ -3827,9 +3827,9 @@ function find_vhbt(v, BTC) result(vhbt)
   elseif (v < BTC%vBT_NN) then
     vhbt = (v - BTC%vBT_NN) * BTC%FA_v_NN + BTC%vh_NN
   elseif (v < 0.0) then
-    vhbt = v * (BTC%FA_v_N0 + BTC%vh_crvN * v**2)
+    vhbt = v * (BTC%FA_v_N0 + BTC%vh_crvN * (v**2))
   elseif (v <= BTC%vBT_SS) then
-    vhbt = v * (BTC%FA_v_S0 + BTC%vh_crvS * v**2)
+    vhbt = v * (BTC%FA_v_S0 + BTC%vh_crvS * (v**2))
   else ! (v > BTC%vBT_SS)
     vhbt = (v - BTC%vBT_SS) * BTC%FA_v_SS + BTC%vh_SS
   endif
@@ -3851,9 +3851,9 @@ function find_dvhbt_dv(v, BTC) result(dvhbt_dv)
   elseif (v < BTC%vBT_NN) then
     dvhbt_dv = BTC%FA_v_NN
   elseif (v < 0.0) then
-    dvhbt_dv = BTC%FA_v_N0 + 3.0*BTC%vh_crvN * v**2
+    dvhbt_dv = BTC%FA_v_N0 + 3.0*BTC%vh_crvN * (v**2)
   elseif (v <= BTC%vBT_SS) then
-    dvhbt_dv = BTC%FA_v_S0 + 3.0*BTC%vh_crvS * v**2
+    dvhbt_dv = BTC%FA_v_S0 + 3.0*BTC%vh_crvS * (v**2)
   else ! (v > BTC%vBT_SS)
     dvhbt_dv = BTC%FA_v_SS
   endif
@@ -3899,13 +3899,13 @@ function vhbt_to_vbt(vhbt, BTC) result(vbt)
     ! Use a false-position method first guess.
     vbt = BTC%vBT_NN * (vhbt / BTC%vh_NN)
     do itt = 1, max_itt
-      vhbt_err = vbt * (BTC%FA_v_N0 + BTC%vh_crvN * vbt**2) - vhbt
+      vhbt_err = vbt * (BTC%FA_v_N0 + BTC%vh_crvN * (vbt**2)) - vhbt
 
       if (abs(vhbt_err) < tol*abs(vhbt)) exit
       if (vhbt_err > 0.0) then ; vbt_max = vbt ; vherr_max = vhbt_err ; endif
       if (vhbt_err < 0.0) then ; vbt_min = vbt ; vherr_min = vhbt_err ; endif
 
-      derr_dv = BTC%FA_v_N0 + 3.0 * BTC%vh_crvN * vbt**2
+      derr_dv = BTC%FA_v_N0 + 3.0 * BTC%vh_crvN * (vbt**2)
       if ((vhbt_err >= derr_dv*(vbt - vbt_min)) .or. &
           (-vhbt_err >= derr_dv*(vbt_max - vbt)) .or. (derr_dv <= 0.0)) then
         ! Use a false-position method guess.
@@ -3922,13 +3922,13 @@ function vhbt_to_vbt(vhbt, BTC) result(vbt)
     ! Use a false-position method first guess.
     vbt = BTC%vBT_SS * (vhbt / BTC%vh_SS)
     do itt = 1, max_itt
-      vhbt_err = vbt * (BTC%FA_v_S0 + BTC%vh_crvS * vbt**2) - vhbt
+      vhbt_err = vbt * (BTC%FA_v_S0 + BTC%vh_crvS * (vbt**2)) - vhbt
 
       if (abs(vhbt_err) < tol*abs(vhbt)) exit
       if (vhbt_err > 0.0) then ; vbt_max = vbt ; vherr_max = vhbt_err ; endif
       if (vhbt_err < 0.0) then ; vbt_min = vbt ; vherr_min = vhbt_err ; endif
 
-      derr_dv = BTC%FA_v_S0 + 3.0 * BTC%vh_crvS * vbt**2
+      derr_dv = BTC%FA_v_S0 + 3.0 * BTC%vh_crvS * (vbt**2)
       if ((vhbt_err >= derr_dv*(vbt - vbt_min)) .or. &
           (-vhbt_err >= derr_dv*(vbt_max - vbt)) .or. (derr_dv <= 0.0)) then
         ! Use a false-position method guess.
@@ -4047,9 +4047,9 @@ subroutine set_local_BT_cont_types(BT_cont, BTCL_u, BTCL_v, G, US, MS, BT_Domain
 
     BTCL_u(I,j)%uh_crvE = 0.0 ; BTCL_u(I,j)%uh_crvW = 0.0
     if (abs(BTCL_u(I,j)%uBT_WW) > 0.0) BTCL_u(I,j)%uh_crvW = &
-      (C1_3 * (BTCL_u(I,j)%FA_u_WW - BTCL_u(I,j)%FA_u_W0)) / BTCL_u(I,j)%uBT_WW**2
+      (C1_3 * (BTCL_u(I,j)%FA_u_WW - BTCL_u(I,j)%FA_u_W0)) / (BTCL_u(I,j)%uBT_WW**2)
     if (abs(BTCL_u(I,j)%uBT_EE) > 0.0) BTCL_u(I,j)%uh_crvE = &
-      (C1_3 * (BTCL_u(I,j)%FA_u_EE - BTCL_u(I,j)%FA_u_E0)) / BTCL_u(I,j)%uBT_EE**2
+      (C1_3 * (BTCL_u(I,j)%FA_u_EE - BTCL_u(I,j)%FA_u_E0)) / (BTCL_u(I,j)%uBT_EE**2)
   enddo ; enddo
   !$OMP do
   do J=js-hs-1,je+hs ; do i=is-hs,ie+hs
@@ -4121,10 +4121,10 @@ subroutine adjust_local_BT_cont_types(ubt, uhbt, vbt, vhbt, BTCL_u, BTCL_v, &
       BTCL_u(I,j)%ubt_WW = dt * ubt(I,j)
       if (3.0*uhbt(I,j) < 2.0*ubt(I,j) * BTCL_u(I,j)%FA_u_W0) then
         ! No further bounding is needed.
-        BTCL_u(I,j)%uh_crvW = (uhbt(I,j) - ubt(I,j) * BTCL_u(I,j)%FA_u_W0) / (dt**2 * ubt(I,j)**3)
+        BTCL_u(I,j)%uh_crvW = (uhbt(I,j) - ubt(I,j) * BTCL_u(I,j)%FA_u_W0) / ((dt**2) * (ubt(I,j)**3))
       else ! This should not happen often!
         BTCL_u(I,j)%FA_u_W0 = 1.5*uhbt(I,j) / ubt(I,j)
-        BTCL_u(I,j)%uh_crvW = -0.5*uhbt(I,j) / (dt**2 * ubt(I,j)**3)
+        BTCL_u(I,j)%uh_crvW = -0.5*uhbt(I,j) / ((dt**2) * (ubt(I,j)**3))
       endif
       BTCL_u(I,j)%uh_WW = dt * uhbt(I,j)
       ! I don't know whether this is helpful.
@@ -4134,10 +4134,10 @@ subroutine adjust_local_BT_cont_types(ubt, uhbt, vbt, vhbt, BTCL_u, BTCL_v, &
       BTCL_u(I,j)%ubt_EE = dt * ubt(I,j)
       if (3.0*uhbt(I,j) < 2.0*ubt(I,j) * BTCL_u(I,j)%FA_u_E0) then
         ! No further bounding is needed.
-        BTCL_u(I,j)%uh_crvE = (uhbt(I,j) - ubt(I,j) * BTCL_u(I,j)%FA_u_E0) / (dt**2 * ubt(I,j)**3)
+        BTCL_u(I,j)%uh_crvE = (uhbt(I,j) - ubt(I,j) * BTCL_u(I,j)%FA_u_E0) / ((dt**2) * (ubt(I,j)**3))
       else ! This should not happen often!
         BTCL_u(I,j)%FA_u_E0 = 1.5*uhbt(I,j) / ubt(I,j)
-        BTCL_u(I,j)%uh_crvE = -0.5*uhbt(I,j) / (dt**2 * ubt(I,j)**3)
+        BTCL_u(I,j)%uh_crvE = -0.5*uhbt(I,j) / ((dt**2) * (ubt(I,j)**3))
       endif
       BTCL_u(I,j)%uh_EE = dt * uhbt(I,j)
       ! I don't know whether this is helpful.
@@ -4151,10 +4151,10 @@ subroutine adjust_local_BT_cont_types(ubt, uhbt, vbt, vhbt, BTCL_u, BTCL_v, &
       BTCL_v(i,J)%vbt_SS = dt * vbt(i,J)
       if (3.0*vhbt(i,J) < 2.0*vbt(i,J) * BTCL_v(i,J)%FA_v_S0) then
         ! No further bounding is needed.
-        BTCL_v(i,J)%vh_crvS = (vhbt(i,J) - vbt(i,J) * BTCL_v(i,J)%FA_v_S0) /  (dt**2 * vbt(i,J)**3)
+        BTCL_v(i,J)%vh_crvS = (vhbt(i,J) - vbt(i,J) * BTCL_v(i,J)%FA_v_S0) /  ((dt**2) * (vbt(i,J)**3))
       else ! This should not happen often!
         BTCL_v(i,J)%FA_v_S0 = 1.5*vhbt(i,J) / (vbt(i,J))
-        BTCL_v(i,J)%vh_crvS = -0.5*vhbt(i,J) /  (dt**2 * vbt(i,J)**3)
+        BTCL_v(i,J)%vh_crvS = -0.5*vhbt(i,J) /  ((dt**2) * (vbt(i,J)**3))
       endif
       BTCL_v(i,J)%vh_SS = dt * vhbt(i,J)
       ! I don't know whether this is helpful.
@@ -4164,10 +4164,10 @@ subroutine adjust_local_BT_cont_types(ubt, uhbt, vbt, vhbt, BTCL_u, BTCL_v, &
       BTCL_v(i,J)%vbt_NN = dt * vbt(i,J)
       if (3.0*vhbt(i,J) < 2.0*vbt(i,J) * BTCL_v(i,J)%FA_v_N0) then
         ! No further bounding is needed.
-        BTCL_v(i,J)%vh_crvN = (vhbt(i,J) - vbt(i,J) * BTCL_v(i,J)%FA_v_N0) /  (dt**2 * vbt(i,J)**3)
+        BTCL_v(i,J)%vh_crvN = (vhbt(i,J) - vbt(i,J) * BTCL_v(i,J)%FA_v_N0) /  ((dt**2) * (vbt(i,J)**3))
       else ! This should not happen often!
         BTCL_v(i,J)%FA_v_N0 = 1.5*vhbt(i,J) / (vbt(i,J))
-        BTCL_v(i,J)%vh_crvN = -0.5*vhbt(i,J) /  (dt**2 * vbt(i,J)**3)
+        BTCL_v(i,J)%vh_crvN = -0.5*vhbt(i,J) /  ((dt**2) * (vbt(i,J)**3))
       endif
       BTCL_v(i,J)%vh_NN = dt * vhbt(i,J)
       ! I don't know whether this is helpful.
