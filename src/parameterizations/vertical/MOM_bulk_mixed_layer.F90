@@ -528,7 +528,7 @@ subroutine bulkmixedlayer(h_3d, u_3d, v_3d, tv, fluxes, dt, ea, eb, G, GV, US, C
                         (fluxes%lrunoff(i,j) + fluxes%frunoff(i,j)) * S(i,1))
         enddo
       else
-        RmixConst = 0.5*CS%rivermix_depth * GV%g_Earth * Irho0**2
+        RmixConst = 0.5*CS%rivermix_depth * GV%g_Earth * (Irho0**2)
         do i=is,ie
           TKE_river(i) = max(0.0, RmixConst*dR0_dS(i)* &
                         (fluxes%lrunoff(i,j) + fluxes%frunoff(i,j)) * S(i,1))
@@ -1325,7 +1325,7 @@ subroutine mixedlayer_convection(h, d_eb, htot, Ttot, Stot, uhtot, vhtot,      &
               else
                 r_SW_top(n) = dR0_dT(i) * Pen_SW_bnd(n,i)
               endif
-              C2(n) = r_SW_top(n) * opacity_band(n,i,k)**2
+              C2(n) = r_SW_top(n) * (opacity_band(n,i,k)**2)
             enddo
             do itt=1,10
               dr_ent = dr ; dr_dh = 0.0
@@ -1524,7 +1524,7 @@ subroutine find_starting_TKE(htot, h_CA, fluxes, U_star_2d, Conv_En, cTKE, dKE_F
       absf = 0.25*((abs(G%CoriolisBu(I,J)) + abs(G%CoriolisBu(I-1,J-1))) + &
                    (abs(G%CoriolisBu(I,J-1)) + abs(G%CoriolisBu(I-1,J))))
       if (CS%omega_frac > 0.0) &
-        absf = sqrt(CS%omega_frac*4.0*CS%omega**2 + (1.0-CS%omega_frac)*absf**2)
+        absf = sqrt(CS%omega_frac*4.0*(CS%omega**2) + (1.0-CS%omega_frac)*(absf**2))
     endif
     absf_Ustar = H_to_Z * absf / U_star
     Idecay_len_TKE(i) = absf_Ustar * CS%TKE_decay
@@ -1558,7 +1558,7 @@ subroutine find_starting_TKE(htot, h_CA, fluxes, U_star_2d, Conv_En, cTKE, dKE_F
 
       if (totEn_Z > 0.0) then
         nstar_FC = CS%nstar * totEn_Z / (totEn_Z + 0.2 * &
-                        sqrt(0.5 * dt * (H_to_Z**2*(absf*htot(i))**3) * totEn_Z))
+                        sqrt(0.5 * dt * ((H_to_Z**2)*((absf*htot(i))**3)) * totEn_Z))
       else
         nstar_FC = CS%nstar
       endif
@@ -1568,7 +1568,7 @@ subroutine find_starting_TKE(htot, h_CA, fluxes, U_star_2d, Conv_En, cTKE, dKE_F
       if (Conv_En(i) > 0.0) then
         totEn_Z = US%L_to_Z**2 * (Conv_En(i) + TKE_CA * (htot(i) / h_CA(i)) )
         nstar_FC = CS%nstar * totEn_Z / (totEn_Z + 0.2 * &
-                        sqrt(0.5 * dt * (H_to_Z**2*(absf*htot(i))**3) * totEn_Z))
+                        sqrt(0.5 * dt * ((H_to_Z**2)*((absf*htot(i))**3)) * totEn_Z))
       else
         nstar_FC = CS%nstar
       endif
@@ -1576,7 +1576,7 @@ subroutine find_starting_TKE(htot, h_CA, fluxes, U_star_2d, Conv_En, cTKE, dKE_F
       totEn_Z = US%L_to_Z**2 * (Conv_En(i) + TKE_CA)
       if (TKE_CA > 0.0) then
         nstar_CA = CS%nstar * totEn_Z / (totEn_Z + 0.2 * &
-                        sqrt(0.5 * dt * (H_to_Z**2*(absf*h_CA(i))**3) * totEn_Z))
+                        sqrt(0.5 * dt * ((H_to_Z**2)*((absf*h_CA(i))**3)) * totEn_Z))
       else
         nstar_CA = CS%nstar
       endif
@@ -1828,7 +1828,7 @@ subroutine mechanical_entrainment(h, d_eb, htot, Ttot, Stot, uhtot, vhtot, &
         endif ; enddo
 
         HpE = htot(i)+h_avail
-        MKE_rate = 1.0/(1.0 + (cMKE(1,i)*HpE + cMKE(2,i)*HpE**2))
+        MKE_rate = 1.0/(1.0 + (cMKE(1,i)*HpE + cMKE(2,i)*(HpE**2)))
         EF4_val = EF4(htot(i)+h_neglect,h_avail,Idecay_len_TKE(i))
         TKE_full_ent = (exp_kh*TKE(i) - h_avail*(dRL*f1_kh + Pen_En_Contrib)) + &
             MKE_rate*dMKE*EF4_val
@@ -1916,7 +1916,7 @@ subroutine mechanical_entrainment(h, d_eb, htot, Ttot, Stot, uhtot, vhtot, &
               TKE_ent1 = exp_kh* TKE(i) - h_ent*(dRL*f1_kh + Pen_En_Contrib)
               EF4_val = EF4(htot(i)+h_neglect,h_ent,Idecay_len_TKE(i),dEF4_dh)
               HpE = htot(i)+h_ent
-              MKE_rate = 1.0/(1.0 + (cMKE(1,i)*HpE + cMKE(2,i)*HpE**2))
+              MKE_rate = 1.0/(1.0 + (cMKE(1,i)*HpE + cMKE(2,i)*(HpE**2)))
               TKE_ent = TKE_ent1 + dMKE*EF4_val*MKE_rate
               ! TKE_ent is the TKE that would remain if h_ent were entrained.
 
@@ -1950,7 +1950,7 @@ subroutine mechanical_entrainment(h, d_eb, htot, Ttot, Stot, uhtot, vhtot, &
 
           if (CS%TKE_diagnostics) then
             HpE = htot(i)+h_ent
-            MKE_rate = 1.0/(1.0 + cMKE(1,i)*HpE + cMKE(2,i)*HpE**2)
+            MKE_rate = 1.0/(1.0 + cMKE(1,i)*HpE + cMKE(2,i)*(HpE**2))
             EF4_val = EF4(htot(i)+h_neglect,h_ent,Idecay_len_TKE(i))
 
             E_HxHpE = h_ent / ((htot(i)+h_neglect)*(HpE+h_neglect))
@@ -2219,7 +2219,7 @@ subroutine resort_ML(h, T, S, R0, SpV0, Rcv, RcvTgt, eps, d_ea, d_eb, ksort, G, 
       do k=nkmb+1,nz ; if (Rcv(i,0) < RcvTgt(k)) exit ; enddo
       k_int_top = k ; Rcv_int = RcvTgt(k)
 
-      I_denom = 1.0 / (dRcv_dS(i)**2 + dT_dS_wt2*dRcv_dT(i)**2)
+      I_denom = 1.0 / (dRcv_dS(i)**2 + dT_dS_wt2*(dRcv_dT(i)**2))
       dT_dR = dT_dS_wt2*dRcv_dT(i) * I_denom
       dS_dR = dRcv_dS(i) * I_denom
 
@@ -2946,7 +2946,7 @@ subroutine mixedlayer_detrain_2(h, T, S, R0, Spv0, Rcv, RcvTgt, dt, dt_diag, d_e
                     h1 - (h1+h2)*(SpV0(i,kb1) - SpV0_det) / (SpV0(i,kb2) - SpV0(i,kb1)))
           if ((stays_merge > stays_min_merge) .and. (stays_merge + h2_to_k1_rem >= h1 + h2)) then
             mergeable_bl = .true.
-            dPE_merge_nB = g_2*GV%H_to_RZ**2*(SpV0(i,kb1)-SpV0(i,kb2)) * ((h1-stays_merge)*(h2-stays_merge))
+            dPE_merge_nB = g_2*(GV%H_to_RZ**2)*(SpV0(i,kb1)-SpV0(i,kb2)) * ((h1-stays_merge)*(h2-stays_merge))
           endif
         else
           stays_min_merge = MAX(h_min_bl, 2.0*h_min_bl - h_to_bl, &
@@ -3097,7 +3097,7 @@ subroutine mixedlayer_detrain_2(h, T, S, R0, Spv0, Rcv, RcvTgt, dt, dt_diag, d_e
           ! dPE_extrap_rhoG should be positive here.
           if (CS%nonBous_energetics) then
             dPE_extrap_rhoG = 0.5*(SpV0(i,kb2)-SpV0_det) * (h2_to_k1*h2) / SpV0(i,k1)
-            dPE_extrapolate = 0.5*GV%g_Earth*GV%H_to_RZ**2*(SpV0(i,kb2)-SpV0_det) * (h2_to_k1*h2)
+            dPE_extrapolate = 0.5*GV%g_Earth*(GV%H_to_RZ**2)*(SpV0(i,kb2)-SpV0_det) * (h2_to_k1*h2)
           else
             dPE_extrap_rhoG = I2Rho0*(R0_det-R0(i,kb2))*h2_to_k1*h2
           endif
@@ -3161,7 +3161,7 @@ subroutine mixedlayer_detrain_2(h, T, S, R0, Spv0, Rcv, RcvTgt, dt, dt_diag, d_e
       if (allocated(CS%diag_PE_detrain) .or. allocated(CS%diag_PE_detrain2)) then
         if (CS%nonBous_energetics) then
           SpV0_det = SpV0_to_bl*Ihdet
-          s1en = Idt_diag * ( -GV%H_to_RZ**2 * g_2 * ((SpV0(i,kb2)-SpV0(i,kb1))*h1*h2 + &
+          s1en = Idt_diag * ( -(GV%H_to_RZ**2) * g_2 * ((SpV0(i,kb2)-SpV0(i,kb1))*h1*h2 + &
               h_det_to_h2*( (SpV0(i,kb1)-SpV0_det)*h1 + (SpV0(i,kb2)-SpV0_det)*h2 ) + &
               h_ml_to_h2*( (SpV0(i,kb2)-SpV0(i,0))*h2 + (SpV0(i,kb1)-SpV0(i,0))*h1 + &
                            (SpV0_det-SpV0(i,0))*h_det_to_h2 ) + &
@@ -3199,7 +3199,7 @@ subroutine mixedlayer_detrain_2(h, T, S, R0, Spv0, Rcv, RcvTgt, dt, dt_diag, d_e
           !  dPE_extrap_rhoG = dPE_extrap_rhoG + 0.5*h_from_ml*(SpV0_to_bl - SpV0(i,0)*h_to_bl) / SpV0(i,0)
           dPE_extrap_rhoG = dPE_extrap_rhoG + 0.5*h_from_ml*(SpV0_to_bl - SpV0(i,0)*h_to_bl) * &
                             ( (h_to_bl + h_from_ml) / (SpV0_to_bl + h_from_ml*SpV0(i,0)) )
-          dPE_extrapolate = dPE_extrapolate + 0.5*GV%g_Earth*GV%H_to_RZ**2 * &
+          dPE_extrapolate = dPE_extrapolate + 0.5*GV%g_Earth*(GV%H_to_RZ**2) * &
                             h_from_ml*(SpV0_to_bl - SpV0(i,0)*h_to_bl)
           SpV0_to_bl = SpV0_to_bl + h_from_ml*SpV0(i,0)
         else
@@ -3284,7 +3284,7 @@ subroutine mixedlayer_detrain_2(h, T, S, R0, Spv0, Rcv, RcvTgt, dt, dt_diag, d_e
       endif
 
       if (CS%nonBous_energetics) then
-        dPE_det_nB = -g_2*GV%H_to_RZ**2*((SpV0(i,kb1)*h_to_bl - SpV0_to_bl)*stays + &
+        dPE_det_nB = -g_2*(GV%H_to_RZ**2)*((SpV0(i,kb1)*h_to_bl - SpV0_to_bl)*stays + &
                        (SpV0(i,kb2)-SpV0(i,kb1)) * (h1-stays) * &
                        (h2 - scale_slope*stays*((h1+h2)+h_to_bl)/(h1+h2)) ) - &
                   dPE_extrapolate
@@ -3819,7 +3819,7 @@ subroutine mixedlayer_detrain_1(h, T, S, R0, SpV0, Rcv, RcvTgt, dt, dt_diag, d_e
           ! 36 here is a typical oceanic value of (dR/dS) / (dR/dT) - it says
           ! that the relative weights of T & S changes is a plausible 6:1.
           ! Also, this was coded on Athena's 6th birthday!
-          I_denom = 1.0 / (dRcv_dS(i)**2 + dT_dS_wt2*dRcv_dT(i)**2)
+          I_denom = 1.0 / (dRcv_dS(i)**2 + dT_dS_wt2*(dRcv_dT(i)**2))
           dT_dR = dT_dS_wt2*dRcv_dT(i) * I_denom
           dS_dR = dRcv_dS(i) * I_denom
         else

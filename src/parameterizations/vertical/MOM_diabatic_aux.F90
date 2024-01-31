@@ -1009,20 +1009,20 @@ subroutine diagnoseMLDbyEnergy(id_MLD, h, tv, G, GV, US, Mixing_Energy, diagPtr)
               ! We also need the derivative of this function for the Newton's method iteration
               ! F'(x) = (G'(x)H(x)-G(x)H'(x))/H(x)^2 + I'(x)
               ! G and its derivative
-              Gx = 0.5 * (Ca * (X*X*X) + Cb * X**2 + Cc * X + Cd)
-              Gpx = 0.5 * (3. * (Ca * X**2) + 2. * (Cb * X) + Cc)
+              Gx = 0.5 * (Ca * (X*X*X) + Cb * (X**2) + Cc * X + Cd)
+              Gpx = 0.5 * (3. * (Ca * (X**2)) + 2. * (Cb * X) + Cc)
               ! H, its inverse, and its derivative
               Hx = D1 + X
               iHx = 1. / Hx
               Hpx = 1.
               ! I and its derivative
-              Ix = 0.5 * (Ca2 * X**2 + Cb2 * X + Cc2)
+              Ix = 0.5 * (Ca2 * (X**2) + Cb2 * X + Cc2)
               Ipx = 0.5 * (2. * Ca2 * X + Cb2)
 
               ! The Function and its derivative:
               PE_Mixed = Gx * iHx + Ix
               Fgx = PE_Mixed - (PE + PE_threshold(iM))
-              Fpx = (Gpx * Hx - Hpx * Gx) * iHx**2 + Ipx
+              Fpx = (Gpx * Hx - Hpx * Gx) * (iHx**2) + Ipx
 
               ! Check if our solution is within the threshold bounds, if not update
               ! using Newton's method.  This appears to converge almost always in

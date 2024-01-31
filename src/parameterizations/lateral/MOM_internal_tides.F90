@@ -976,9 +976,9 @@ subroutine itidal_lowmode_loss(G, GV, US, CS, Nb, Rho_bot, Ub, En, TKE_loss_fixe
 
     ! Calculate TKE loss rate; units of [R Z3 T-3 ~> W m-2] here.
     if (GV%Boussinesq .or. GV%semi_Boussinesq) then
-      TKE_loss_tot = q_itides * GV%Z_to_H * TKE_loss_fixed(i,j) * Nb(i,j) * Ub(i,j,fr,m)**2
+      TKE_loss_tot = q_itides * GV%Z_to_H * TKE_loss_fixed(i,j) * Nb(i,j) * (Ub(i,j,fr,m)**2)
     else
-      TKE_loss_tot = q_itides * (GV%RZ_to_H * Rho_bot(i,j)) * TKE_loss_fixed(i,j) * Nb(i,j) * Ub(i,j,fr,m)**2
+      TKE_loss_tot = q_itides * (GV%RZ_to_H * Rho_bot(i,j)) * TKE_loss_fixed(i,j) * Nb(i,j) * (Ub(i,j,fr,m)**2)
     endif
 
     ! Update energy remaining (this is a pseudo implicit calc)
@@ -2398,10 +2398,10 @@ subroutine PPM_limit_pos(h_in, h_L, h_R, h_min, G, iis, iie, jis, jie)
       if (abs(dh) < curv) then ! The parabola's minimum is within the cell.
         if (h_in(i,j) <= h_min) then
           h_L(i,j) = h_in(i,j) ; h_R(i,j) = h_in(i,j)
-        elseif (12.0*curv*(h_in(i,j) - h_min) < (curv**2 + 3.0*dh**2)) then
+        elseif (12.0*curv*(h_in(i,j) - h_min) < (curv**2 + 3.0*(dh**2))) then
           ! The minimum value is h_in - (curv^2 + 3*dh^2)/(12*curv), and must
           ! be limited in this case.  0 < scale < 1.
-          scale = 12.0*curv*(h_in(i,j) - h_min) / (curv**2 + 3.0*dh**2)
+          scale = 12.0*curv*(h_in(i,j) - h_min) / (curv**2 + 3.0*(dh**2))
           h_L(i,j) = h_in(i,j) + scale*(h_L(i,j) - h_in(i,j))
           h_R(i,j) = h_in(i,j) + scale*(h_R(i,j) - h_in(i,j))
         endif

@@ -1183,7 +1183,7 @@ subroutine horizontal_viscosity(u, v, h, diffu, diffv, MEKE, VarMix, G, GV, US, 
               m_leithy(i,j) = 0.0
             else
               if ((CS%m_const_leithy(i,j)*vert_vort_mag(i,j)) < abs(vort_xy_smooth(i,j))) then
-                m_leithy(i,j) = CS%c_K * (vert_vort_mag(i,j) / vort_xy_smooth(i,j))**2
+                m_leithy(i,j) = CS%c_K * ((vert_vort_mag(i,j) / vort_xy_smooth(i,j))**2)
               else
                 m_leithy(i,j) = CS%m_leithy_max(i,j)
               endif
@@ -1196,7 +1196,7 @@ subroutine horizontal_viscosity(u, v, h, diffu, diffv, MEKE, VarMix, G, GV, US, 
             Del2vort_h = 0.25 * ((Del2vort_q(I,J) + Del2vort_q(I-1,J-1)) + &
                                  (Del2vort_q(I-1,J) + Del2vort_q(I,J-1)))
             AhLthy = CS%Biharm6_const_xx(i,j) * inv_PI6 * &
-                    sqrt(max(0.,Del2vort_h**2 - m_leithy(i,j)*vert_vort_mag_smooth(i,j)**2))
+                    sqrt(max(0.,Del2vort_h**2 - m_leithy(i,j)*(vert_vort_mag_smooth(i,j)**2)))
             Ah(i,j) = max(CS%Ah_bg_xx(i,j), AhLthy)
           enddo ; enddo
           ! Smooth Ah before applying upper bound
@@ -1448,7 +1448,7 @@ subroutine horizontal_viscosity(u, v, h, diffu, diffv, MEKE, VarMix, G, GV, US, 
 
         if (CS%anisotropic) &
           ! *Add* the shear component of anisotropic viscosity
-          Kh(I,J) = Kh(I,J) + CS%Kh_aniso * CS%n1n2_q(I,J)**2
+          Kh(I,J) = Kh(I,J) + CS%Kh_aniso * (CS%n1n2_q(I,J)**2)
 
         ! Newer method of bounding for stability
         if (CS%better_bound_Kh) then
@@ -2471,7 +2471,7 @@ subroutine hor_visc_init(Time, G, GV, US, param_file, diag, CS, ADp)
          CS%biharm6_const_xx(i,j) = Leith_bi_const * (grid_sp_h3 * grid_sp_h3)
       endif
       if (CS%use_Leithy) then
-         CS%biharm6_const_xx(i,j) = Leith_bi_const * max(G%dxT(i,j),G%dyT(i,j))**6
+         CS%biharm6_const_xx(i,j) = Leith_bi_const * (max(G%dxT(i,j),G%dyT(i,j))**6)
          CS%m_const_leithy(i,j) = 0.5 * sqrt(CS%c_K) * max(G%dxT(i,j),G%dyT(i,j))
          CS%m_leithy_max(i,j) = 4. / max(G%dxT(i,j),G%dyT(i,j))**2
       endif

@@ -1602,7 +1602,7 @@ subroutine vertvisc_coef(u, v, h, dz, forces, visc, tv, dt, G, GV, US, CS, OBC, 
                   z2_wt = 1.0  ; if (zh(I) * I_HTbl(I) < 2.0*CS%harm_BL_val) &
                     z2_wt = max(0.0, min(1.0, zh(I) * I_HTbl(I) * I_valBL - 1.0))
                   z2 = z2_wt * (max(zh(I), Ztop_min(I) - min(zcol(i),zcol(i+1))) * I_HTbl(I))
-                  topfn = 1.0 / (1.0 + 0.09*z2**6)
+                  topfn = 1.0 / (1.0 + 0.09*(z2**6))
                   hvel_shelf(I,k) = min(hvel(I,k), (1.0-topfn)*h_arith(I,k) + topfn*h_harm(I,k))
                   dz_vel_shelf(I,k) = min(dz_vel(I,k), (1.0-topfn)*dz_arith(I,k) + topfn*dz_harm(I,k))
                 endif
@@ -1816,7 +1816,7 @@ subroutine vertvisc_coef(u, v, h, dz, forces, visc, tv, dt, G, GV, US, CS, OBC, 
                   z2_wt = 1.0  ; if (zh(i) * I_HTbl(i) < 2.0*CS%harm_BL_val) &
                     z2_wt = max(0.0, min(1.0, zh(i) * I_HTbl(i) * I_valBL - 1.0))
                   z2 = z2_wt * (max(zh(i), Ztop_min(i) - min(zcol1(i),zcol2(i))) * I_HTbl(i))
-                  topfn = 1.0 / (1.0 + 0.09*z2**6)
+                  topfn = 1.0 / (1.0 + 0.09*(z2**6))
                   hvel_shelf(i,k) = min(hvel(i,k), (1.0-topfn)*h_arith(i,k) + topfn*h_harm(i,k))
                   dz_vel_shelf(i,k) = min(dz_vel(i,k), (1.0-topfn)*dz_arith(i,k) + topfn*dz_harm(i,k))
                 endif
@@ -2175,7 +2175,7 @@ subroutine find_coupling_coef(a_cpl, hvel, do_i, h_harm, bbl_thick, kv_bbl, z_i,
 
     do K=2,nz ; do i=is,ie ;  if (do_i(i)) then
       z_t(i) = z_t(i) + hvel(i,k-1) / tbl_thick(i)
-      topfn = 1.0 / (1.0 + 0.09 * z_t(i)**6)
+      topfn = 1.0 / (1.0 + 0.09 * (z_t(i)**6))
 
       dhc = 0.5*(hvel(i,k)+hvel(i,k-1))
       if (dhc > tbl_thick(i)) then
@@ -2228,7 +2228,7 @@ subroutine find_coupling_coef(a_cpl, hvel, do_i, h_harm, bbl_thick, kv_bbl, z_i,
         endif ; enddo ; endif
       endif
       do I=is,ie
-        tau_mag(I) = GV%RZ_to_H*rho_av1(i) * u_star(I)**2
+        tau_mag(I) = GV%RZ_to_H*rho_av1(i) * (u_star(I)**2)
       enddo
     else ! (.not.allocated(tv%SpV_avg))
       if (work_on_u) then
@@ -2255,7 +2255,7 @@ subroutine find_coupling_coef(a_cpl, hvel, do_i, h_harm, bbl_thick, kv_bbl, z_i,
         endif ; enddo ; endif
       endif
       do I=is,ie
-        tau_mag(I) = GV%Z_to_H*u_star(I)**2
+        tau_mag(I) = GV%Z_to_H*(u_star(I)**2)
       enddo
     endif
 
@@ -2339,7 +2339,7 @@ subroutine find_coupling_coef(a_cpl, hvel, do_i, h_harm, bbl_thick, kv_bbl, z_i,
         ! (in a log-layer) and be further limited by rotation to give the natural Ekman length.
         temp1 = (z_t(i)*h_ml(i) - z_t(i)*z_t(i))
         if (GV%Boussinesq) then
-          ustar2_denom = (CS%vonKar * GV%Z_to_H*u_star(i)**2) / (absf(i)*temp1 + (h_ml(i)+h_neglect)*u_star(i))
+          ustar2_denom = (CS%vonKar * GV%Z_to_H*(u_star(i)**2)) / (absf(i)*temp1 + (h_ml(i)+h_neglect)*u_star(i))
         else
           ustar2_denom = (CS%vonKar * tau_mag(i)) / (absf(i)*temp1 + (h_ml(i)+h_neglect)*u_star(i))
         endif
@@ -2363,7 +2363,7 @@ subroutine find_coupling_coef(a_cpl, hvel, do_i, h_harm, bbl_thick, kv_bbl, z_i,
 
         temp1 = (z_t(i)*h_ml(i) - z_t(i)*z_t(i))
         if (GV%Boussinesq) then
-          ustar2_denom = (CS%vonKar * GV%Z_to_H*u_star(i)**2) / (absf(i)*temp1 + (h_ml(i)+h_neglect)*u_star(i))
+          ustar2_denom = (CS%vonKar * GV%Z_to_H*(u_star(i)**2)) / (absf(i)*temp1 + (h_ml(i)+h_neglect)*u_star(i))
         else
           ustar2_denom = (CS%vonKar * tau_mag(i)) / (absf(i)*temp1 + (h_ml(i)+h_neglect)*u_star(i))
         endif

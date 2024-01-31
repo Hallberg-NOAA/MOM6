@@ -132,11 +132,11 @@ subroutine interface_filter(h, uhtr, vhtr, tv, dt, G, GV, US, CDp, CS)
   else
     !$OMP parallel do default(shared)
     do j=js-hs,je+hs ; do I=is-(hs+1),ie+hs
-      Lsm2_u(I,j) = (0.125*filter_strength) *  (min(G%areaT(i,j), G%areaT(i+1,j)) * G%IdyCu(I,j))**2
+      Lsm2_u(I,j) = (0.125*filter_strength) *  ((min(G%areaT(i,j), G%areaT(i+1,j)) * G%IdyCu(I,j))**2)
     enddo ; enddo
     !$OMP parallel do default(shared)
     do J=js-(hs+1),je+hs ; do i=is-hs,ie+hs
-      Lsm2_v(i,J) = (0.125*filter_strength) *  (min(G%areaT(i,j), G%areaT(i,j+1)) * G%IdxCv(i,J))**2
+      Lsm2_v(i,J) = (0.125*filter_strength) *  ((min(G%areaT(i,j), G%areaT(i,j+1)) * G%IdxCv(i,J))**2)
     enddo ; enddo
   endif
 

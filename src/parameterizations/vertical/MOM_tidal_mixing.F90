@@ -1134,14 +1134,14 @@ subroutine add_int_tide_diffusivity(dz, j, N2_bot, Rho_bot, N2_lay, TKE_to_Kd, m
       CS%Nb(i,j) = sqrt(N2_bot(i))
       if (CS%tidal_answer_date < 20190101) then
         if ((CS%tideamp(i,j) > 0.0) .and. &
-            (CS%kappa_itides**2 * CS%h2(i,j) * CS%Nb(i,j)**3 > 1.0e-14*US%T_to_s**3) ) then
+            ((CS%kappa_itides**2) * CS%h2(i,j) * (CS%Nb(i,j)**3) > 1.0e-14*US%T_to_s**3) ) then
           z0_Polzin(i) = CS%Polzin_decay_scale_factor * CS%Nu_Polzin * &
-                         CS%Nbotref_Polzin**2 * CS%tideamp(i,j) / &
-                       ( CS%kappa_itides**2 * CS%h2(i,j) * CS%Nb(i,j)**3 )
+                         (CS%Nbotref_Polzin**2) * CS%tideamp(i,j) / &
+                       ( (CS%kappa_itides**2) * CS%h2(i,j) * (CS%Nb(i,j)**3) )
           if (z0_Polzin(i) < CS%Polzin_min_decay_scale) &
             z0_Polzin(i) = CS%Polzin_min_decay_scale
           if (N2_meanz(i) > 1.0e-14*US%T_to_s**2  ) then
-            z0_Polzin_scaled(i) = z0_Polzin(i)*CS%Nb(i,j)**2 / N2_meanz(i)
+            z0_Polzin_scaled(i) = z0_Polzin(i)*(CS%Nb(i,j)**2) / N2_meanz(i)
           else
             z0_Polzin_scaled(i) = CS%Polzin_decay_scale_max_factor * dztot(i)
           endif
@@ -1152,14 +1152,14 @@ subroutine add_int_tide_diffusivity(dz, j, N2_bot, Rho_bot, N2_lay, TKE_to_Kd, m
           z0_Polzin_scaled(i) = CS%Polzin_decay_scale_max_factor * dztot(i)
         endif
       else
-        z0Ps_num = (CS%Polzin_decay_scale_factor * CS%Nu_Polzin * CS%Nbotref_Polzin**2) * CS%tideamp(i,j)
-        z0Ps_denom = ( CS%kappa_itides**2 * CS%h2(i,j) * CS%Nb(i,j) * N2_meanz(i) )
+        z0Ps_num = (CS%Polzin_decay_scale_factor * CS%Nu_Polzin * (CS%Nbotref_Polzin**2)) * CS%tideamp(i,j)
+        z0Ps_denom = ( (CS%kappa_itides**2) * CS%h2(i,j) * CS%Nb(i,j) * N2_meanz(i) )
         if ((CS%tideamp(i,j) > 0.0) .and. &
             (z0Ps_num < z0Ps_denom * CS%Polzin_decay_scale_max_factor * dztot(i))) then
           z0_Polzin_scaled(i) = z0Ps_num / z0Ps_denom
 
           if (abs(N2_meanz(i) * z0_Polzin_scaled(i)) < &
-              CS%Nb(i,j)**2 * (CS%Polzin_decay_scale_max_factor * dztot(i))) then
+              (CS%Nb(i,j)**2) * (CS%Polzin_decay_scale_max_factor * dztot(i))) then
             z0_Polzin(i) = z0_Polzin_scaled(i) * (N2_meanz(i) / CS%Nb(i,j)**2)
           else
             z0_Polzin(i) = CS%Polzin_decay_scale_max_factor * dztot(i)

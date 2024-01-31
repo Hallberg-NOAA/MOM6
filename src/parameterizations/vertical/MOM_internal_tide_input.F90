@@ -540,7 +540,7 @@ subroutine int_tide_input_init(Time, G, GV, US, param_file, diag, CS, itide)
 
     ! Compute the fixed part of internal tidal forcing; units are [R Z4 H-1 T-2 ~> J m-2 or J m kg-1] here.
     CS%TKE_itidal_coef(i,j,fr) = 0.5*US%L_to_Z*kappa_h2_factor * GV%H_to_RZ * &
-         kappa_itides * itide%h2(i,j) * CS%tideamp(i,j,fr)**2
+         kappa_itides * itide%h2(i,j) * (CS%tideamp(i,j,fr)**2)
   enddo ; enddo ; enddo
 
 

@@ -872,15 +872,15 @@ subroutine find_TKE_to_Kd(h, tv, dRho_int, N2_lay, j, dt, G, GV, US, CS, &
       ! The omega^2 term in TKE_to_Kd is due to a rescaling of the efficiency of turbulent
       ! mixing by a factor of N^2 / (N^2 + Omega^2), as proposed by Melet et al., 2013?
       if (allocated(tv%SpV_avg)) then
-        maxTKE(i,k) = I_dt * ((GV%H_to_RZ * grav * tv%SpV_avg(i,j,k)**2) * &
+        maxTKE(i,k) = I_dt * ((GV%H_to_RZ * grav * (tv%SpV_avg(i,j,k)**2)) * &
             (0.5*max(dRho_int(i,K+1) + dsp1_ds(i,k)*dRho_int(i,K), 0.0))) * &
              ((h(i,j,k) + dh_max) * maxEnt(i,k))
-        TKE_to_Kd(i,k) = 1.0 / (grav * tv%SpV_avg(i,j,k) * dRho_lay + CS%omega**2 * (dz(i,k) + dz_neglect))
+        TKE_to_Kd(i,k) = 1.0 / (grav * tv%SpV_avg(i,j,k) * dRho_lay + (CS%omega**2) * (dz(i,k) + dz_neglect))
       else
         maxTKE(i,k) = I_dt * (G_IRho0 * &
             (0.5*max(dRho_int(i,K+1) + dsp1_ds(i,k)*dRho_int(i,K), 0.0))) * &
              ((h(i,j,k) + dh_max) * maxEnt(i,k))
-        TKE_to_Kd(i,k) = 1.0 / (G_Rho0 * dRho_lay + CS%omega**2 * (dz(i,k) + dz_neglect))
+        TKE_to_Kd(i,k) = 1.0 / (G_Rho0 * dRho_lay + (CS%omega**2) * (dz(i,k) + dz_neglect))
       endif
     endif
   enddo ; enddo
@@ -1274,7 +1274,7 @@ subroutine add_drag_diffusivity(h, u, v, tv, fluxes, visc, j, TKE_to_Kd, maxTKE,
     ! Rho_top is determined by finding the density where
     ! integral(bottom, Z) (rho(z') - rho(Z)) dz' = rho_0 400 ustar^2 / g
 
-    gh_sum_top(i) = R0_g * 400.0 * ustar_h**2
+    gh_sum_top(i) = R0_g * 400.0 * (ustar_h**2)
 
     do_i(i) = (G%mask2dT(i,j) > 0.0)
     htot(i) = h(i,j,nz)
@@ -1323,10 +1323,10 @@ subroutine add_drag_diffusivity(h, u, v, tv, fluxes, visc, j, TKE_to_Kd, maxTKE,
 
       ! TKE_Ray has been initialized to 0 above.
       if (Rayleigh_drag) TKE_Ray = 0.5*CS%BBL_effic * US%L_to_Z**2 * G%IareaT(i,j) * &
-            ((G%areaCu(I-1,j) * visc%Ray_u(I-1,j,k) * u(I-1,j,k)**2 + &
-              G%areaCu(I,j)   * visc%Ray_u(I,j,k)   * u(I,j,k)**2) + &
-             (G%areaCv(i,J-1) * visc%Ray_v(i,J-1,k) * v(i,J-1,k)**2 + &
-              G%areaCv(i,J)   * visc%Ray_v(i,J,k)   * v(i,J,k)**2))
+            ((G%areaCu(I-1,j) * visc%Ray_u(I-1,j,k) * (u(I-1,j,k)**2) + &
+              G%areaCu(I,j)   * visc%Ray_u(I,j,k)   * (u(I,j,k)**2)) + &
+             (G%areaCv(i,J-1) * visc%Ray_v(i,J-1,k) * (v(i,J-1,k)**2) + &
+              G%areaCv(i,J)   * visc%Ray_v(i,J,k)   * (v(i,J,k)**2)))
 
       if (TKE_to_layer + TKE_Ray > 0.0) then
         if (CS%BBL_mixing_as_max) then
@@ -1513,10 +1513,10 @@ subroutine add_LOTW_BBL_diffusivity(h, u, v, tv, fluxes, visc, j, N2_int, Rho_bo
       ! Add in additional energy input from bottom-drag against slopes (sides)
       if (Rayleigh_drag) TKE_remaining = TKE_remaining + &
             0.5*CS%BBL_effic * US%L_to_Z**2 * G%IareaT(i,j) * &
-            ((G%areaCu(I-1,j) * visc%Ray_u(I-1,j,k) * u(I-1,j,k)**2 + &
-              G%areaCu(I,j)   * visc%Ray_u(I,j,k)   * u(I,j,k)**2) + &
-             (G%areaCv(i,J-1) * visc%Ray_v(i,J-1,k) * v(i,J-1,k)**2 + &
-              G%areaCv(i,J)   * visc%Ray_v(i,J,k)   * v(i,J,k)**2))
+            ((G%areaCu(I-1,j) * visc%Ray_u(I-1,j,k) * (u(I-1,j,k)**2) + &
+              G%areaCu(I,j)   * visc%Ray_u(I,j,k)   * (u(I,j,k)**2)) + &
+             (G%areaCv(i,J-1) * visc%Ray_v(i,J-1,k) * (v(i,J-1,k)**2) + &
+              G%areaCv(i,J)   * visc%Ray_v(i,J,k)   * (v(i,J,k)**2)))
 
       ! Exponentially decay TKE across the thickness of the layer.
       ! This is energy loss in addition to work done as mixing, apparently to Joule heating.
@@ -1649,7 +1649,7 @@ subroutine add_MLrad_diffusivity(dz, fluxes, tv, j, Kd_int, G, GV, US, CS, TKE_t
       u_star_H = GV%RZ_to_H * sqrt(US%L_to_Z*fluxes%tau_mag(i,j) * GV%Rho0)
     endif
     TKE_ml_flux(i) = (CS%mstar * CS%ML_rad_coeff) * (ustar_sq * u_star_H)
-    I_decay_len2_TKE = CS%TKE_decay**2 * (f_sq / ustar_sq)
+    I_decay_len2_TKE = (CS%TKE_decay**2) * (f_sq / ustar_sq)
 
     if (CS%ML_rad_TKE_decay) &
       TKE_ml_flux(i) = TKE_ml_flux(i) * exp(-h_ml(i) * sqrt(I_decay_len2_TKE))

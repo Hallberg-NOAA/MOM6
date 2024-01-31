@@ -708,7 +708,7 @@ subroutine set_viscous_BBL(u, v, h, tv, visc, G, GV, US, CS, pbv)
     ! When stratification dominates h_N<<h_f, and vice versa.
     do i=is,ie ; if (do_i(i)) then
       ! The 400.0 in this expression is the square of a Ci introduced in KW99, eq. 2.22.
-      ustarsq = Rho0x400_G * ustar(i)**2 ! Note not in units of u*^2 but [H R ~> kg m-2 or kg2 m-5]
+      ustarsq = Rho0x400_G * (ustar(i)**2) ! Note not in units of u*^2 but [H R ~> kg m-2 or kg2 m-5]
       htot = 0.0
       dztot = 0.0
 
@@ -904,7 +904,7 @@ subroutine set_viscous_BBL(u, v, h, tv, visc, G, GV, US, CS, pbv)
           else
             tmp = slope/crv
             Vol_open = 0.25*slope*tmp + C1_12*crv
-            Vol_2_reg = 0.5*tmp**2 * (crv - C1_3*slope)
+            Vol_2_reg = 0.5*(tmp**2) * (crv - C1_3*slope)
           endif
           ! Define some combinations of crv & slope for later use.
           C24_crv = 24.0/crv ; Iapb = 1.0/(crv+slope)
@@ -921,7 +921,7 @@ subroutine set_viscous_BBL(u, v, h, tv, visc, G, GV, US, CS, pbv)
           else
             C24_crv = 24.0/crv ; Iapb = 1.0/(crv+slope)
             L_direct = 1.0 + slope/crv ! L_direct < 1 because crv < 0
-            Vol_direct = -C1_6*crv*L_direct**3
+            Vol_direct = -C1_6*crv*(L_direct**3)
           endif
           Ibma_2 = 2.0 / (slope - crv)
         endif
@@ -960,7 +960,7 @@ subroutine set_viscous_BBL(u, v, h, tv, visc, G, GV, US, CS, pbv)
               tmp_val_m1_to_p1 = max(-1., min(1., tmp_val_m1_to_p1))
               L(K) = 0.5 - cos(C1_3*acos(tmp_val_m1_to_p1) - C2pi_3)
               ! To check the answers.
-              ! Vol_err = Vol_open - 0.25*crv_3*(1.0+2.0*L(K)) * (1.0-L(K))**2 - vol
+              ! Vol_err = Vol_open - 0.25*crv_3*(1.0+2.0*L(K)) * ((1.0-L(K))**2) - vol
             endif
           else ! a < 0.
             if (vol <= Vol_direct) then
@@ -988,9 +988,9 @@ subroutine set_viscous_BBL(u, v, h, tv, visc, G, GV, US, CS, pbv)
               use_L0 = .false.
               do_one_L_iter = .false.
               if (CS%answer_date < 20190101) then
-                curv_tol = GV%Angstrom_Z*dV_dL2**2 &
+                curv_tol = GV%Angstrom_Z*(dV_dL2**2) &
                            * (0.25 * dV_dL2 * GV%Angstrom_Z - crv * L0 * dVol)
-                do_one_L_iter = (crv * crv * dVol**3) < curv_tol
+                do_one_L_iter = (crv * crv * (dVol**3)) < curv_tol
               else
                 ! The following code is more robust when GV%Angstrom_H=0, but
                 ! it changes answers.
@@ -999,9 +999,9 @@ subroutine set_viscous_BBL(u, v, h, tv, visc, G, GV, US, CS, pbv)
                 Vol_tol = max(0.5 * GV%Angstrom_Z + dz_neglect, 1e-14 * vol)
                 Vol_quit = max(0.9 * GV%Angstrom_Z + dz_neglect, 1e-14 * vol)
 
-                curv_tol = Vol_tol * dV_dL2**2 &
+                curv_tol = Vol_tol * (dV_dL2**2) &
                            * (dV_dL2 * Vol_tol - 2.0 * crv * L0 * dVol)
-                do_one_L_iter = (crv * crv * dVol**3) < curv_tol
+                do_one_L_iter = (crv * crv * (dVol**3)) < curv_tol
               endif
 
               if (use_L0) then
@@ -1027,7 +1027,7 @@ subroutine set_viscous_BBL(u, v, h, tv, visc, G, GV, US, CS, pbv)
                 if (abs(Vol_err_min) <= Vol_quit) then
                   L(K) = L_min ; Vol_err = Vol_err_min
                 else
-                  L(K) = sqrt((L_min**2*Vol_err_max - L_max**2*Vol_err_min) / &
+                  L(K) = sqrt(((L_min**2)*Vol_err_max - (L_max**2)*Vol_err_min) / &
                               (Vol_err_max - Vol_err_min))
                   do itt=1,maxitt
                     Vol_err = 0.5*(L(K)*L(K))*(slope + crv_3*(3.0-4.0*L(K))) - vol
@@ -1068,7 +1068,7 @@ subroutine set_viscous_BBL(u, v, h, tv, visc, G, GV, US, CS, pbv)
             gam = 1.0 - L(K+1)/L(K)
             Rayleigh = cdrag_conv * (L(K)-L(K+1)) * (1.0-BBL_frac) * &
                 (12.0*CS%c_Smag*h_vel_pos) /  (12.0*CS%c_Smag*h_vel_pos + &
-                 cdrag_conv * gam*(1.0-gam)*(1.0-1.5*gam) * L(K)**2 * Cell_width)
+                 cdrag_conv * gam*(1.0-gam)*(1.0-1.5*gam) * (L(K)**2) * Cell_width)
           else ! This layer feels no drag.
             Rayleigh = 0.0
           endif
@@ -1540,7 +1540,7 @@ subroutine set_viscous_ML(u, v, h, tv, forces, visc, dt, G, GV, US, CS)
           if (CS%omega_frac >= 1.0) then ; absf = 2.0*CS%omega ; else
             absf = 0.5*(abs(G%CoriolisBu(I,J)) + abs(G%CoriolisBu(I,J-1)))
             if (CS%omega_frac > 0.0) &
-              absf = sqrt(CS%omega_frac*4.0*CS%omega**2 + (1.0-CS%omega_frac)*absf**2)
+              absf = sqrt(CS%omega_frac*4.0*(CS%omega**2) + (1.0-CS%omega_frac)*(absf**2))
           endif
           U_star = max(CS%ustar_min, 0.5*(U_star_2d(i,j) + U_star_2d(i+1,j)))
           Idecay_len_TKE(I) = (absf / U_star) * CS%TKE_decay
@@ -1596,7 +1596,7 @@ subroutine set_viscous_ML(u, v, h, tv, forces, visc, dt, G, GV, US, CS)
                 if (RiBulk * Uh2 <= (htot(I)**2) * gHprime) then
                   visc%nkml_visc_u(I,j) = real(k_massive(I))
                   do_i(I) = .false.
-                elseif (RiBulk * Uh2 <= (htot(I) + hlay)**2 * gHprime) then
+                elseif (RiBulk * Uh2 <= ((htot(I) + hlay)**2) * gHprime) then
                   visc%nkml_visc_u(I,j) = real(k-1) + &
                     ( sqrt(RiBulk * Uh2 / gHprime) - htot(I) ) / hlay
                   do_i(I) = .false.
@@ -1709,7 +1709,7 @@ subroutine set_viscous_ML(u, v, h, tv, forces, visc, dt, G, GV, US, CS)
       do I=Isq,Ieq ; if (do_i(I)) then
   !  The 400.0 in this expression is the square of a constant proposed
   !  by Killworth and Edwards, 1999, in equation (2.20).
-        ustarsq = Rho0x400_G * ustar(i)**2
+        ustarsq = Rho0x400_G * (ustar(i)**2)
         htot(i) = 0.0 ; dztot(i) = 0.0
         if (use_EOS) then
           Thtot(i) = 0.0 ; Shtot(i) = 0.0
@@ -1810,7 +1810,7 @@ subroutine set_viscous_ML(u, v, h, tv, forces, visc, dt, G, GV, US, CS)
           if (CS%omega_frac >= 1.0) then ; absf = 2.0*CS%omega ; else
             absf = 0.5*(abs(G%CoriolisBu(I-1,J)) + abs(G%CoriolisBu(I,J)))
             if (CS%omega_frac > 0.0) &
-              absf = sqrt(CS%omega_frac*4.0*CS%omega**2 + (1.0-CS%omega_frac)*absf**2)
+              absf = sqrt(CS%omega_frac*4.0*(CS%omega**2) + (1.0-CS%omega_frac)*(absf**2))
           endif
 
           U_star = max(CS%ustar_min, 0.5*(U_star_2d(i,j) + U_star_2d(i,j+1)))
@@ -1865,10 +1865,10 @@ subroutine set_viscous_ML(u, v, h, tv, forces, visc, dt, G, GV, US, CS)
 
               if (gHprime > 0.0) then
                 RiBulk = CS%bulk_Ri_ML * exp(-htot(i) * Idecay_len_TKE(i))
-                if (RiBulk * Uh2 <= htot(i)**2 * gHprime) then
+                if (RiBulk * Uh2 <= (htot(i)**2) * gHprime) then
                   visc%nkml_visc_v(i,J) = real(k_massive(i))
                   do_i(i) = .false.
-                elseif (RiBulk * Uh2 <= (htot(i) + hlay)**2 * gHprime) then
+                elseif (RiBulk * Uh2 <= ((htot(i) + hlay)**2) * gHprime) then
                   visc%nkml_visc_v(i,J) = real(k-1) + &
                     ( sqrt(RiBulk * Uh2 / gHprime) - htot(i) ) / hlay
                   do_i(i) = .false.
@@ -1980,7 +1980,7 @@ subroutine set_viscous_ML(u, v, h, tv, forces, visc, dt, G, GV, US, CS)
       do i=is,ie ; if (do_i(i)) then
   !  The 400.0 in this expression is the square of a constant proposed
   !  by Killworth and Edwards, 1999, in equation (2.20).
-        ustarsq = Rho0x400_G * ustar(i)**2
+        ustarsq = Rho0x400_G * (ustar(i)**2)
         htot(i) = 0.0
         dztot(i) = 0.0
         if (use_EOS) then

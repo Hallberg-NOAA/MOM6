@@ -594,8 +594,8 @@ subroutine calc_Visbeck_coeffs_old(h, slope_x, slope_y, N2_u, N2_v, G, GV, US, C
       wNE = G%mask2dCv(i+1,J  ) * ( (h(i+1,j,k)*h(i+1,j+1,k)) * (h(i+1,j,k-1)*h(i+1,j+1,k-1)) )
       wSW = G%mask2dCv(i  ,J-1) * ( (h(i  ,j,k)*h(i  ,j-1,k)) * (h(i  ,j,k-1)*h(i  ,j-1,k-1)) )
       S2 =  slope_x(I,j,K)**2 + &
-              ((wNW*slope_y(i,J,K)**2 + wSE*slope_y(i+1,J-1,K)**2) + &
-               (wNE*slope_y(i+1,J,K)**2 + wSW*slope_y(i,J-1,K)**2) ) / &
+              ((wNW*(slope_y(i,J,K)**2) + wSE*(slope_y(i+1,J-1,K)**2)) + &
+               (wNE*(slope_y(i+1,J,K)**2) + wSW*(slope_y(i,J-1,K)**2)) ) / &
               ( ((wSE+wNW) + (wNE+wSW)) + GV%H_subroundoff**4 )
       if (S2max>0.) S2 = S2 * S2max / (S2 + S2max) ! Limit S2
 
@@ -630,8 +630,8 @@ subroutine calc_Visbeck_coeffs_old(h, slope_x, slope_y, N2_u, N2_v, G, GV, US, C
       wNE = G%mask2dCu(I,j+1)   * ( (h(i,j+1,k)*h(i+1,j+1,k)) * (h(i,j+1,k-1)*h(i+1,j+1,k-1)) )
       wSW = G%mask2dCu(I-1,j)   * ( (h(i,j  ,k)*h(i-1,j  ,k)) * (h(i,j  ,k-1)*h(i-1,j  ,k-1)) )
       S2 = slope_y(i,J,K)**2 + &
-             ((wSE*slope_x(I,j,K)**2 + wNW*slope_x(I-1,j+1,K)**2) + &
-              (wNE*slope_x(I,j+1,K)**2 + wSW*slope_x(I-1,j,K)**2) ) / &
+             ((wSE*(slope_x(I,j,K)**2) + wNW*(slope_x(I-1,j+1,K)**2)) + &
+              (wNE*(slope_x(I,j+1,K)**2) + wSW*(slope_x(I-1,j,K)**2)) ) / &
              ( ((wSE+wNW) + (wNE+wSW)) + GV%H_subroundoff**4 )
       if (S2max>0.) S2 = S2 * S2max / (S2 + S2max) ! Limit S2
 
@@ -777,7 +777,7 @@ subroutine calc_Eady_growth_rate_2D(CS, G, GV, US, h, e, dzu, dzv, dzSxN, dzSyN,
         dT = min( e(i,j,K), e(i,j+1,K) )! Deepest interface
         dB = max( e(i,j,GV%ke+1), e(i,j+1,GV%ke+1) ) ! Shallowest topography
         weight = weight * min( max( 0., (dT-dB)*r_crp_dist ), 1. )
-        vint_SN(I) = vint_SN(I) + weight**2 * dzSyN(i,J,K)
+        vint_SN(I) = vint_SN(I) + (weight**2) * dzSyN(i,J,K)
         sum_dz(i) = sum_dz(i) + weight * dzv(i,J,K)
       enddo ; enddo
     else
@@ -789,7 +789,7 @@ subroutine calc_Eady_growth_rate_2D(CS, G, GV, US, h, e, dzu, dzv, dzSxN, dzSyN,
                                        ! When sum_dz<D_scale<dnew, 0<dz<dzu.
                                        ! When D_scale<sum_dz, dz=0.
         weight = dz / ( dzv(i,J,K) + dz_neglect ) ! Fraction of this layer to include
-        vint_SN(I) = vint_SN(I) + weight**2 * dzSyN(i,J,K)
+        vint_SN(I) = vint_SN(I) + (weight**2) * dzSyN(i,J,K)
         sum_dz(i) = sum_dz(i) + weight * dzv(i,J,K)
       enddo ; enddo
     endif
@@ -1370,10 +1370,10 @@ subroutine VarMix_init(Time, G, GV, US, param_file, diag, CS)
     if (CS%Visbeck_L_scale<0) then
       ! Undo the rescaling of CS%Visbeck_L_scale.
       do j=js,je ; do I=is-1,Ieq
-        CS%L2u(I,j) = (US%L_to_m*CS%Visbeck_L_scale)**2 * G%areaCu(I,j)
+        CS%L2u(I,j) = ((US%L_to_m*CS%Visbeck_L_scale)**2) * G%areaCu(I,j)
       enddo ; enddo
       do J=js-1,Jeq ; do i=is,ie
-        CS%L2v(i,J) = (US%L_to_m*CS%Visbeck_L_scale)**2 * G%areaCv(i,J)
+        CS%L2v(i,J) = ((US%L_to_m*CS%Visbeck_L_scale)**2) * G%areaCv(i,J)
       enddo ; enddo
     else
       CS%L2u(:,:) = CS%Visbeck_L_scale**2

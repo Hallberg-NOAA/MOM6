@@ -525,8 +525,8 @@ subroutine mixedlayer_restrat_OM4(h, uhtr, vhtr, tv, forces, dt, MLD_in, VarMix,
     ! NOTE: growth_time changes answers on some systems, see below.
     ! timescale = growth_time(u_star, h_vel, absf, h_neglect, CS%vonKar, CS%Kv_restrat, CS%ml_restrat_coef)
 
-    mom_mixrate = vonKar_x_pi2*u_star**2 / &
-                  (absf*h_vel**2 + 4.0*(h_vel+h_neglect)*u_star)
+    mom_mixrate = vonKar_x_pi2*(u_star**2) / &
+                  (absf*(h_vel**2) + 4.0*(h_vel+h_neglect)*u_star)
     timescale = 0.0625 * (absf + 2.0*mom_mixrate) / (absf**2 + mom_mixrate**2)
     timescale = timescale * CS%ml_restrat_coef
 
@@ -540,8 +540,8 @@ subroutine mixedlayer_restrat_OM4(h, uhtr, vhtr, tv, forces, dt, MLD_in, VarMix,
     ! NOTE: growth_time changes answers on some systems, see below.
     ! timescale = growth_time(u_star, h_vel, absf, h_neglect, CS%vonKar, CS%Kv_restrat, CS%ml_restrat_coef2)
 
-    mom_mixrate = vonKar_x_pi2*u_star**2 / &
-                  (absf*h_vel**2 + 4.0*(h_vel+h_neglect)*u_star)
+    mom_mixrate = vonKar_x_pi2*(u_star**2) / &
+                  (absf*(h_vel**2) + 4.0*(h_vel+h_neglect)*u_star)
     timescale = 0.0625 * (absf + 2.0*mom_mixrate) / (absf**2 + mom_mixrate**2)
     timescale = timescale * CS%ml_restrat_coef2
 
@@ -612,8 +612,8 @@ subroutine mixedlayer_restrat_OM4(h, uhtr, vhtr, tv, forces, dt, MLD_in, VarMix,
     ! NOTE: growth_time changes answers on some systems, see below.
     ! timescale = growth_time(u_star, h_vel, absf, h_neglect, CS%vonKar, CS%Kv_restrat, CS%ml_restrat_coef)
 
-    mom_mixrate = vonKar_x_pi2*u_star**2 / &
-                  (absf*h_vel**2 + 4.0*(h_vel+h_neglect)*u_star)
+    mom_mixrate = vonKar_x_pi2*(u_star**2) / &
+                  (absf*(h_vel**2) + 4.0*(h_vel+h_neglect)*u_star)
     timescale = 0.0625 * (absf + 2.0*mom_mixrate) / (absf**2 + mom_mixrate**2)
     timescale = timescale * CS%ml_restrat_coef
 
@@ -627,8 +627,8 @@ subroutine mixedlayer_restrat_OM4(h, uhtr, vhtr, tv, forces, dt, MLD_in, VarMix,
     ! NOTE: growth_time changes answers on some systems, see below.
     ! timescale = growth_time(u_star, h_vel, absf, h_neglect, CS%vonKar, CS%Kv_restrat, CS%ml_restrat_coef2)
 
-    mom_mixrate = vonKar_x_pi2*u_star**2 / &
-                  (absf*h_vel**2 + 4.0*(h_vel+h_neglect)*u_star)
+    mom_mixrate = vonKar_x_pi2*(u_star**2) / &
+                  (absf*(h_vel**2) + 4.0*(h_vel+h_neglect)*u_star)
     timescale = 0.0625 * (absf + 2.0*mom_mixrate) / (absf**2 + mom_mixrate**2)
     timescale = timescale * CS%ml_restrat_coef2
 
@@ -748,7 +748,7 @@ real function mu(sigma, dh)
   !mu = max(0., (1. - (2.*sigma + 1.)**2))
 
   ! Second order, in Rossby number, shape. See eq 21 from FK08a, eq 9 from FK08b, eq 5 FK11
-  mu = max(0., (1. - (2.*sigma + 1.)**2) * (1. + (5./21.)*(2.*sigma + 1.)**2))
+  mu = max(0., (1. - (2.*sigma + 1.)**2) * (1. + (5./21.)*((2.*sigma + 1.)**2)))
 
   ! -0.5    < sigma           : xp(sigma)=0      (upper half of mixed layer)
   ! -1.0+dh < sigma < -0.5    : xp(sigma)=linear (lower half +dh of mixed layer)
@@ -758,7 +758,7 @@ real function mu(sigma, dh)
   ! -0.5    < sigma           : dd(sigma)=1      (upper half of mixed layer)
   ! -1.0+dh < sigma < -0.5    : dd(sigma)=cubic  (lower half +dh of mixed layer)
   !           sigma < -1.0+dh : dd(sigma)=0      (below mixed layer + dh)
-  dd = (max(1. - xp**2 * (3. - 2.*xp), 0.))**(1. + 2.*dh)
+  dd = (max(1. - (xp**2) * (3. - 2.*xp), 0.))**(1. + 2.*dh)
 
   ! -0.5    < sigma           : bottop(sigma)=0  (upper half of mixed layer)
   !           sigma < -0.5    : bottop(sigma)=1  (below upper half)
@@ -1329,8 +1329,8 @@ subroutine mixedlayer_restrat_BML(h, uhtr, vhtr, tv, forces, dt, G, GV, US, CS)
 
     ! peak ML visc: u_star * von_Karman * (h_ml*u_star)/(absf*h_ml + 4.0*u_star)
     ! momentum mixing rate: pi^2*visc/h_ml^2
-    mom_mixrate = vonKar_x_pi2*u_star**2 / &
-                  (absf*h_vel**2 + 4.0*(h_vel+h_neglect)*u_star)
+    mom_mixrate = vonKar_x_pi2*(u_star**2) / &
+                  (absf*(h_vel**2) + 4.0*(h_vel+h_neglect)*u_star)
     timescale = 0.0625 * (absf + 2.0*mom_mixrate) / (absf**2 + mom_mixrate**2)
 
     timescale = timescale * CS%ml_restrat_coef
@@ -1380,8 +1380,8 @@ subroutine mixedlayer_restrat_BML(h, uhtr, vhtr, tv, forces, dt, G, GV, US, CS)
 
     ! peak ML visc: u_star * von_Karman * (h_ml*u_star)/(absf*h_ml + 4.0*u_star)
     ! momentum mixing rate: pi^2*visc/h_ml^2
-    mom_mixrate = vonKar_x_pi2*u_star**2 / &
-                  (absf*h_vel**2 + 4.0*(h_vel+h_neglect)*u_star)
+    mom_mixrate = vonKar_x_pi2*(u_star**2) / &
+                  (absf*(h_vel**2) + 4.0*(h_vel+h_neglect)*u_star)
     timescale = 0.0625 * (absf + 2.0*mom_mixrate) / (absf**2 + mom_mixrate**2)
 
     timescale = timescale * CS%ml_restrat_coef
@@ -1481,7 +1481,7 @@ real function growth_time(u_star, hBL, absf, h_neg, vonKar, Kv_rest, restrat_coe
                 ! scheme, with a value that is chosen to reproduce previous answers.
   if (Kv_rest <= 0.0) then
     ! This case reproduces the previous answers, but the extra h_neg is otherwise unnecessary.
-    mom_mixrate = (pi2*vonKar)*u_star**2 / (absf*hBL**2 + 4.0*(hBL + h_neg)*u_star)
+    mom_mixrate = (pi2*vonKar)*(u_star**2) / (absf*(hBL**2) + 4.0*(hBL + h_neg)*u_star)
     growth_time = restrat_coef * (0.0625 * (absf + 2.0*mom_mixrate) / (absf**2 + mom_mixrate**2))
   else
     ! Set the mixing rate to the sum of a turbulent mixing rate and a laminar viscous rate.
@@ -1489,9 +1489,9 @@ real function growth_time(u_star, hBL, absf, h_neg, vonKar, Kv_rest, restrat_coe
     if (absf*hBL <= 4.0e-16*u_star) then
       Kv_eff = pi2 * (Kv_rest + 0.25*vonKar*hBL*u_star)
     else
-      Kv_eff = pi2 * (Kv_rest + vonKar*u_star**2*hBL / (absf*hBL + 4.0*u_star))
+      Kv_eff = pi2 * (Kv_rest + vonKar*(u_star**2)*hBL / (absf*hBL + 4.0*u_star))
     endif
-    growth_time = (restrat_coef*0.0625) * ((hBL**2*(hBL**2*absf + 2.0*Kv_eff)) / ((hBL**2*absf)**2 + Kv_eff**2))
+    growth_time = (restrat_coef*0.0625) * (((hBL**2)*((hBL**2)*absf + 2.0*Kv_eff)) / (((hBL**2)*absf)**2 + Kv_eff**2))
   endif
 
 end function growth_time

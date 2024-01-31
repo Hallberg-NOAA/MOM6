@@ -650,7 +650,7 @@ subroutine absorbRemainingSW(G, GV, US, h, opacity_band, nsw, optics, j, dt, H_l
   if (optics%answer_date < 20190101) then
     g_Hconv2 = (US%L_to_Z**2*GV%g_Earth * GV%H_to_RZ) * GV%H_to_RZ
   else
-    g_Hconv2 = US%L_to_Z**2*GV%g_Earth * GV%H_to_RZ**2
+    g_Hconv2 = US%L_to_Z**2*GV%g_Earth * (GV%H_to_RZ**2)
   endif
 
   h_heat(:) = 0.0
@@ -734,7 +734,7 @@ subroutine absorbRemainingSW(G, GV, US, h, opacity_band, nsw, optics, j, dt, H_l
             ! that is well behaved and more accurate when opt_depth is small.
             TKE(i,k) = TKE(i,k) - coSWa_frac*Heat_bnd*dSV_dT(i,k)* &
                (0.5*h(i,k)*g_Hconv2) * &
-               (C1_6*opt_depth * (1.0 - C1_60*opt_depth**2))
+               (C1_6*opt_depth * (1.0 - C1_60*(opt_depth**2)))
           endif
         endif
 

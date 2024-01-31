@@ -843,7 +843,7 @@ subroutine entrainment_diffusive(h, tv, fluxes, dt, G, GV, US, CS, ea, eb, &
       if (GV%Boussinesq .or. .not.associated(tv%eqn_of_state)) then
         g_2dt = 0.5 * GV%H_to_Z**2 * US%L_to_Z**2 * (GV%g_Earth / dt)
       else
-        g_2dt = 0.5 * GV%H_to_RZ**2 * US%L_to_Z**2 * (GV%g_Earth / dt)
+        g_2dt = 0.5 * (GV%H_to_RZ**2) * US%L_to_Z**2 * (GV%g_Earth / dt)
       endif
       do i=is,ie ; diff_work(i,j,1) = 0.0 ; diff_work(i,j,nz+1) = 0.0 ; enddo
       if (associated(tv%eqn_of_state)) then
@@ -1422,7 +1422,7 @@ subroutine determine_dSkb(h_bl, Sref, Ent_bl, E_kb, is, ie, kmb, G, GV, limit, &
           else
             expz = exp(z) ; Inv_term = 1.0 / (1.0 + expz)
             f2 = (eps_dSLay + expz) * Inv_term
-            df2_dz = (1.0 - eps_dSLay) * expz * Inv_term**2
+            df2_dz = (1.0 - eps_dSLay) * expz * (Inv_term**2)
           endif
 
           dSLay(i) = dSkb(i) * f1 * f2
@@ -1725,7 +1725,7 @@ subroutine determine_Ea_kb(h_bl, dtKd_kb, Sref, I_dSkbp1, Ent_bl, ea_kbp1, &
       fk = dtKd_kb(i) * (dS_Lay(i)/dS_kb(i))
       fm = (ea_kbp1(i) - h_bl(i,kmb+1)) + eL*2.0*Ent_bl(i,Kmb+1)
       if (fm > -GV%Angstrom_H) fm = fm + GV%Angstrom_H  ! This could be smooth if need be.
-      err(i) = (fa * Ent(i)**2 - fm * Ent(i)) - fk
+      err(i) = (fa * (Ent(i)**2) - fm * Ent(i)) - fk
       derror_dE(i) = ((2.0*fa + (ddSkb_dE(i)*I_dSkbp1(i))*Ent(i))*Ent(i) - fm) - &
           dtKd_kb(i) * (ddSlay_dE(i)*dS_kb(i) - ddSkb_dE(i)*dS_Lay(i))/(dS_kb(i)**2)
 

@@ -401,7 +401,7 @@ subroutine calculate_bkgnd_mixing(h, tv, N2_lay, Kd_lay, Kd_int, Kv_bkgnd, j, G,
       if (G%geoLatT(i,j) < -10.0) then
         Kd_int(i,1) = Kd_int(i,1) + CS%bckgrnd_vdc1
       elseif (G%geoLatT(i,j) <= 10.0) then
-        Kd_int(i,1) = Kd_int(i,1) + CS%bckgrnd_vdc1 * (G%geoLatT(i,j)/10.0)**2
+        Kd_int(i,1) = Kd_int(i,1) + CS%bckgrnd_vdc1 * ((G%geoLatT(i,j)/10.0)**2)
       else
         Kd_int(i,1) = Kd_int(i,1) + CS%bckgrnd_vdc1
       endif

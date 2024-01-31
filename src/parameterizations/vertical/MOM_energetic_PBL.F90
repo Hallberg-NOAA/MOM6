@@ -429,7 +429,7 @@ subroutine energetic_PBL(h_3d, u_3d, v_3d, tv, fluxes, dt, Kd_int, G, GV, US, CS
       if (associated(fluxes%ustar) .and. (GV%Boussinesq .or. .not.associated(fluxes%tau_mag))) then
         u_star = fluxes%ustar(i,j)
         u_star_Mean = fluxes%ustar_gustless(i,j)
-        mech_TKE = dt * GV%Rho0 * u_star**3
+        mech_TKE = dt * GV%Rho0 * (u_star**3)
       elseif (allocated(tv%SpV_avg)) then
         u_star = sqrt(US%L_to_Z*fluxes%tau_mag(i,j) * tv%SpV_avg(i,j,1))
         u_star_Mean = sqrt(US%L_to_Z*fluxes%tau_mag_gustless(i,j) * tv%SpV_avg(i,j,1))
@@ -437,7 +437,7 @@ subroutine energetic_PBL(h_3d, u_3d, v_3d, tv, fluxes, dt, Kd_int, G, GV, US, CS
       else
         u_star = sqrt(fluxes%tau_mag(i,j) * I_rho)
         u_star_Mean = sqrt(US%L_to_Z*fluxes%tau_mag_gustless(i,j) * I_rho)
-        mech_TKE = dt * GV%Rho0 * u_star**3
+        mech_TKE = dt * GV%Rho0 * (u_star**3)
         ! The line above is equivalent to: mech_TKE = dt * u_star * US%L_to_Z*fluxes%tau_mag(i,j)
       endif
 
@@ -462,7 +462,7 @@ subroutine energetic_PBL(h_3d, u_3d, v_3d, tv, fluxes, dt, Kd_int, G, GV, US, CS
         absf = 0.25*((abs(G%CoriolisBu(I,J)) + abs(G%CoriolisBu(I-1,J-1))) + &
                      (abs(G%CoriolisBu(I,J-1)) + abs(G%CoriolisBu(I-1,J))))
         if (CS%omega_frac > 0.0) &
-          absf = sqrt(CS%omega_frac*4.0*CS%omega**2 + (1.0-CS%omega_frac)*absf**2)
+          absf = sqrt(CS%omega_frac*4.0*(CS%omega**2) + (1.0-CS%omega_frac)*(absf**2))
       endif
 
       ! Perhaps provide a first guess for MLD based on a stored previous value.
@@ -904,10 +904,10 @@ subroutine ePBL_column(h, dz, u, v, T0, S0, dSV_dT, dSV_dS, SpV_dt, TKE_forcing,
 
       !/ Apply MStar to get mech_TKE
       if ((CS%answer_date < 20190101) .and. (CS%mstar_scheme==Use_Fixed_MStar)) then
-        mech_TKE = (dt*MSTAR_total*GV%Rho0) * u_star**3
+        mech_TKE = (dt*MSTAR_total*GV%Rho0) * (u_star**3)
       else
         mech_TKE = MSTAR_total * mech_TKE_in
-        ! mech_TKE = MSTAR_total * (dt*GV%Rho0* u_star**3)
+        ! mech_TKE = MSTAR_total * (dt*GV%Rho0* (u_star**3))
       endif
       ! stochastically perturb mech_TKE in the UFS
       if (present(TKE_gen_stoch)) mech_TKE = mech_TKE*TKE_gen_stoch
@@ -960,10 +960,10 @@ subroutine ePBL_column(h, dz, u, v, T0, S0, dSV_dT, dSV_dS, SpV_dt, TKE_forcing,
           dz_rsum = dz_rsum + dz(k-1)
           if (CS%MixLenExponent==2.0) then
             MixLen_shape(K) = CS%transLay_scale + (1.0 - CS%transLay_scale) * &
-                 (max(0.0, (MLD_guess - dz_rsum)*I_MLD) )**2 ! CS%MixLenExponent
+                 ((max(0.0, (MLD_guess - dz_rsum)*I_MLD) )**2) ! CS%MixLenExponent
           else
             MixLen_shape(K) = CS%transLay_scale + (1.0 - CS%transLay_scale) * &
-                 (max(0.0, (MLD_guess - dz_rsum)*I_MLD) )**CS%MixLenExponent
+                 ((max(0.0, (MLD_guess - dz_rsum)*I_MLD) )**CS%MixLenExponent)
           endif
         enddo
       endif
@@ -1023,10 +1023,10 @@ subroutine ePBL_column(h, dz, u, v, T0, S0, dSV_dT, dSV_dS, SpV_dt, TKE_forcing,
           ! Note:         Ro = 1.0 / sqrt(0.5 * dt * Rho0 * (absf*dztot)**3 / conv_PErel)
           if (GV%Boussinesq) then
             nstar_FC = CS%nstar * conv_PErel / (conv_PErel + 0.2 * &
-                       sqrt(0.5 * dt * GV%Rho0 * (absf*dztot)**3 * conv_PErel))
+                       sqrt(0.5 * dt * GV%Rho0 * ((absf*dztot)**3) * conv_PErel))
           else
             nstar_FC = CS%nstar * conv_PErel / (conv_PErel + 0.2 * &
-                       sqrt(0.5 * dt * GV%H_to_RZ * (absf**3 * (dztot**2 * htot)) * conv_PErel))
+                       sqrt(0.5 * dt * GV%H_to_RZ * ((absf**3) * ((dztot**2) * htot)) * conv_PErel))
           endif
         endif
 
@@ -1778,12 +1778,12 @@ subroutine find_PE_chg_orig(Kddt_h, h_k, b_den_1, dTe_term, dSe_term, &
 
   if (present(dPEc_dKd)) then
     ! Find the derivatives of the temperature and salinity changes with Kddt_h.
-    dKr_dKd = (h_k*b_den_1) * I_Kr_denom**2
+    dKr_dKd = (h_k*b_den_1) * (I_Kr_denom**2)
 
     ddT_k_dKd = dKr_dKd * dTe_term
     ddS_k_dKd = dKr_dKd * dSe_term
-    ddT_km1_dKd = (b1**2 * b_den_1) * ( dT_k + dT_km1_t2 ) + b1Kd * ddT_k_dKd
-    ddS_km1_dKd = (b1**2 * b_den_1) * ( dS_k + dS_km1_t2 ) + b1Kd * ddS_k_dKd
+    ddT_km1_dKd = ((b1**2) * b_den_1) * ( dT_k + dT_km1_t2 ) + b1Kd * ddT_k_dKd
+    ddS_km1_dKd = ((b1**2) * b_den_1) * ( dS_k + dS_km1_t2 ) + b1Kd * ddS_k_dKd
 
     ! Calculate the partial derivative of Pe_chg with Kddt_h.
     dPEc_dKd = (dT_to_dPE_k * ddT_k_dKd + dT_to_dPEa * ddT_km1_dKd) + &
@@ -1847,13 +1847,13 @@ subroutine find_mstar(CS, US, Buoyancy_Flux, UStar, &
 
     if (CS%answer_date < 20190101) then
       ! The limit for the balance of rotation and stabilizing is f(L_Ekman,L_Obukhov)
-      MStar_S = CS%MStar_coef*sqrt(max(0.0,Buoyancy_Flux) / UStar**2 / &
+      MStar_S = CS%MStar_coef*sqrt(max(0.0,Buoyancy_Flux) / (UStar**2) / &
                     (Abs_Coriolis + 1.e-10*US%T_to_s) )
       ! The limit for rotation (Ekman length) limited mixing
       MStar_N =  CS%C_Ek * log( max( 1., UStar / (Abs_Coriolis + 1.e-10*US%T_to_s) / BLD ) )
     else
       ! The limit for the balance of rotation and stabilizing is f(L_Ekman,L_Obukhov)
-      MStar_S = CS%MSTAR_COEF*sqrt(max(0.0, Buoyancy_Flux) / (UStar**2 * max(Abs_Coriolis, 1.e-20*US%T_to_s)))
+      MStar_S = CS%MSTAR_COEF*sqrt(max(0.0, Buoyancy_Flux) / ((UStar**2) * max(Abs_Coriolis, 1.e-20*US%T_to_s)))
       ! The limit for rotation (Ekman length) limited mixing
       MStar_N = 0.0
       if (UStar > Abs_Coriolis * BLD) Mstar_N = CS%C_EK * log(UStar / (Abs_Coriolis * BLD))
@@ -1879,10 +1879,10 @@ subroutine find_mstar(CS, US, Buoyancy_Flux, UStar, &
   if (CS%answer_date < 20190101) then
     MStar_Conv_Red = 1. - CS%MStar_Convect_coef * (-min(0.0,Buoyancy_Flux) + 1.e-10*US%T_to_s**3*US%m_to_Z**2) / &
                          ( (-min(0.0,Buoyancy_Flux) + 1.e-10*US%T_to_s**3*US%m_to_Z**2) + &
-                         2.0 *MStar * UStar**3 / BLD )
+                         2.0 * MStar * (UStar**3) / BLD )
   else
     MSCR_term1 = -BLD * min(0.0, Buoyancy_Flux)
-    MSCR_term2 = 2.0*MStar * UStar**3
+    MSCR_term2 = 2.0*MStar * (UStar**3)
     if ( abs(MSCR_term2) > 0.0) then
       MStar_Conv_Red = ((1.-CS%mstar_convect_coef) * MSCR_term1 + MSCR_term2) / (MSCR_term1 + MSCR_term2)
     else
@@ -1951,10 +1951,10 @@ subroutine Mstar_Langmuir(CS, US, Abs_Coriolis, Buoyancy_Flux, UStar, BLD, Langm
       Ekman_Obukhov = Max_ratio ; MLD_Obukhov = Max_ratio ; MLD_Ekman = Max_ratio
       I_f = 0.0 ; if (abs(abs_Coriolis) > 0.0) I_f = 1.0 / abs_Coriolis
       I_ustar = 0.0 ; if (abs(Ustar) > 0.0) I_ustar = 1.0 / Ustar
-      if (abs(Buoyancy_Flux*CS%vonkar) < Max_ratio*(abs_Coriolis * Ustar**2)) &
-        Ekman_Obukhov = abs(Buoyancy_Flux*CS%vonkar) * (I_f * I_Ustar**2)
-      if (abs(BLD*Buoyancy_Flux*CS%vonkar) < Max_ratio*Ustar**3) &
-        MLD_Obukhov = abs(BLD*Buoyancy_Flux*CS%vonkar) * I_Ustar**3
+      if (abs(Buoyancy_Flux*CS%vonkar) < Max_ratio*(abs_Coriolis * (Ustar**2))) &
+        Ekman_Obukhov = abs(Buoyancy_Flux*CS%vonkar) * (I_f * (I_Ustar**2))
+      if (abs(BLD*Buoyancy_Flux*CS%vonkar) < Max_ratio*(Ustar**3)) &
+        MLD_Obukhov = abs(BLD*Buoyancy_Flux*CS%vonkar) * (I_Ustar**3)
       if (BLD*Abs_Coriolis < Max_ratio*Ustar) &
         MLD_Ekman = BLD*Abs_Coriolis * I_Ustar
 

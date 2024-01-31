@@ -729,8 +729,8 @@ subroutine KPP_calculate(CS, G, GV, US, h, tv, uStar, buoyFlux, Kt, Ks, Kv, &
           if (present(lamult)) then
             LangEnhK = lamult(i,j)
           else
-            LangEnhK = sqrt(1.+(1.5*CS%La_SL(i,j))**(-2) + &
-                (5.4*CS%La_SL(i,j))**(-4))
+            LangEnhK = sqrt( 1. + ((1.5*CS%La_SL(i,j))**(-2)) + &
+                ((5.4*CS%La_SL(i,j))**(-4)) )
           endif
         elseif (CS%LT_K_METHOD==LT_K_MODE_RW16) then
           !This maximum value is proposed in Reichl et al., 2016 JPO formula
@@ -752,7 +752,7 @@ subroutine KPP_calculate(CS, G, GV, US, h, tv, uStar, buoyFlux, Kt, Ks, Kv, &
             !Kviscosity(k)     = Kviscosity(k)   * LangEnhK
           elseif (CS%LT_K_SHAPE == LT_K_SCALED) then
             sigma = min(1.0,-iFaceHeight(k)/CS%OBLdepth(i,j))
-            SigmaRatio = sigma * (1. - sigma)**2 / 0.148148037
+            SigmaRatio = sigma * ((1. - sigma)**2) / 0.148148037
             if (CS%id_EnhK > 0) CS%EnhK(i,j,k) = (1.0 + (LangEnhK - 1.)*sigmaRatio)
             !Kdiffusivity(k,1) = Kdiffusivity(k,1) * ( 1. + &
             !                    ( LangEnhK - 1.)*sigmaRatio)
@@ -830,7 +830,7 @@ subroutine KPP_calculate(CS, G, GV, US, h, tv, uStar, buoyFlux, Kt, Ks, Kv, &
         if (CS%NLT_shape == NLT_SHAPE_CUBIC) then
           do k = 2, GV%ke
             sigma = min(1.0,-iFaceHeight(k)/CS%OBLdepth(i,j))
-            nonLocalTrans(k,1) = (1.0 - sigma)**2 * (1.0 + 2.0*sigma) !*
+            nonLocalTrans(k,1) = ((1.0 - sigma)**2) * (1.0 + 2.0*sigma) !*
             nonLocalTrans(k,2) = nonLocalTrans(k,1)
           enddo
         elseif (CS%NLT_shape == NLT_SHAPE_PARABOLIC) then
@@ -849,7 +849,7 @@ subroutine KPP_calculate(CS, G, GV, US, h, tv, uStar, buoyFlux, Kt, Ks, Kv, &
           ! Sanity check (should agree with CVMix result using simple matching)
           do k = 2, GV%ke
             sigma = min(1.0,-iFaceHeight(k)/CS%OBLdepth(i,j))
-            nonLocalTrans(k,1) = CS%CS2 * sigma*(1.0 -sigma)**2
+            nonLocalTrans(k,1) = CS%CS2 * sigma * ((1.0 -sigma)**2)
             nonLocalTrans(k,2) = nonLocalTrans(k,1)
           enddo
         endif
@@ -1217,8 +1217,8 @@ subroutine KPP_compute_BLD(CS, G, GV, US, h, Temp, Salt, u, v, tv, uStar, buoyFl
           if (present(lamult)) then
             LangEnhVT2 = lamult(i,j)
           else
-            LangEnhVT2 = sqrt(1.+(1.5*CS%La_SL(i,j))**(-2) + &
-                      (5.4*CS%La_SL(i,j))**(-4))
+            LangEnhVT2 = sqrt(1. + ((1.5*CS%La_SL(i,j))**(-2)) + &
+                      ((5.4*CS%La_SL(i,j))**(-4)))
           endif
         else
           ! for other methods (e.g., LT_VT2_MODE_RW16, LT_VT2_MODE_LF17), the enhancement factor is

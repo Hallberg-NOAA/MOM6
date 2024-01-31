@@ -502,8 +502,8 @@ subroutine step_forward_MEKE(MEKE, h, SN_u, SN_v, visc, dt, G, GV, US, CS, hu, h
       do j=js,je ; do I=is-1,ie
         K4_here = CS%MEKE_K4 ! [L4 T-1 ~> m4 s-1]
         ! Limit Kh to avoid CFL violations.
-        Inv_K4_max = 64.0 * sdt * ((G%dy_Cu(I,j)*G%IdxCu(I,j)) * &
-                     max(G%IareaT(i,j), G%IareaT(i+1,j)))**2
+        Inv_K4_max = 64.0 * sdt * (((G%dy_Cu(I,j)*G%IdxCu(I,j)) * &
+                     max(G%IareaT(i,j), G%IareaT(i+1,j)))**2)
         if (K4_here*Inv_K4_max > 0.3) K4_here = 0.3 / Inv_K4_max
 
         ! Here the units of MEKE_uflux are [R Z L4 T-3 ~> kg m2 s-3].
@@ -514,7 +514,7 @@ subroutine step_forward_MEKE(MEKE, h, SN_u, SN_v, visc, dt, G, GV, US, CS, hu, h
       !$OMP parallel do default(shared) private(K4_here,Inv_K4_max)
       do J=js-1,je ; do i=is,ie
         K4_here = CS%MEKE_K4 ! [L4 T-1 ~> m4 s-1]
-        Inv_K4_max = 64.0 * sdt * ((G%dx_Cv(i,J)*G%IdyCv(i,J)) * max(G%IareaT(i,j), G%IareaT(i,j+1)))**2
+        Inv_K4_max = 64.0 * sdt * (((G%dx_Cv(i,J)*G%IdyCv(i,J)) * max(G%IareaT(i,j), G%IareaT(i,j+1)))**2)
         if (K4_here*Inv_K4_max > 0.3) K4_here = 0.3 / Inv_K4_max
 
         ! Here the units of MEKE_vflux are [R Z L4 T-3 ~> kg m2 s-3].
@@ -689,7 +689,7 @@ subroutine step_forward_MEKE(MEKE, h, SN_u, SN_v, visc, dt, G, GV, US, CS, hu, h
 
   if (CS%viscosity_coeff_Au /=0.) then
     do j=js,je ; do i=is,ie
-      MEKE%Au(i,j) = CS%viscosity_coeff_Au * sqrt(2.*max(0.,MEKE%MEKE(i,j))) * LmixScale(i,j)**3
+      MEKE%Au(i,j) = CS%viscosity_coeff_Au * sqrt(2.*max(0.,MEKE%MEKE(i,j))) * (LmixScale(i,j)**3)
     enddo ; enddo
   endif
 

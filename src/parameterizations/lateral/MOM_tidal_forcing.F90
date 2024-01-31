@@ -281,10 +281,10 @@ subroutine tidal_forcing_init(Time, G, US, param_file, CS)
   do j=js-1,je+1 ; do i=is-1,ie+1
     CS%sin_struct(i,j,1) = -sin(2.0*lat_rad(i,j)) * sin(lon_rad(i,j))
     CS%cos_struct(i,j,1) =  sin(2.0*lat_rad(i,j)) * cos(lon_rad(i,j))
-    CS%sin_struct(i,j,2) = -cos(lat_rad(i,j))**2 * sin(2.0*lon_rad(i,j))
-    CS%cos_struct(i,j,2) =  cos(lat_rad(i,j))**2 * cos(2.0*lon_rad(i,j))
+    CS%sin_struct(i,j,2) = -(cos(lat_rad(i,j))**2) * sin(2.0*lon_rad(i,j))
+    CS%cos_struct(i,j,2) =  (cos(lat_rad(i,j))**2) * cos(2.0*lon_rad(i,j))
     CS%sin_struct(i,j,3) =  0.0
-    CS%cos_struct(i,j,3) = (0.5-1.5*sin(lat_rad(i,j))**2)
+    CS%cos_struct(i,j,3) = (0.5-1.5*(sin(lat_rad(i,j))**2))
   enddo ; enddo
 
   call get_param(param_file, mdl, "TIDE_M2", use_M2, &

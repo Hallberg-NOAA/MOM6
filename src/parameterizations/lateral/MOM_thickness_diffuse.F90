@@ -972,7 +972,7 @@ subroutine thickness_diffuse_full(h, e, Kh_u, Kh_v, tv, uhD, vhD, cg1, dt, G, GV
 
             if (present_slope_x) then
               Slope = slope_x(I,j,k)
-              slope2_Ratio_u(I,K) = Slope**2 * I_slope_max2
+              slope2_Ratio_u(I,K) = (Slope**2) * I_slope_max2
             else
               ! Use the harmonic mean thicknesses to weight the horizontal gradients.
               ! These unnormalized weights have been rearranged to minimize divisions.
@@ -986,7 +986,7 @@ subroutine thickness_diffuse_full(h, e, Kh_u, Kh_v, tv, uhD, vhD, cg1, dt, G, GV
               mag_grad2 = (US%Z_to_L*drdx)**2 + drdz**2
               if (mag_grad2 > 0.0) then
                 Slope = drdx / sqrt(mag_grad2)
-                slope2_Ratio_u(I,K) = Slope**2 * I_slope_max2
+                slope2_Ratio_u(I,K) = (Slope**2) * I_slope_max2
               else ! Just in case mag_grad2 = 0 ever.
                 Slope = 0.0
                 slope2_Ratio_u(I,K) = 1.0e20  ! Force the use of the safe streamfunction.
@@ -1047,7 +1047,7 @@ subroutine thickness_diffuse_full(h, e, Kh_u, Kh_v, tv, uhD, vhD, cg1, dt, G, GV
       do k=1,nz ; do I=is-1,ie ; if (G%OBCmaskCu(I,j)>0.) then
         dz_harm = max( dz_neglect, &
               2. * dz(i,j,k) * dz(i+1,j,k) / ( ( dz(i,j,k) + dz(i+1,j,k) ) + dz_neglect ) )
-        c2_dz_u(I,k) = CS%FGNV_scale * ( 0.5*( cg1(i,j) + cg1(i+1,j) ) )**2 / dz_harm
+        c2_dz_u(I,k) = CS%FGNV_scale * (( 0.5*( cg1(i,j) + cg1(i+1,j) ) )**2) / dz_harm
       endif ; enddo ; enddo
 
       ! Solve an elliptic equation for the streamfunction following Ferrari et al., 2010.
@@ -1287,7 +1287,7 @@ subroutine thickness_diffuse_full(h, e, Kh_u, Kh_v, tv, uhD, vhD, cg1, dt, G, GV
             endif
             if (present_slope_y) then
               Slope = slope_y(i,J,k)
-              slope2_Ratio_v(i,K) = Slope**2 * I_slope_max2
+              slope2_Ratio_v(i,K) = (Slope**2) * I_slope_max2
             else
               ! Use the harmonic mean thicknesses to weight the horizontal gradients.
               ! These unnormalized weights have been rearranged to minimize divisions.
@@ -1301,7 +1301,7 @@ subroutine thickness_diffuse_full(h, e, Kh_u, Kh_v, tv, uhD, vhD, cg1, dt, G, GV
               mag_grad2 = (US%Z_to_L*drdy)**2 + drdz**2
               if (mag_grad2 > 0.0) then
                 Slope = drdy / sqrt(mag_grad2)
-                slope2_Ratio_v(i,K) = Slope**2 * I_slope_max2
+                slope2_Ratio_v(i,K) = (Slope**2) * I_slope_max2
               else ! Just in case mag_grad2 = 0 ever.
                 Slope = 0.0
                 slope2_Ratio_v(i,K) = 1.0e20  ! Force the use of the safe streamfunction.
@@ -1361,7 +1361,7 @@ subroutine thickness_diffuse_full(h, e, Kh_u, Kh_v, tv, uhD, vhD, cg1, dt, G, GV
       do k=1,nz ; do i=is,ie ; if (G%OBCmaskCv(i,J)>0.) then
         dz_harm = max( dz_neglect, &
               2. * dz(i,j,k) * dz(i,j+1,k) / ( ( dz(i,j,k) + dz(i,j+1,k) ) + dz_neglect ) )
-        c2_dz_v(i,k) = CS%FGNV_scale * ( 0.5*( cg1(i,j) + cg1(i,j+1) ) )**2 / dz_harm
+        c2_dz_v(i,k) = CS%FGNV_scale * (( 0.5*( cg1(i,j) + cg1(i,j+1) ) )**2) / dz_harm
       endif ; enddo ; enddo
 
       ! Solve an elliptic equation for the streamfunction following Ferrari et al., 2010.
@@ -1795,7 +1795,7 @@ subroutine add_detangling_Kh(h, e, Kh_u, Kh_v, KH_u_CFL, KH_v_CFL, tv, dt, G, GV
         h1 = max( h(i,j,k), h2 - min(de_bot(i,j), de_top(i,j,k)) )
       endif
       jag_Rat = (h2 - h1)**2 / (h2 + h1 + h_neglect)**2
-      KH_lay_u(I,j,k) = (Kh_scale * KH_u_CFL(I,j)) * jag_Rat**2
+      KH_lay_u(I,j,k) = (Kh_scale * KH_u_CFL(I,j)) * (jag_Rat**2)
     endif ; enddo ; enddo
 
     do J=js-1,je ; do i=is,ie ; if (G%OBCmaskCv(i,J) > 0.0) then
@@ -1807,7 +1807,7 @@ subroutine add_detangling_Kh(h, e, Kh_u, Kh_v, KH_u_CFL, KH_v_CFL, tv, dt, G, GV
         h1 = max( h(i,j,k), h2 - min(de_bot(i,j), de_top(i,j,k)) )
       endif
       jag_Rat = (h2 - h1)**2 / (h2 + h1 + h_neglect)**2
-      KH_lay_v(i,J,k) = (Kh_scale * KH_v_CFL(i,J)) * jag_Rat**2
+      KH_lay_v(i,J,k) = (Kh_scale * KH_v_CFL(i,J)) * (jag_Rat**2)
     endif ; enddo ; enddo
   enddo
 
@@ -2161,11 +2161,11 @@ subroutine thickness_diffuse_init(Time, G, GV, US, param_file, diag, CDp, CS)
     allocate(CS%Kh_eta_u(G%IsdB:G%IedB, G%jsd:G%jed), source=0.)
     allocate(CS%Kh_eta_v(G%isd:G%ied, G%JsdB:G%JedB), source=0.)
     do j=G%jsc,G%jec ; do I=G%isc-1,G%iec
-      grid_sp = sqrt((2.0*G%dxCu(I,j)**2 * G%dyCu(I,j)**2) / (G%dxCu(I,j)**2 + G%dyCu(I,j)**2))
+      grid_sp = sqrt((2.0*(G%dxCu(I,j)**2) * (G%dyCu(I,j)**2)) / (G%dxCu(I,j)**2 + G%dyCu(I,j)**2))
       CS%Kh_eta_u(I,j) = G%OBCmaskCu(I,j) * MAX(0.0, CS%Kh_eta_bg + CS%Kh_eta_vel * grid_sp)
     enddo ; enddo
     do J=G%jsc-1,G%jec ; do i=G%isc,G%iec
-      grid_sp = sqrt((2.0*G%dxCv(i,J)**2 * G%dyCv(i,J)**2) / (G%dxCv(i,J)**2 + G%dyCv(i,J)**2))
+      grid_sp = sqrt((2.0*(G%dxCv(i,J)**2) * (G%dyCv(i,J)**2)) / (G%dxCv(i,J)**2 + G%dyCv(i,J)**2))
       CS%Kh_eta_v(i,J) = G%OBCmaskCv(i,J) * MAX(0.0, CS%Kh_eta_bg + CS%Kh_eta_vel * grid_sp)
     enddo ; enddo
   endif

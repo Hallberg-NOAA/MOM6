@@ -1224,12 +1224,12 @@ subroutine calculate_projected_state(kappa, u0, v0, T0, S0, dt, nz, dz, I_dz_int
   ! Store the squared shear at interfaces
   S2(1) = 0.0 ; S2(nz+1) = 0.0
   if (ks > 1) &
-    S2(ks) = ((u(ks)-u0(ks-1))**2 + (v(ks)-v0(ks-1))**2) * (US%L_to_Z*I_dz_int(ks))**2
+    S2(ks) = ((u(ks)-u0(ks-1))**2 + (v(ks)-v0(ks-1))**2) * ((US%L_to_Z*I_dz_int(ks))**2)
   do K=ks+1,ke
-    S2(K) = ((u(k)-u(k-1))**2 + (v(k)-v(k-1))**2) * (US%L_to_Z*I_dz_int(K))**2
+    S2(K) = ((u(k)-u(k-1))**2 + (v(k)-v(k-1))**2) * ((US%L_to_Z*I_dz_int(K))**2)
   enddo
   if (ke<nz) &
-    S2(ke+1) = ((u0(ke+1)-u(ke))**2 + (v0(ke+1)-v(ke))**2) * (US%L_to_Z*I_dz_int(ke+1))**2
+    S2(ke+1) = ((u0(ke+1)-u(ke))**2 + (v0(ke+1)-v(ke))**2) * ((US%L_to_Z*I_dz_int(ke+1))**2)
 
   ! Store the buoyancy frequency at interfaces
   N2(1) = 0.0 ; N2(nz+1) = 0.0
@@ -1600,10 +1600,10 @@ subroutine find_kappa_tke(N2, S2, kappa_in, Idz, h_Int, dz_Int, dz_h_Int, I_L2_b
         cKcomp = bK * (Idz(k-1)*cKcomp + decay_term_k) ! = 1-cK(K+1)
         if (CS%dKdQ_iteration_bug) then
           dKdQ(K) = bK * (Idz(k-1)*dKdQ(K-1)*cQ(K) + &
-                      US%m_to_Z*(N2(K)*Ilambda2 + f2) * I_Q**2 * kappa(K) )
+                      US%m_to_Z*(N2(K)*Ilambda2 + f2) * (I_Q**2) * kappa(K) )
         else
           dKdQ(K) = bK * (Idz(k-1)*dKdQ(K-1)*cQ(K) + &
-                      dz_Int(K)*(N2(K)*Ilambda2 + f2) * I_Q**2 * kappa(K) )
+                      dz_Int(K)*(N2(K)*Ilambda2 + f2) * (I_Q**2) * kappa(K) )
         endif
         dK(K) = bK * (kap_src + Idz(k-1)*dK(K-1) + Idz(k-1)*dKdQ(K-1)*dQ(K-1))
 
@@ -1727,7 +1727,7 @@ subroutine find_kappa_tke(N2, S2, kappa_in, Idz, h_Int, dz_Int, dz_h_Int, I_L2_b
                              Idz(k)*(kappa_prev(k)-kappa_prev(k+1)))
         K_err_lin = -Idz(k-1)*(dK(K-1)-dK(K)) + Idz(k)*(dK(K)-dK(K+1)) + &
                      h_Int(K)*I_Ld2_debug(K)*dK(K) - kap_src - &
-                     dz_Int(K)*(N2(K)*Ilambda2 + f2)*I_Q**2*kappa_prev(K) * dQ(K)
+                     dz_Int(K)*(N2(K)*Ilambda2 + f2)*(I_Q**2)*kappa_prev(K) * dQ(K)
 
         h_dz_here = 0.0 ; if (abs(dz_h_Int(K)) > 0.0) h_dz_here = 1.0 / dz_h_Int(K)
         tke_src = h_Int(K) * ((kappa_prev(K) + kappa0)*S2(K) - &
