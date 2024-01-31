@@ -104,7 +104,7 @@ subroutine ISOMIP_initialize_topography(D, G, param_file, max_depth, US)
       ! For the 2D setup take a slice through the middle of the domain
       xtil = G%geoLonT(i,j)*km_to_L / xbar
       !xtil = 450.*km_to_L / xbar
-      bx = b0 + b2*xtil**2 + b4*xtil**4 + b6*xtil**6
+      bx = b0 + b2*(xtil**2) + b4*(xtil**4) + b6*(xtil**6)
 
       by = 2.0 * dc / (1.0 + exp(2.0*wc / fc))
 
@@ -126,7 +126,7 @@ subroutine ISOMIP_initialize_topography(D, G, param_file, max_depth, US)
 
       xtil = G%geoLonT(i,j)*km_to_L / xbar
 
-      bx = b0 + b2*xtil**2 + b4*xtil**4 + b6*xtil**6
+      bx = b0 + b2*(xtil**2) + b4*(xtil**4) + b6*(xtil**6)
       by = (dc / (1.0 + exp(-2.*(G%geoLatT(i,j)*km_to_L - 0.5*ly - wc) / fc))) + &
            (dc / (1.0 + exp(2.*(G%geoLatT(i,j)*km_to_L - 0.5*ly + wc) / fc)))
 

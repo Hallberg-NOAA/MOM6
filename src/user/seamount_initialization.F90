@@ -271,7 +271,7 @@ subroutine seamount_initialize_temperature_salinity(T, S, h, G, GV, US, param_fi
       a1 = 2.0 * res_rat / (1.0 + res_rat)
       do k=k_light+1,nz
         k_frac = real(k-k_light)/real(nz-k_light)
-        frac_dense = a1 * k_frac + (1.0 - a1) * k_frac**2
+        frac_dense = a1 * k_frac + (1.0 - a1) * (k_frac**2)
         do j=js,je ; do i=is,ie
           T(i,j,k) = frac_dense * (T_Dense - T_Light) + T_Light
           S(i,j,k) = frac_dense * (S_Dense - S_Light) + S_Light

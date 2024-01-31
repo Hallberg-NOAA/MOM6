@@ -206,7 +206,7 @@ subroutine USER_initialize_tracer(restart, day, G, GV, US, h, diag, OBC, CS, &
 !    This sets a stripe of tracer across the basin.
       PI = 4.0*atan(1.0)
       do j=js,je
-        dist2 = (G%Rad_Earth_L * PI / 180.0)**2 * (G%geoLatT(i,j) - CS%stripe_lat)**2
+        dist2 = ((G%Rad_Earth_L * PI / 180.0)**2) * ((G%geoLatT(i,j) - CS%stripe_lat)**2)
         tr_y = 0.5 * exp( -dist2 / CS%stripe_width**2 )
 
         do k=1,nz ; do i=is,ie

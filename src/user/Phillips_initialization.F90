@@ -187,7 +187,7 @@ subroutine Phillips_initialize_velocity(u, v, G, GV, US, param_file, just_read)
 !           (2.0 * GV%g_prime(K+1) / (G%CoriolisBu(I,J) + G%CoriolisBu(I,J-1)))
 ! This uses d/d y_2 tanh(y_2 / jet_width)
       u(I,j,k) = u(I,j,k+1) + (1e-3 * (jet_height / (US%m_to_L*jet_width)) * &
-           (sech(y_2 / jet_width))**2 ) * &
+           ((sech(y_2 / jet_width))**2) ) * &
            (2.0 * GV%g_prime(K+1) / (G%CoriolisBu(I,J) + G%CoriolisBu(I,J-1)))
     endif
   enddo ; enddo ; enddo
@@ -360,14 +360,14 @@ subroutine Phillips_initialize_topography(D, G, param_file, max_depth, US)
   do j=js,je ; do i=is,ie
     D(i,j)=0.0
     if (G%geoLonT(i,j)>x1 .and. G%geoLonT(i,j)<x2) then
-      D(i,j) = Htop*sin(PI*(G%geoLonT(i,j)-x1)/(x2-x1))**2
+      D(i,j) = Htop * (sin(PI*(G%geoLonT(i,j)-x1)/(x2-x1))**2)
       if (G%geoLatT(i,j)>y1 .and. G%geoLatT(i,j)<y2) then
-         D(i,j) = D(i,j)*(1-sin(PI*(G%geoLatT(i,j)-y1)/(y2-y1))**2)
+         D(i,j) = D(i,j)*(1. - (sin(PI*(G%geoLatT(i,j)-y1)/(y2-y1))**2) )
       endif
     elseif (G%geoLonT(i,j)>x3 .and. G%geoLonT(i,j)<x4 .and. &
              G%geoLatT(i,j)>y1 .and. G%geoLatT(i,j)<y2) then
-      D(i,j) = 2.0/3.0*Htop*sin(PI*(G%geoLonT(i,j)-x3)/(x4-x3))**2 &
-                   *sin(PI*(G%geoLatT(i,j)-y1)/(y2-y1))**2
+      D(i,j) = 2.0/3.0 * Htop * (sin(PI*(G%geoLonT(i,j)-x3)/(x4-x3))**2) &
+                   * (sin(PI*(G%geoLatT(i,j)-y1)/(y2-y1))**2)
     endif
     D(i,j) = max_depth - D(i,j)
   enddo ; enddo

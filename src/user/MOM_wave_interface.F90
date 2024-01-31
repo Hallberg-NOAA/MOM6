@@ -837,7 +837,7 @@ subroutine Update_Stokes_Drift(G, GV, US, CS, dz, ustar, dt, dynamics_step)
                 CMN_FAC = exp(2.*CS%WaveNum_Cen(b)*Top) * one_minus_exp_x(2.*CS%WaveNum_Cen(b)*level_thick)
               else
                 ! Use an analytic expression for the average of an exponential over a layer
-                WN = CS%Freq_Cen(b)**2 * CS%I_g_Earth
+                WN = (CS%Freq_Cen(b)**2) * CS%I_g_Earth
                 CMN_FAC = exp(2.*WN*Top) * one_minus_exp_x(2.*WN*level_thick)
               endif
               CS%US_x(II,jj,kk) = CS%US_x(II,jj,kk) + CS%STKx0(II,jj,b)*CMN_FAC
@@ -862,7 +862,7 @@ subroutine Update_Stokes_Drift(G, GV, US, CS, dz, ustar, dt, dynamics_step)
               if (CS%PartitionMode == 0) then
                 CMN_FAC = exp(MidPoint * 2. * CS%WaveNum_Cen(b))
               else
-                CMN_FAC = exp(MidPoint * 2. * CS%Freq_Cen(b)**2 / CS%g_Earth)
+                CMN_FAC = exp(MidPoint * 2. * (CS%Freq_Cen(b)**2) / CS%g_Earth)
               endif
               CS%US_x(II,jj,kk) = CS%US_x(II,jj,kk) + CS%STKx0(II,jj,b)*CMN_FAC
             enddo
@@ -895,7 +895,7 @@ subroutine Update_Stokes_Drift(G, GV, US, CS, dz, ustar, dt, dynamics_step)
                 CMN_FAC = exp(2.*CS%WaveNum_Cen(b)*Top) * one_minus_exp_x(2.*CS%WaveNum_Cen(b)*level_thick)
               else
                 ! Use an analytic expression for the average of an exponential over a layer
-                WN = CS%Freq_Cen(b)**2 * CS%I_g_Earth
+                WN = (CS%Freq_Cen(b)**2) * CS%I_g_Earth
                 CMN_FAC = exp(2.*WN*Top) * one_minus_exp_x(2.*WN*level_thick)
               endif
               CS%US_y(ii,JJ,kk) = CS%US_y(ii,JJ,kk) + CS%STKy0(ii,JJ,b)*CMN_FAC
@@ -919,7 +919,7 @@ subroutine Update_Stokes_Drift(G, GV, US, CS, dz, ustar, dt, dynamics_step)
               if (CS%PartitionMode == 0) then
                 CMN_FAC = exp(MidPoint*2.*CS%WaveNum_Cen(b))
               else
-                CMN_FAC = exp(MidPoint * 2. * CS%Freq_Cen(b)**2 / CS%g_Earth)
+                CMN_FAC = exp(MidPoint * 2. * (CS%Freq_Cen(b)**2) / CS%g_Earth)
               endif
               CS%US_y(ii,JJ,kk) = CS%US_y(ii,JJ,kk) + CS%STKy0(ii,JJ,b)*CMN_FAC
             enddo
@@ -1358,7 +1358,7 @@ subroutine get_StokesSL_LiFoxKemper(ustar, hbl, GV, US, CS, UStokes_SL, LA)
     UStokes = us_to_u10*u10
     !
     ! significant wave height from Pierson-Moskowitz spectrum (Bouws, 1998)
-    hm0 = CS%SWH_from_u10sq * u10**2
+    hm0 = CS%SWH_from_u10sq * (u10**2)
     !
     ! peak frequency (PM, Bouws, 1998)
     fp = 0.877 * (US%L_to_Z*GV%g_Earth) / (2.0 * PI * u19p5_to_u10 * u10)
@@ -1370,7 +1370,7 @@ subroutine get_StokesSL_LiFoxKemper(ustar, hbl, GV, US, CS, UStokes_SL, LA)
     !  for the effect of directional spreading, multidirectional waves
     !  and the use of PM peak frequency and PM significant wave height
     !  on estimating the Stokes transport)
-    vstokes = 0.125 * PI * r_loss * US%Z_to_L * fm * hm0**2
+    vstokes = 0.125 * PI * r_loss * US%Z_to_L * fm * (hm0**2)
     !
     ! the general peak wavenumber for Phillips' spectrum
     ! (Breivik et al., 2016) with correction of directional spreading
@@ -1426,7 +1426,7 @@ subroutine get_StokesSL_LiFoxKemper(ustar, hbl, GV, US, CS, UStokes_SL, LA)
         ! It is more accurate to replace erf with the first two terms of its Taylor series
         !  erf(z) = (2/sqrt(pi)) * z * (1. - (1/3)*z**2 + (1/10)*z**4 - (1/42)*z**6 + ...)
         ! and then cancel or combine common terms and drop negligibly small terms.
-        r5 = -0.64*sqrt(PI)*root_2kz + (-0.14184 + 1.0839648 * root_2kz**2)
+        r5 = -0.64*sqrt(PI)*root_2kz + (-0.14184 + 1.0839648 * (root_2kz**2))
       endif
       UStokes_sl = UStokes * (0.715 + ((r1 + r3) + r5))
     endif
@@ -1561,13 +1561,13 @@ subroutine DHH85_mid(GV, US, CS, zpt, UStokes)
   UStokes = 0.0
   omega = CS%omega_min + 0.5*domega
   do oi = 1,nomega-1
-    Dnn = exp ( -0.5 * (omega-omega_peak)**2 / (Snn**2 * omega_peak**2) )
+    Dnn = exp ( -0.5 * (omega-omega_peak)**2 / ((Snn**2) * (omega_peak**2)) )
     ! wavespec units [L Z T ~> m2 s]
-    wavespec = US%Z_to_L * (Ann * CS%g_Earth**2 / (omega_peak*omega**4 ) ) * &
-               exp(-bnn*(omega_peak/omega)**4)*Cnn**Dnn
+    wavespec = US%Z_to_L * (Ann * (CS%g_Earth**2) / ( omega_peak*(omega**4) ) ) * &
+               exp(-bnn * ((omega_peak/omega)**4) ) * (Cnn**Dnn)
     ! Stokes units [L ~> m] (multiply by frequency range for units of [L T-1 ~> m s-1])
-    Stokes = 2.0 * wavespec * omega**3 * &
-         exp( 2.0 * omega**2 * zpt / CS%g_Earth) / CS%g_Earth
+    Stokes = 2.0 * wavespec * (omega**3) * &
+         exp( 2.0 * (omega**2) * zpt / CS%g_Earth ) / CS%g_Earth
     UStokes = UStokes + Stokes*domega
     omega = omega + domega
   enddo
@@ -1999,7 +1999,7 @@ subroutine ust_2_u10_coare3p5(USTair, U10, GV, US, CS)
       CT=CT+1
       u10a = u10
       alpha = min(CS%Charnock_min, CS%Charnock_slope_U10 * u10 + CS%Charnock_intercept)
-      z0rough = alpha * (US%Z_to_L*USTair)**2 / GV%g_Earth ! Compute z0rough from ustar guess
+      z0rough = alpha * ((US%Z_to_L*USTair)**2) / GV%g_Earth ! Compute z0rough from ustar guess
       z0 = z0sm + z0rough
       Cd = ( CS%vonKar / log(ten_m_scale / z0) )**2 ! Compute Cd from derived roughness
       u10 = US%Z_to_L*USTair/sqrt(Cd)  ! Compute new u10 from derived Cd, while loop
@@ -2025,7 +2025,7 @@ subroutine ust_2_u10_coare3p5(USTair, U10, GV, US, CS)
       if (abs(u10a - u10) <= 0.001*u10) exit   ! Check for convergence.
       u10a = u10
       alpha = min(CS%Charnock_min, CS%Charnock_slope_U10 * u10 + CS%Charnock_intercept)
-      z0rough = alpha * (CS%I_g_Earth * USTair**2) ! Compute z0rough from ustar guess
+      z0rough = alpha * (CS%I_g_Earth * (USTair**2)) ! Compute z0rough from ustar guess
       z0 = z0sm + z0rough
       I_sqrtCd = abs(log(z0 * I_ten_m_scale)) * I_vonKar ! Compute Cd from derived roughness
       u10 = US%Z_to_L*USTair * I_sqrtCd  ! Compute new u10 from the derived Cd.

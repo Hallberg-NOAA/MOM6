@@ -176,11 +176,11 @@ function val_weights(val, range) result(ans)
     if (val < range(2)) then
       ! x goes from 0 to 1; ans goes from 0 to 1, with 0 derivatives at the ends.
       x = (val - range(1)) / (range(2) - range(1))
-      ans = x**2 * (3.0 - 2.0 * x)
+      ans = (x**2) * (3.0 - 2.0 * x)
     elseif (val > range(3)) then
       ! x goes from 0 to 1; ans goes from 0 to 1, with 0 derivatives at the ends.
       x = (range(4) - val) / (range(4) - range(3))
-      ans = x**2 * (3.0 - 2.0 * x)
+      ans = (x**2) * (3.0 - 2.0 * x)
     else
       ans = 1.0
     endif

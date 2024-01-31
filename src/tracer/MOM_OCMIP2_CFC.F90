@@ -561,10 +561,10 @@ subroutine OCMIP2_CFC_surface_state(sfc_state, h, G, GV, US, CS)
     ! The final result is in mol/cm3/pptv (1 part per trillion 1e-12)
     ! Use Bullister and Wisegavger for CCl4.
     ! The factor 1.e-09 converts from mol/(l * atm) to mol/(m3 * pptv).
-    alpha_11 = exp(CS%d1_11 + CS%d2_11/ta + CS%d3_11*log(ta) + CS%d4_11*ta**2 +&
+    alpha_11 = exp(CS%d1_11 + CS%d2_11/ta + CS%d3_11*log(ta) + CS%d4_11*(ta**2) +&
                    sal * ((CS%e3_11 * ta + CS%e2_11) * ta + CS%e1_11)) * &
                1.0e-09 * G%mask2dT(i,j)
-    alpha_12 = exp(CS%d1_12 + CS%d2_12/ta + CS%d3_12*log(ta) + CS%d4_12*ta**2 +&
+    alpha_12 = exp(CS%d1_12 + CS%d2_12/ta + CS%d3_12*log(ta) + CS%d4_12*(ta**2) +&
                    sal * ((CS%e3_12 * ta + CS%e2_12) * ta + CS%e1_12)) * &
                1.0e-09 * G%mask2dT(i,j)
     !   Calculate Schmidt numbers using coefficients given by

@@ -612,10 +612,10 @@ subroutine get_solubility(alpha_11, alpha_12, ta, sal , mask)
 
   ! Eq. 9 from Warner and Weiss (1985) DSR, vol 32.
   factor = 1.0
-  alpha_11 = exp(d1_11 + d2_11/ta + d3_11*log(ta) + d4_11*ta**2 +&
+  alpha_11 = exp(d1_11 + d2_11/ta + d3_11*log(ta) + d4_11*(ta**2) +&
                  sal * ((e3_11 * ta + e2_11) * ta + e1_11)) * &
              factor * mask
-  alpha_12 = exp(d1_12 + d2_12/ta + d3_12*log(ta) + d4_12*ta**2 +&
+  alpha_12 = exp(d1_12 + d2_12/ta + d3_12*log(ta) + d4_12*(ta**2) +&
                  sal * ((e3_12 * ta + e2_12) * ta + e1_12)) * &
              factor * mask
 

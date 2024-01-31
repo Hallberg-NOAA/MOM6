@@ -195,9 +195,9 @@ subroutine idealized_hurricane_wind_init(Time, G, US, param_file, CS)
   dP = CS%pressure_ambient - CS%pressure_central
   if (CS%answer_date < 20190101) then
     C = CS%max_windspeed / sqrt( US%R_to_kg_m3 * dP )
-    CS%Holland_B = C**2 * US%R_to_kg_m3*CS%rho_a * exp(1.0)
+    CS%Holland_B = (C**2) * US%R_to_kg_m3*CS%rho_a * exp(1.0)
   else
-    CS%Holland_B = CS%max_windspeed**2 * CS%rho_a * exp(1.0) / dP
+    CS%Holland_B = (CS%max_windspeed**2) * CS%rho_a * exp(1.0) / dP
   endif
   CS%Holland_A = (US%L_to_m*CS%rad_max_wind)**CS%Holland_B
   CS%Holland_AxBxDP = CS%Holland_A*CS%Holland_B*dP
@@ -522,14 +522,14 @@ subroutine SCM_idealized_hurricane_wind_forcing(sfc_state, forces, day, G, US, C
   dP = CS%pressure_ambient - CS%pressure_central
   if (CS%answer_date < 20190101) then
     C = CS%max_windspeed / sqrt( US%R_to_kg_m3*dP )
-    B = C**2 * US%R_to_kg_m3*CS%rho_a * exp(1.0)
+    B = (C**2) * US%R_to_kg_m3*CS%rho_a * exp(1.0)
     if (BR_Bench) then ! rho_a reset to value used in generated wind for benchmark test
-      B = C**2 * 1.2 * exp(1.0)
+      B = (C**2) * 1.2 * exp(1.0)
     endif
   elseif (BR_Bench) then ! rho_a reset to value used in generated wind for benchmark test
     B = (CS%max_windspeed**2 / dP ) * 1.2*US%kg_m3_to_R * exp(1.0)
   else
-    B = (CS%max_windspeed**2 /dP ) * CS%rho_a * exp(1.0)
+    B = (CS%max_windspeed**2 / dP ) * CS%rho_a * exp(1.0)
   endif
 
   A = (US%L_to_m*CS%rad_max_wind / 1000.)**B

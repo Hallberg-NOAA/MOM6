@@ -684,9 +684,9 @@ subroutine determine_temperature(temp, salt, R_tgt, EOS, p_ref, niter, k_start, 
             dT(i,k) = max(min((R_tgt(k)-rho(i,k)) / drho_dT(i,k), max_t_adj), -max_t_adj)
             T(i,k) = max(min(T(i,k)+dT(i,k), T_max), T_min)
           else
-            I_denom = 1.0 / (drho_dS(i,k)**2 + dT_dS_gauge**2*drho_dT(i,k)**2)
+            I_denom = 1.0 / ( drho_dS(i,k)**2 + (dT_dS_gauge**2)*(drho_dT(i,k)**2) )
             dS(i,k) = (R_tgt(k)-rho(i,k)) * drho_dS(i,k) * I_denom
-            dT(i,k) = (R_tgt(k)-rho(i,k)) * dT_dS_gauge**2*drho_dT(i,k) * I_denom
+            dT(i,k) = (R_tgt(k)-rho(i,k)) * (dT_dS_gauge**2)*drho_dT(i,k) * I_denom
 
             T(i,k) = max(min(T(i,k)+dT(i,k), T_max), T_min)
             S(i,k) = max(min(S(i,k)+dS(i,k), S_max), S_min)
