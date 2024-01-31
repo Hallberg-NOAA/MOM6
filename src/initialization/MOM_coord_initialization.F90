@@ -405,7 +405,7 @@ subroutine set_coord_from_TS_range(Rlay, g_prime, GV, US, param_file, eqn_of_sta
   a1 = 2.0 * res_rat / (1.0 + res_rat)
   do k=k_light+1,nz
     k_frac = real(k-k_light)/real(nz-k_light)
-    frac_dense = a1 * k_frac + (1.0 - a1) * k_frac**2
+    frac_dense = a1 * k_frac + (1.0 - a1) * (k_frac**2)
     T0(k) = frac_dense * (T_Dense - T_Light) + T_Light
     S0(k) = frac_dense * (S_Dense - S_Light) + S_Light
   enddo

@@ -247,7 +247,7 @@ subroutine build_adapt_column(CS, G, GV, US, tv, i, j, zInt, tInt, sInt, h, nom_
     drdz = max(drdz, 0.)
 
     ! set vertical grid diffusivity
-    kGrid(k) = (CS%adaptTimeRatio * nz**2 * depth) * &
+    kGrid(k) = (CS%adaptTimeRatio * (nz**2) * depth) * &
          ( CS%adaptZoomCoeff / (CS%adaptZoom + 0.5*(zNext(K) + zNext(K+1))) + &
            (CS%adaptBuoyCoeff * drdz / CS%adaptDrho0) + &
            max(1.0 - CS%adaptZoomCoeff - CS%adaptBuoyCoeff, 0.0) / depth)

@@ -828,7 +828,7 @@ subroutine wind_forcing_from_file(sfc_state, forces, day, G, US, CS)
       call MOM_read_data(filename, CS%Ustar_var, ustar_loc(:,:), &
                          G%Domain, timelevel=time_lev, scale=US%m_to_Z*US%T_to_s)
       if (associated(forces%tau_mag)) then ; do j=js,je ; do i=is,ie
-        forces%tau_mag(i,j) = US%Z_to_L * CS%Rho0 * ustar_loc(i,j)**2
+        forces%tau_mag(i,j) = US%Z_to_L * CS%Rho0 * (ustar_loc(i,j)**2)
       enddo ; enddo ; endif
       if (associated(forces%ustar)) then ; do j=G%jsc,G%jec ; do i=G%isc,G%iec
         forces%ustar(i,j) = ustar_loc(i,j)
@@ -911,7 +911,7 @@ subroutine wind_forcing_by_data_override(sfc_state, forces, day, G, US, CS)
   ! Only reset values where data override of ustar has occurred
   if (associated(forces%tau_mag)) then
     do j=G%jsc,G%jec ; do i=G%isc,G%iec ; if (ustar_prev(i,j) /= ustar_loc(i,j)) then
-      forces%tau_mag(i,j) = US%Z_to_L * CS%Rho0 * ustar_loc(i,j)**2
+      forces%tau_mag(i,j) = US%Z_to_L * CS%Rho0 * (ustar_loc(i,j)**2)
     endif ; enddo ; enddo
   endif
 

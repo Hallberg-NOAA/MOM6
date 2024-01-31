@@ -417,19 +417,19 @@ subroutine shelf_calc_flux(sfc_state_in, fluxes_in, Time, time_step_in, CS)
     I_au = 0.0 ; if (asu1 + asu2 > 0.0) I_au = 1.0 / (asu1 + asu2)
     I_av = 0.0 ; if (asv1 + asv2 > 0.0) I_av = 1.0 / (asv1 + asv2)
     if (allocated(sfc_state%taux_shelf) .and. allocated(sfc_state%tauy_shelf)) then
-      taux2 = (asu1 * sfc_state%taux_shelf(I-1,j)**2 + asu2 * sfc_state%taux_shelf(I,j)**2  ) * I_au
-      tauy2 = (asv1 * sfc_state%tauy_shelf(i,J-1)**2 + asv2 * sfc_state%tauy_shelf(i,J)**2  ) * I_av
+      taux2 = (asu1 * (sfc_state%taux_shelf(I-1,j)**2) + asu2 * (sfc_state%taux_shelf(I,j)**2)  ) * I_au
+      tauy2 = (asv1 * (sfc_state%tauy_shelf(i,J-1)**2) + asv2 * (sfc_state%tauy_shelf(i,J)**2)  ) * I_av
     endif
-    u2_av = (asu1 * sfc_state%u(I-1,j)**2 + asu2 * sfc_state%u(I,j)**2) * I_au
-    v2_av = (asv1 * sfc_state%v(i,J-1)**2 + asu2 * sfc_state%v(i,J)**2) * I_av
+    u2_av = (asu1 * (sfc_state%u(I-1,j)**2) + asu2 * (sfc_state%u(I,j)**2)) * I_au
+    v2_av = (asv1 * (sfc_state%v(i,J-1)**2) + asu2 * (sfc_state%v(i,J)**2)) * I_av
 
     if ((taux2 + tauy2 > 0.0) .and. .not.CS%ustar_shelf_from_vel) then
       if (CS%ustar_max >= 0.0) then
         fluxes%ustar_shelf(i,j) = MIN(CS%ustar_max, MAX(CS%ustar_bg, US%L_to_Z * &
-            sqrt(Irho0 * sqrt(taux2 + tauy2) + CS%cdrag*CS%utide(i,j)**2)))
+            sqrt(Irho0 * sqrt(taux2 + tauy2) + CS%cdrag*(CS%utide(i,j)**2)) ))
       else
         fluxes%ustar_shelf(i,j) = MAX(CS%ustar_bg, US%L_to_Z * &
-            sqrt(Irho0 * sqrt(taux2 + tauy2) + CS%cdrag*CS%utide(i,j)**2))
+            sqrt(Irho0 * sqrt(taux2 + tauy2) + CS%cdrag*(CS%utide(i,j)**2)) )
       endif
     else   ! Take care of the cases when taux_shelf is not set or not allocated.
       fluxes%ustar_shelf(i,j) = MAX(CS%ustar_bg, US%L_TO_Z * &
@@ -543,7 +543,7 @@ subroutine shelf_calc_flux(sfc_state_in, fluxes_in, Time, time_step_in, CS)
             if (wB_flux < 0.0) then
               ! The buoyancy flux is stabilizing and will reduce the turbulent
               ! fluxes, and iteration is required.
-              n_star_term = (ZETA_N * hBL_neut * VK) / (RC * ustar_h**3)
+              n_star_term = (ZETA_N * hBL_neut * VK) / (RC * (ustar_h**3))
               do it3 = 1,30
                ! n_star <= 1.0 is the ratio of working boundary layer thickness
                ! to the neutral thickness.
@@ -577,8 +577,8 @@ subroutine shelf_calc_flux(sfc_state_in, fluxes_in, Time, time_step_in, CS)
                 ! Find the root where wB_flux_new = wB_flux.
                 if (abs(wB_flux_new - wB_flux) < CS%buoy_flux_itt_threshold*(abs(wB_flux_new) + abs(wB_flux))) exit
 
-                dDwB_dwB_in = dG_dwB * (dB_dS * (dS_ustar * I_Gam_S**2) + &
-                                        dB_dT * (dT_ustar * I_Gam_T**2)) - 1.0
+                dDwB_dwB_in = dG_dwB * (dB_dS * (dS_ustar * (I_Gam_S**2)) + &
+                                        dB_dT * (dT_ustar * (I_Gam_T**2))) - 1.0
                 ! This is Newton's method without any bounds.  Should bounds be needed?
                 wB_flux_new = wB_flux - (wB_flux_new - wB_flux) / dDwB_dwB_in
                 ! Update wB_flux

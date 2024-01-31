@@ -2309,9 +2309,9 @@ subroutine calc_shelf_driving_stress(CS, ISS, G, US, taudx, taudy, OD)
 
         !Stress (Neumann) boundary conditions
         if (CS%ground_frac(i,j) == 1) then
-          neumann_val = ((.5 * grav) * (rho * ISS%h_shelf(i,j)**2 - rhow * CS%bed_elev(i,j)**2))
+          neumann_val = ((.5 * grav) * (rho * (ISS%h_shelf(i,j)**2) - rhow * CS%bed_elev(i,j)**2))
         else
-          neumann_val = (.5 * grav) * ((1-rho/rhow) * (rho * ISS%h_shelf(i,j)**2))
+          neumann_val = (.5 * grav) * ((1-rho/rhow) * (rho * (ISS%h_shelf(i,j)**2)))
         endif
         if ((CS%u_face_mask_bdry(I-1,j) == 2) .OR. &
           ((ISS%hmask(i-1,j) == 0 .OR. ISS%hmask(i-1,j) == 2) .AND. (i+i_off /= gisc))) then
@@ -2914,7 +2914,7 @@ subroutine CG_diagonal_subgrid_basal (Phisub, H_node, bathyT, dens_ratio, f_grnd
 
   do n=1,2 ; do m=1,2 ; do j=1,nsub ; do i=1,nsub
     do qy=1,2 ; do qx = 1,2
-        f_grnd_q(qx,qy) = grnd_stat(qx,qy,i,j) * Phisub(qx,qy,i,j,m,n)**2
+        f_grnd_q(qx,qy) = grnd_stat(qx,qy,i,j) * (Phisub(qx,qy,i,j,m,n)**2)
     enddo ; enddo
     !calculate sub-cell contribution to each node by summing up quadrature point contributions from the sub-cell
     f_grnd_sub(i,j,m,n) = (subarea * 0.25) * ((f_grnd_q(1,1) + f_grnd_q(2,2)) + (f_grnd_q(1,2)+f_grnd_q(2,1)))
@@ -3099,7 +3099,7 @@ subroutine calc_shelf_taub(CS, ISS, G, US, u_shlf, v_shlf)
       if ((ISS%hmask(i,j) == 1) .OR. (ISS%hmask(i,j) == 3)) then
         umid = ((u_shlf(I,J) + u_shlf(I-1,J-1)) + (u_shlf(I,J-1) + u_shlf(I-1,J))) * 0.25
         vmid = ((v_shlf(I,J) + v_shlf(I-1,J-1)) + (v_shlf(I,J-1) + v_shlf(I-1,J))) * 0.25
-        unorm = US%L_T_to_m_s * sqrt( (umid**2 + vmid**2) + (eps_min**2 * (G%dxT(i,j)**2 + G%dyT(i,j)**2)) )
+        unorm = US%L_T_to_m_s * sqrt( (umid**2 + vmid**2) + ((eps_min**2) * (G%dxT(i,j)**2 + G%dyT(i,j)**2)) )
 
         !Coulomb friction (Schoof 2005, Gagliardini et al 2007)
         if (CS%CoulombFriction) then

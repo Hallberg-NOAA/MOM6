@@ -1113,9 +1113,9 @@ subroutine edge_slopes_implicit_h5( N, h, u, edge_slopes, h_neglect, answer_date
   do i = 1,6
     dx = h(i)
     xavg = x(i) + 0.5 * dx
-    Asys(1:6,i) =  (/ 1.0, xavg, (xavg**2 + C1_12*dx**2), xavg * (xavg**2 + 0.25*dx**2), &
-                      (xavg**4 + 0.5*xavg**2*dx**2 + 0.0125*dx**4), &
-                       xavg * (xavg**4 + C5_6*xavg**2*dx**2 + 0.0625*dx**4) /)
+    Asys(1:6,i) =  (/ 1.0, xavg, (xavg**2 + C1_12*(dx**2)), xavg * (xavg**2 + 0.25*dx**2), &
+                      (xavg**4 + 0.5*(xavg**2)*(dx**2) + 0.0125*(dx**4)), &
+                       xavg * (xavg**4 + C5_6*(xavg**2)*(dx**2) + 0.0625*(dx**4)) /)
     Bsys(i) = u(i)
     x(i+1) = x(i) + dx
   enddo
@@ -1170,9 +1170,9 @@ subroutine edge_slopes_implicit_h5( N, h, u, edge_slopes, h_neglect, answer_date
   do i = 1,6
     dx = h(N+1-i)
     xavg = x(i) + 0.5*dx
-    Asys(1:6,i) =  (/ 1.0, xavg, (xavg**2 + C1_12*dx**2), xavg * (xavg**2 + 0.25*dx**2), &
-                      (xavg**4 + 0.5*xavg**2*dx**2 + 0.0125*dx**4), &
-                       xavg * (xavg**4 + C5_6*xavg**2*dx**2 + 0.0625*dx**4) /)
+    Asys(1:6,i) =  (/ 1.0, xavg, (xavg**2 + C1_12*(dx**2)), xavg * (xavg**2 + 0.25*dx**2), &
+                      (xavg**4 + 0.5*(xavg**2)*(dx**2) + 0.0125*(dx**4)), &
+                       xavg * (xavg**4 + C5_6*(xavg**2)*(dx**2) + 0.0625*(dx**4)) /)
     Bsys(i) = u(N+1-i)
     x(i+1) = x(i) + dx
   enddo
@@ -1346,9 +1346,9 @@ subroutine edge_values_implicit_h6( N, h, u, edge_val, h_neglect, answer_date )
   do i = 1,6
     dx = max( hMin, h(i) )
     xavg = x(i) + 0.5*dx
-    Asys(1:6,i) =  (/ 1.0, xavg, (xavg**2 + C1_12*dx**2), xavg * (xavg**2 + 0.25*dx**2), &
-                      (xavg**4 + 0.5*xavg**2*dx**2 + 0.0125*dx**4), &
-                       xavg * (xavg**4 + C5_6*xavg**2*dx**2 + 0.0625*dx**4) /)
+    Asys(1:6,i) =  (/ 1.0, xavg, (xavg**2 + C1_12*(dx**2)), xavg * (xavg**2 + 0.25*dx**2), &
+                      (xavg**4 + 0.5*(xavg**2)*(dx**2) + 0.0125*(dx**4)), &
+                       xavg * (xavg**4 + C5_6*(xavg**2)*(dx**2) + 0.0625*(dx**4)) /)
     Bsys(i) = u(i)
     x(i+1) = x(i) + dx
   enddo
@@ -1403,9 +1403,9 @@ subroutine edge_values_implicit_h6( N, h, u, edge_val, h_neglect, answer_date )
   do i = 1,6
     dx = max( hMin, h(N+1-i) )
     xavg = x(i) + 0.5 * dx
-    Asys(1:6,i) =  (/ 1.0, xavg, (xavg**2 + C1_12*dx**2), xavg * (xavg**2 + 0.25*dx**2), &
-                      (xavg**4 + 0.5*xavg**2*dx**2 + 0.0125*dx**4), &
-                       xavg * (xavg**4 + C5_6*xavg**2*dx**2 + 0.0625*dx**4) /)
+    Asys(1:6,i) =  (/ 1.0, xavg, (xavg**2 + C1_12*(dx**2)), xavg * (xavg**2 + 0.25*dx**2), &
+                      (xavg**4 + 0.5*(xavg**2)*(dx**2) + 0.0125*(dx**4)), &
+                       xavg * (xavg**4 + C5_6*(xavg**2)*(dx**2) + 0.0625*(dx**4)) /)
     Bsys(i) = u(N+1-i)
     x(i+1) = x(i) + dx
   enddo
