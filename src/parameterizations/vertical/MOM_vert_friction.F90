@@ -2096,9 +2096,9 @@ subroutine find_coupling_coef(a_cpl, hvel, do_i, h_harm, bbl_thick, kv_bbl, z_i,
       ! These expressions assume that Kv_tot(i,nz+1) = CS%Kv, consistent with
       ! the suppression of turbulent mixing by the presence of a solid boundary.
       if (dhc < bbl_thick(i)) then
-        a_cpl(i,nz+1) = kv_bbl(i) / ((dhc+h_neglect) + I_amax*kv_bbl(i))
+        a_cpl(i,nz+1) = kv_bbl(i) / (I_amax*kv_bbl(i) + (dhc+h_neglect)*US%one)
       else
-        a_cpl(i,nz+1) = kv_bbl(i) / ((bbl_thick(i)+h_neglect) + I_amax*kv_bbl(i))
+        a_cpl(i,nz+1) = kv_bbl(i) / (I_amax*kv_bbl(i) + (bbl_thick(i)+h_neglect)*US%one)
       endif
     endif ; enddo
     do K=nz,2,-1 ; do i=is,ie ; if (do_i(i)) then
@@ -2116,14 +2116,14 @@ subroutine find_coupling_coef(a_cpl, hvel, do_i, h_harm, bbl_thick, kv_bbl, z_i,
       endif
 
       ! Calculate the coupling coefficients from the viscosities.
-      a_cpl(i,K) = Kv_tot(i,K) / (h_shear + I_amax*Kv_tot(i,K))
+      a_cpl(i,K) = Kv_tot(i,K) / (h_shear*US%one + I_amax*Kv_tot(i,K))
     endif ; enddo ; enddo ! i & k loops
   elseif (abs(CS%Kv_extra_bbl) > 0.0) then
     ! There is a simple enhancement of the near-bottom viscosities, but no adjustment
     ! of the viscous coupling length scales to give a particular bottom stress.
     do i=is,ie ; if (do_i(i)) then
       a_cpl(i,nz+1) = (Kv_tot(i,nz+1) + CS%Kv_extra_bbl) / &
-                      ((0.5*hvel(i,nz)+h_neglect) + I_amax*(Kv_tot(i,nz+1)+CS%Kv_extra_bbl))
+                      ((0.5*hvel(i,nz)+h_neglect)*US%one + I_amax*(Kv_tot(i,nz+1)+CS%Kv_extra_bbl))
     endif ; enddo
     do K=nz,2,-1 ; do i=is,ie ; if (do_i(i)) then
       !    botfn determines when a point is within the influence of the bottom
@@ -2135,18 +2135,18 @@ subroutine find_coupling_coef(a_cpl, hvel, do_i, h_harm, bbl_thick, kv_bbl, z_i,
       h_shear = 0.5*(hvel(i,k) + hvel(i,k-1) + h_neglect)
 
       ! Calculate the coupling coefficients from the viscosities.
-      a_cpl(i,K) = Kv_tot(i,K) / (h_shear + I_amax*Kv_tot(i,K))
+      a_cpl(i,K) = Kv_tot(i,K) / (h_shear*US%one + I_amax*Kv_tot(i,K))
     endif ; enddo ; enddo ! i & k loops
   else
     ! Any near-bottom viscous enhancements were already incorporated into Kv_tot, and there is
     ! no adjustment of the viscous coupling length scales to give a particular bottom stress.
     do i=is,ie ; if (do_i(i)) then
-      a_cpl(i,nz+1) = Kv_tot(i,nz+1) / ((0.5*hvel(i,nz)+h_neglect) + I_amax*Kv_tot(i,nz+1))
+      a_cpl(i,nz+1) = Kv_tot(i,nz+1) / ((0.5*hvel(i,nz)+h_neglect)*US%one + I_amax*Kv_tot(i,nz+1))
     endif ; enddo
     do K=nz,2,-1 ; do i=is,ie ; if (do_i(i)) then
       h_shear = 0.5*(hvel(i,k) + hvel(i,k-1) + h_neglect)
       ! Calculate the coupling coefficients from the viscosities.
-      a_cpl(i,K) = Kv_tot(i,K) / (h_shear + I_amax*Kv_tot(i,K))
+      a_cpl(i,K) = Kv_tot(i,K) / (h_shear*US%one + I_amax*Kv_tot(i,K))
     endif ; enddo ; enddo ! i & k loops
   endif
 
@@ -2167,9 +2167,9 @@ subroutine find_coupling_coef(a_cpl, hvel, do_i, h_harm, bbl_thick, kv_bbl, z_i,
 
       ! If a_cpl(i,1) were not already 0, it would be added here.
       if (0.5*hvel(i,1) > tbl_thick(i)) then
-        a_cpl(i,1) = kv_TBL(i) / (tbl_thick(i) + I_amax*kv_TBL(i))
+        a_cpl(i,1) = kv_TBL(i) / (tbl_thick(i)*US%one + I_amax*kv_TBL(i))
       else
-        a_cpl(i,1) = kv_TBL(i) / ((0.5*hvel(i,1)+h_neglect) + I_amax*kv_TBL(i))
+        a_cpl(i,1) = kv_TBL(i) / ((0.5*hvel(i,1)+h_neglect)*US%one + I_amax*kv_TBL(i))
       endif
     endif ; enddo
 
@@ -2185,7 +2185,7 @@ subroutine find_coupling_coef(a_cpl, hvel, do_i, h_harm, bbl_thick, kv_bbl, z_i,
       endif
 
       kv_top = topfn * kv_TBL(i)
-      a_cpl(i,K) = a_cpl(i,K) + kv_top / (h_shear + I_amax*kv_top)
+      a_cpl(i,K) = a_cpl(i,K) + kv_top / (h_shear*US%one + I_amax*kv_top)
     endif ; enddo ; enddo
 
   elseif (CS%dynamic_viscous_ML .or. (GV%nkml>0) .or. CS%fixed_LOTW_ML .or. CS%apply_LOTW_floor) then
@@ -2386,7 +2386,7 @@ subroutine find_coupling_coef(a_cpl, hvel, do_i, h_harm, bbl_thick, kv_bbl, z_i,
         else
           visc_ml = CS%vonKar * (temp1*tau_mag(i)) / (absf(i)*temp1 + (h_ml(i)+h_neglect)*u_star(i))
         endif
-        a_ml = visc_ml / (0.25*(hvel(i,k)+hvel(i,k-1) + h_neglect) + 0.5*I_amax*visc_ml)
+        a_ml = visc_ml / (0.25*(hvel(i,k)+hvel(i,k-1) + h_neglect)*US%one + 0.5*I_amax*visc_ml)
 
         ! Choose the largest estimate of a_cpl, but these could be changed to be additive.
         a_cpl(i,K) = max(a_cpl(i,K), a_ml)
