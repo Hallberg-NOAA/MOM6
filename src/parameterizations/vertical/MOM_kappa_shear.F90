@@ -1295,6 +1295,7 @@ subroutine find_kappa_tke(N2, S2, kappa_in, Idz, h_Int, dz_Int, dz_h_Int, I_L2_b
     k_src, &      ! The source term in the kappa equation [T-1 ~> s-1].
     dQmdK, &      ! With Newton's method the change in dQ(k-1) due to dK(k) [Z T H-1 ~> s or m3 s kg-1]
     dKdQ, &       ! With Newton's method the change in dK(k) due to dQ(k) [H Z-1 T-1 ~> s-1 or kg m-3 s-1]
+    S2_dz_h, &    ! The product of dz_h_Int and S2 [Z H-1 T-2 ~> s-2 or m3 kg-1 s-2]
     e1            ! The fractional change in a layer TKE due to a change in the
                   ! TKE of the layer above when all the kappas below are 0 [nondim].
                   ! e1 is nondimensional, and 0 < e1 < 1.
@@ -1437,6 +1438,8 @@ subroutine find_kappa_tke(N2, S2, kappa_in, Idz, h_Int, dz_Int, dz_h_Int, I_L2_b
   enddo
   e1(1) = 0.0
 
+  ! Calculate a rescaled version of the shear to preserve certain answers when FMAs are enabled.
+  do K=1,nz+1 ; S2_dz_h(K) = dz_h_Int(K)*S2(K) ; enddo
 
   ! Iterate here to convergence to within some tolerance of order tol_err.
   do itt=1,CS%max_RiNo_it
@@ -1460,7 +1463,7 @@ subroutine find_kappa_tke(N2, S2, kappa_in, Idz, h_Int, dz_Int, dz_h_Int, I_L2_b
       enddo
       dQ(1) = -TKE(1)
       if (tke_noflux_top_BC) then
-        tke_src = dz_h_Int(1)*kappa0*S2(1) + q0 * TKE_decay(1) ! Uses that kappa(1) = 0
+        tke_src = kappa0*S2_dz_h(1) + q0 * TKE_decay(1) ! Uses that kappa(1) = 0
         bQd1 = h_Int(1) * TKE_decay(1)
         bQ = 1.0 / (bQd1 +  aQ(1))
         tke(1) = bQ * (h_Int(1)*tke_src)
@@ -1470,8 +1473,8 @@ subroutine find_kappa_tke(N2, S2, kappa_in, Idz, h_Int, dz_Int, dz_h_Int, I_L2_b
       endif
       do K=2,ke_tke-1
         dQ(K) = -TKE(K)
-        tke_src = dz_h_Int(K)*(kappa(K) + kappa0)*S2(K) + q0*TKE_decay(K)
-        bQd1 = h_Int(K)*(TKE_decay(K) + dz_h_Int(K)*N2(K)*K_Q(K)) + cQcomp*aQ(k-1)
+        tke_src = (kappa(K) + kappa0)*S2_dz_h(K) + q0*TKE_decay(K)
+        bQd1 = h_Int(K)*(TKE_decay(K) + (dz_h_Int(K)*N2(K))*K_Q(K)) + cQcomp*aQ(k-1)
         bQ = 1.0 / (bQd1 + aQ(k))
         tke(K) = bQ * (h_Int(K)*tke_src + aQ(k-1)*tke(K-1))
         cQ(K+1) = aQ(k) * bQ ; cQcomp = bQd1 * bQ ! = 1 - cQ
@@ -1481,7 +1484,7 @@ subroutine find_kappa_tke(N2, S2, kappa_in, Idz, h_Int, dz_Int, dz_h_Int, I_L2_b
         dQ(nz+1) = 0.0
       else
         k = ke_tke
-        tke_src = dz_h_Int(K)*kappa0*S2(K) + q0*TKE_decay(K) ! Uses that kappa(ke_tke) = 0
+        tke_src = kappa0*S2_dz_h(K) + q0*TKE_decay(K) ! Uses that kappa(ke_tke) = 0
         if (K == nz+1) then
           dQ(K) = -TKE(K)
           bQ = 1.0 / (h_Int(K)*TKE_decay(K) + cQcomp*aQ(k-1))
@@ -1572,7 +1575,7 @@ subroutine find_kappa_tke(N2, S2, kappa_in, Idz, h_Int, dz_Int, dz_h_Int, I_L2_b
       aQ(1) = (0.5*(kappa(1)+kappa(2))+kappa0) * Idz(1)
       dQdz(1) = 0.5*(TKE(1) - TKE(2))*Idz(1)
       if (tke_noflux_top_BC) then
-        tke_src = h_Int(1) * (kappa0*dz_h_Int(1)*S2(1) - (TKE(1) - q0)*TKE_decay(1)) - &
+        tke_src = h_Int(1) * (kappa0*S2_dz_h(1) - (TKE(1) - q0)*TKE_decay(1)) - &
                   aQ(1) * (TKE(1) - TKE(2))
 
         bQ = 1.0 / (aQ(1) + h_Int(1)*TKE_decay(1))
@@ -1585,7 +1588,7 @@ subroutine find_kappa_tke(N2, S2, kappa_in, Idz, h_Int, dz_Int, dz_h_Int, I_L2_b
       endif
       do K=2,nz
         I_Q = 1.0 / TKE(K)
-        I_Ld2(K) = (N2(K)*Ilambda2 + f2) * dz_h_Int(K)*I_Q + I_L2_bdry(K)
+        I_Ld2(K) = (N2(K)*Ilambda2 + f2) * (dz_h_Int(K)*I_Q) + I_L2_bdry(K)
 
         kap_src = h_Int(K) * (K_src(K) - I_Ld2(K)*kappa(K)) + &
                             Idz(k-1)*(kappa(K-1)-kappa(K)) - Idz(k)*(kappa(K)-kappa(K+1))
@@ -1650,7 +1653,7 @@ subroutine find_kappa_tke(N2, S2, kappa_in, Idz, h_Int, dz_Int, dz_h_Int, I_L2_b
         dK(nz+1) = 0.0 ; dKdQ(nz+1) = 0.0
         if (tke_noflux_bottom_BC) then
           K = nz+1
-          tke_src = h_Int(K) * (kappa0*dz_h_Int(K)*S2(K) - (TKE(K) - q0)*TKE_decay(K)) + &
+          tke_src = h_Int(K) * (kappa0*S2_dz_h(K) - (TKE(K) - q0)*TKE_decay(K)) + &
                     aQ(k-1) * (TKE(K-1) - TKE(K))
 
           v1 = aQ(k-1) + dQdz(k-1)*dKdQ(K-1)
@@ -1720,7 +1723,7 @@ subroutine find_kappa_tke(N2, S2, kappa_in, Idz, h_Int, dz_Int, dz_h_Int, I_L2_b
         ! been increased to ensure a positive pivot, or 2) negative TKEs have been
         ! truncated, or 3) small or negative kappas have been rounded toward 0.
         I_Q = 1.0 / TKE(K)
-        I_Ld2_debug(K) = (N2(K)*Ilambda2 + f2) * dz_h_Int(K)*I_Q + I_L2_bdry(K)
+        I_Ld2_debug(K) = (N2(K)*Ilambda2 + f2) * (dz_h_Int(K)*I_Q) + I_L2_bdry(K)
 
         kap_src = h_Int(K) * (k_src(K) - I_Ld2(K)*kappa_prev(K)) + &
                             (Idz(k-1)*(kappa_prev(k-1)-kappa_prev(k)) - &
@@ -1731,7 +1734,7 @@ subroutine find_kappa_tke(N2, S2, kappa_in, Idz, h_Int, dz_Int, dz_h_Int, I_L2_b
 
         h_dz_here = 0.0 ; if (abs(dz_h_Int(K)) > 0.0) h_dz_here = 1.0 / dz_h_Int(K)
         tke_src = h_Int(K) * ((kappa_prev(K) + kappa0)*S2(K) - &
-                     kappa_prev(K)*N2(K) - (TKE_prev(K) - q0)*h_dz_here*TKE_decay(K)) - &
+                     kappa_prev(K)*N2(K) - (TKE_prev(K) - q0)*(h_dz_here*TKE_decay(K))) - &
                   (aQ(k) * (TKE_prev(K) - TKE_prev(K+1)) - aQ(k-1) * (TKE_prev(K-1) - TKE_prev(K)))
         Q_err_lin = tke_src + (aQ(k-1) * (dQ(K-1)-dQ(K)) - aQ(k) * (dQ(k)-dQ(k+1))) - &
                     0.5*(TKE_prev(K)-TKE_prev(K+1))*Idz(k)  * (dK(K) + dK(K+1)) - &
