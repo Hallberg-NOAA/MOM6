@@ -56,6 +56,9 @@ type, public :: unit_scale_type
   real :: Pa_to_RL2_T2    !< Convert pressures from Pa to R L2 T-2                                [R L2 T-2 Pa-1 ~> 1]
   real :: Pa_to_RLZ_T2    !< Convert wind stresses from Pa to R L Z T-2                          [R L Z T-2 Pa-1 ~> 1]
 
+  real :: one = 1.0       !< This is always 1.0, but can be used to trick compilers into doing
+                          !! calculations in the same order when scaling factors are removed [nondim].
+
   ! These are no longer used for changing scaling across restarts.
   real :: m_to_Z_restart = 1.0 !< A copy of the m_to_Z that is used in restart files.
   real :: m_to_L_restart = 1.0 !< A copy of the m_to_L that is used in restart files.
@@ -167,6 +170,8 @@ subroutine unit_scaling_init( param_file, US )
   US%S_to_ppt = 1.0 * S_Rescale_factor
   US%ppt_to_S = 1.0 / S_Rescale_factor
 
+  US%one = 1.0
+
   call set_unit_scaling_combos(US)
 end subroutine unit_scaling_init
 
@@ -185,6 +190,7 @@ subroutine unit_no_scaling_init(US)
   US%Q_to_J_kg = 1.0 ; US%J_kg_to_Q = 1.0
   US%C_to_degC = 1.0 ; US%degC_to_C = 1.0
   US%S_to_ppt = 1.0 ; US%ppt_to_S = 1.0
+  US%one = 1.0
 
   call set_unit_scaling_combos(US)
 end subroutine unit_no_scaling_init
