@@ -48,6 +48,7 @@ type, public :: PressureForce_FV_CS ; private
                             !! timing of diagnostic output.
   logical :: useMassWghtInterp !< Use mass weighting in T/S interpolation
   logical :: useMassWghtInterpis !< Use mass weighting in T/S interpolation for top boundary
+  logical :: correction_intxpa ! Use correction to surface intxpa
   logical :: use_inaccurate_pgf_rho_anom !< If true, uses the older and less accurate
                             !! method to calculate density anomalies, as used prior to
                             !! March 2018.
@@ -533,6 +534,10 @@ subroutine PressureForce_FV_Bouss(h, tv, PFu, PFv, G, GV, US, CS, ALE_CSp, p_atm
                 ! interface atop a layer, divided by the grid spacing [R L2 T-2 ~> Pa].
   real, dimension(SZI_(G),SZJB_(G),SZK_(GV)) :: &
     inty_dpa    ! The change in inty_pa through a layer [R L2 T-2 ~> Pa].
+  real, dimension(SZIB_(G),SZJ_(G)) :: &
+    correction_x! Correction for curvature in intx_pa [R L2 T-2 ~> Pa]
+  real, dimension(SZI_(G),SZJB_(G)) :: &
+    correction_y! Correction for curvature in inty_pa [R L2 T-2 ~> Pa]
 
   real, dimension(SZI_(G),SZJ_(G),SZK_(GV)), target :: &
     T_tmp, &    ! Temporary array of temperatures where layers that are lighter
@@ -544,6 +549,8 @@ subroutine PressureForce_FV_Bouss(h, tv, PFu, PFv, G, GV, US, CS, ALE_CSp, p_atm
                 ! of salinity within each layer [S ~> ppt].
     T_t, T_b    ! Top and bottom edge values for linear reconstructions
                 ! of temperature within each layer [C ~> degC].
+  real, dimension(SZI_(G),SZJ_(G)) :: &
+    rho_top     ! Density of top layer used in calculating correction_x and correction_y
   real, dimension(SZI_(G),SZJ_(G),SZK_(G)) :: &
     rho_pgf, rho_stanley_pgf ! Density [R ~> kg m-3] from EOS with and without SGS T variance
                              ! in Stanley parameterization.
@@ -566,11 +573,12 @@ subroutine PressureForce_FV_Bouss(h, tv, PFu, PFv, G, GV, US, CS, ALE_CSp, p_atm
   logical :: use_ALE         ! If true, use an ALE pressure reconstruction.
   logical :: use_EOS         ! If true, density is calculated from T & S using an equation of state.
   type(thermo_var_ptrs) :: tv_tmp! A structure of temporary T & S.
-  real, parameter :: C1_6 = 1.0/6.0 ! [nondim]
   integer, dimension(2) :: EOSdom ! The i-computational domain for the equation of state
   integer, dimension(2) :: EOSdom_h ! The i-computational domain for the equation of state at tracer points
   integer :: is, ie, js, je, Isq, Ieq, Jsq, Jeq, nz, nkmb
   integer :: i, j, k
+  real, parameter :: C1_6 = 1.0/6.0    ! A rational constant [nondim]
+  real, parameter :: C1_12 = 1.0/12.0  ! A rational constant [nondim]
 
   is = G%isc ; ie = G%iec ; js = G%jsc ; je = G%jec ; nz = GV%ke
   nkmb=GV%nk_rho_varies
@@ -730,6 +738,14 @@ subroutine PressureForce_FV_Bouss(h, tv, PFu, PFv, G, GV, US, CS, ALE_CSp, p_atm
     enddo ; enddo
   endif
 
+  !Determine surface density so it can be used in pressure correction
+  if (CS%correction_intxpa) then
+    do j=Jsq,Jeq+1
+      call calculate_density(T_t(:,j,1), S_t(:,j,1), p_ref, rho_top(:,j), &
+                             tv%eqn_of_state, EOSdom)
+    enddo
+  endif
+
   do k=1,nz
     ! Calculate 4 integrals through the layer that are required in the
     ! subsequent calculation.
@@ -792,25 +808,57 @@ subroutine PressureForce_FV_Bouss(h, tv, PFu, PFv, G, GV, US, CS, ALE_CSp, p_atm
     enddo ; enddo
   enddo
 
-  ! Set the surface boundary conditions on the horizontally integrated pressure anomaly,
-  ! assuming that the surface pressure anomaly varies linearly in x and y.
-  ! If there is an ice-shelf or icebergs, this linear variation would need to be applied
-  ! to an interior interface.
-  !$OMP parallel do default(shared)
-  do j=js,je ; do I=Isq,Ieq
-    intx_pa(I,j,1) = 0.5*(pa(i,j,1) + pa(i+1,j,1))
-  enddo ; enddo
+  if (CS%correction_intxpa) then
+    ! This version attempts to correct for hydrostatic variations in surface pressure under ice.
+    !$OMP parallel do default(shared)
+    do j=js,je ; do I=Isq,Ieq
+      correction_x(I,j) = 0.0
+      if (((pa(i+1,j,1)-pa(i,j,1))*(-e(i+1,j,1)+e(i,j,1))) < 0.0) then
+        ! The pressure/depth relationship has a positive implied density
+        if (abs(pa(i+1,j,1) - pa(i,j,1)) > abs(0.25*(rho_top(I+1,j)+rho_top(I,j)-2.0*rho_ref) * &
+                                               ((-e(i+1,j,1)+e(i,j,1))*GV%g_Earth))) then
+          ! The pressure difference is at least half the size of the difference expected by hydrostatic
+          ! balance.  This test gets rid of pressure differences that are small, e.g. open ocean.
+          correction_x(I,j) = C1_12 * (rho_top(I+1,j)-rho_top(I,j)) * (GV%g_Earth * (e(i+1,j,1)-e(i,j,1)))
+        endif
+      endif
+      intx_pa(I,j,1) = 0.5*(pa(i,j,1) + pa(i+1,j,1)) + correction_x(I,j)
+    enddo ; enddo
+    !$OMP parallel do default(shared)
+    do J=Jsq,Jeq ; do i=is,ie
+      correction_y(i,J) = 0.0
+      if (((pa(i,j+1,1)-pa(i,j,1))*(-e(i,j+1,1)+e(i,j,1))) < 0.0) then
+        ! The pressure/depth relationship has a positive implied density
+        if (abs(pa(i,j+1,1) - pa(i,j,1)) > abs(0.25*(rho_top(i,J+1)+rho_top(i,J)-2.0*rho_ref) * &
+                                               ((-e(i,j+1,1)+e(i,j,1))*GV%g_Earth)) ) then
+          ! The pressure difference is at least half the size of the difference expected by hydrostatic
+          ! balance.  This test gets rid of pressure differences that are small, e.g. open ocean.
+          correction_y(i,J) = C1_12 * (rho_top(i,J+1)-rho_top(i,J)) * (GV%g_Earth * (e(i,j+1,1)-e(i,j,1)))
+        endif
+      endif
+      inty_pa(i,J,1) = 0.5*(pa(i,j,1) + pa(i,j+1,1)) + correction_y(i,J)
+    enddo ; enddo
+  else
+    ! Set the surface boundary conditions on the horizontally integrated pressure anomaly,
+    ! assuming that the surface pressure anomaly varies linearly in x and y.
+    ! If there is an ice-shelf or icebergs, this linear variation would need to be applied
+    ! to an interior interface.
+    !$OMP parallel do default(shared)
+    do j=js,je ; do I=Isq,Ieq
+      intx_pa(I,j,1) = 0.5*(pa(i,j,1) + pa(i+1,j,1))
+    enddo ; enddo
+    !$OMP parallel do default(shared)
+    do J=Jsq,Jeq ; do i=is,ie
+      inty_pa(i,J,1) = 0.5*(pa(i,j,1) + pa(i,j+1,1))
+    enddo ; enddo
+  endif
+
   do k=1,nz
     !$OMP parallel do default(shared)
     do j=js,je ; do I=Isq,Ieq
       intx_pa(I,j,K+1) = intx_pa(I,j,K) + intx_dpa(I,j,k)
     enddo ; enddo
   enddo
-
-  !$OMP parallel do default(shared)
-  do J=Jsq,Jeq ; do i=is,ie
-    inty_pa(i,J,1) = 0.5*(pa(i,j,1) + pa(i,j+1,1))
-  enddo ; enddo
   do k=1,nz
     !$OMP parallel do default(shared)
     do J=Jsq,Jeq ; do i=is,ie
@@ -1023,6 +1071,9 @@ subroutine PressureForce_FV_init(Time, G, GV, US, param_file, diag, CS, SAL_CSp,
                  "If true, use mass weighting when interpolating T/S for "//&
                  "integrals near the top in FV pressure gradient calculations. "//&
                  "Defaults to MASS_WEIGHT_IN_PRESSURE_GRADIENT.", default=CS%useMassWghtInterp)
+  call get_param(param_file, mdl, "CORRECTION_INTXPA",CS%correction_intxpa, &
+                 "If true, use a correction for surface pressure curvature in intx_pa.", &
+                 default = .false.)
   call get_param(param_file, mdl, "USE_INACCURATE_PGF_RHO_ANOM", CS%use_inaccurate_pgf_rho_anom, &
                  "If true, use a form of the PGF that uses the reference density "//&
                  "in an inaccurate way. This is not recommended.", default=.false.)
