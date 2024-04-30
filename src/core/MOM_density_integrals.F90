@@ -368,7 +368,7 @@ end subroutine int_density_dz_generic_pcm
 !! T and S are linear profiles.
 subroutine int_density_dz_generic_plm(k, tv, T_t, T_b, S_t, S_b, e, rho_ref, &
                                       rho_0, G_e, dz_subroundoff, bathyT, HI, GV, EOS, US, use_stanley_eos, dpa, &
-                                      intz_dpa, intx_dpa, inty_dpa, useMassWghtInterp, &
+                                      intz_dpa, intx_dpa, inty_dpa, useMassWghtInterp, useMassWghtInterpis, &
                                       use_inaccurate_form, Z_0p)
   integer,              intent(in)  :: k   !< Layer index to calculate integrals for
   type(hor_index_type), intent(in)  :: HI  !< Ocean horizontal index structures for the input arrays
@@ -411,6 +411,8 @@ subroutine int_density_dz_generic_plm(k, tv, T_t, T_b, S_t, S_b, e, rho_ref, &
                                            !! divided by the y grid spacing [R L2 T-2 ~> Pa]
   logical,    optional, intent(in)  :: useMassWghtInterp !< If true, uses mass weighting to
                                            !! interpolate T/S for top and bottom integrals.
+  logical,    optional, intent(in)  :: useMassWghtInterpis !< If true, uses mass weighting to
+                                           !! interpolate T/S for top integrals.
   logical,    optional, intent(in)  :: use_inaccurate_form !< If true, uses an inaccurate form of
                                            !! density anomalies, as was used prior to March 2018.
   real,       optional, intent(in)  :: Z_0p !< The height at which the pressure is 0 [Z ~> m]
@@ -461,10 +463,12 @@ subroutine int_density_dz_generic_plm(k, tv, T_t, T_b, S_t, S_b, e, rho_ref, &
   real :: dz_x(5,HI%iscB:HI%iecB) ! Layer thicknesses along an x-line of subgrid locations [Z ~> m]
   real :: dz_y(5,HI%isc:HI%iec)   ! Layer thicknesses along a y-line of subgrid locations [Z ~> m]
   real :: massWeightToggle          ! A non-dimensional toggle factor (0 or 1) [nondim]
+  real :: isWeightToggle            ! A non-dimensional toggle factor (0 or 1) [nondim]
   real :: Ttl, Tbl, Ttr, Tbr        ! Temperatures at the velocity cell corners [C ~> degC]
   real :: Stl, Sbl, Str, Sbr        ! Salinities at the velocity cell corners [S ~> ppt]
   real :: z0pres                    ! The height at which the pressure is zero [Z ~> m]
   real :: hWght                     ! A topographically limited thickness weight [Z ~> m]
+  real :: hWghtis                   ! An ice shelf draft limited thickness weight [Z ~> m]
   real :: hL, hR                    ! Thicknesses to the left and right [Z ~> m]
   real :: iDenom                    ! The denominator of the thickness weight expressions [Z-2 ~> m-2]
   logical :: use_rho_ref ! Pass rho_ref to the equation of state for more accurate calculation
@@ -481,8 +485,12 @@ subroutine int_density_dz_generic_plm(k, tv, T_t, T_b, S_t, S_b, e, rho_ref, &
   I_Rho = 1.0 / rho_0
   z0pres = 0.0 ; if (present(Z_0p)) z0pres = Z_0p
   massWeightToggle = 0.
+  isWeightToggle = 0.
   if (present(useMassWghtInterp)) then
     if (useMassWghtInterp) massWeightToggle = 1.
+  endif
+  if (present(useMassWghtInterpis)) then
+    if (useMassWghtInterpis) isWeightToggle = 1.
   endif
   use_rho_ref = .true.
   if (present(use_inaccurate_form)) then
@@ -580,6 +588,17 @@ subroutine int_density_dz_generic_plm(k, tv, T_t, T_b, S_t, S_b, e, rho_ref, &
       ! this distance by the layer thickness to replicate other models.
       hWght = massWeightToggle * &
               max(0., -bathyT(i,j)-e(i+1,j,K), -bathyT(i+1,j)-e(i,j,K))
+      ! CY: The below code just uses top interface, which may be bad in high res open ocean
+      ! We want something like if (pa(i+1,k+1)<pa(i,1)) or (pa(i+1,1) <pa(i,k+1)) then...
+      ! but pressures are not passed through to this submodule, and tv just has surface press.
+      !if ((p(i+1,j,k+1)<p(i,j,1)).or.(tv%p(i+1,j,k+1)<tv%p(i,j,1))) then
+      hWghtis = isWeightToggle * &
+              max(0., e(i+1,j,K+1)-e(i,j,1), e(i,j,K+1)-e(i+1,j,1))
+      !else !pressure criteria not activated
+      ! hWghtis = 0.
+      !endif
+      ! Set it to be max of the bottom and top hWghts:
+      hWght = max(hWght,hWghtis)
       if (hWght > 0.) then
         hL = (e(i,j,K) - e(i,j,K+1)) + dz_subroundoff
         hR = (e(i+1,j,K) - e(i+1,j,K+1)) + dz_subroundoff
@@ -676,6 +695,17 @@ subroutine int_density_dz_generic_plm(k, tv, T_t, T_b, S_t, S_b, e, rho_ref, &
     ! this distance by the layer thickness to replicate other models.
       hWght = massWeightToggle * &
               max(0., -bathyT(i,j)-e(i,j+1,K), -bathyT(i,j+1)-e(i,j,K))
+      ! CY: The below code just uses top interface, which may be bad in high res open ocean
+      ! We want something like if (pa(i+1,k+1)<pa(i,1)) or (pa(i+1,1) <pa(i,k+1)) then...
+      ! but pressures are not passed through to this submodule, and tv just has surface press.
+      !if ((p(i+1,j,k+1)<p(i,j,1)).or.(tv%p(i+1,j,k+1)<tv%p(i,j,1))) then
+      hWghtis = isWeightToggle * &
+              max(0., e(i,j+1,K+1)-e(i,j,1), e(i,j,K+1)-e(i,j+1,1))
+      !else !pressure criteria not activated
+      ! hWghtis = 0.
+      !endif
+      ! Set it to be max of the bottom and top hWghts:
+      hWght = max(hWght,hWghtis)
       if (hWght > 0.) then
         hL = (e(i,j,K) - e(i,j,K+1)) + dz_subroundoff
         hR = (e(i,j+1,K) - e(i,j+1,K+1)) + dz_subroundoff

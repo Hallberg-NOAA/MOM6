@@ -47,6 +47,7 @@ type, public :: PressureForce_FV_CS ; private
   type(diag_ctrl), pointer :: diag !< A structure that is used to regulate the
                             !! timing of diagnostic output.
   logical :: useMassWghtInterp !< Use mass weighting in T/S interpolation
+  logical :: useMassWghtInterpis !< Use mass weighting in T/S interpolation for top boundary
   logical :: use_inaccurate_pgf_rho_anom !< If true, uses the older and less accurate
                             !! method to calculate density anomalies, as used prior to
                             !! March 2018.
@@ -744,7 +745,7 @@ subroutine PressureForce_FV_Bouss(h, tv, PFu, PFv, G, GV, US, CS, ALE_CSp, p_atm
                     rho_ref, CS%Rho0, GV%g_Earth, dz_neglect, G%bathyT, &
                     G%HI, GV, tv%eqn_of_state, US, CS%use_stanley_pgf, dpa(:,:,k), intz_dpa(:,:,k), &
                     intx_dpa(:,:,k), inty_dpa(:,:,k), &
-                    useMassWghtInterp=CS%useMassWghtInterp, &
+                    useMassWghtInterp=CS%useMassWghtInterp, useMassWghtInterpis=CS%useMassWghtInterpis, &
                     use_inaccurate_form=CS%use_inaccurate_pgf_rho_anom, Z_0p=G%Z_ref)
         elseif ( CS%Recon_Scheme == 2 ) then
           call int_density_dz_generic_ppm(k, tv, T_t, T_b, S_t, S_b, e, &
@@ -1018,6 +1019,10 @@ subroutine PressureForce_FV_init(Time, G, GV, US, param_file, diag, CS, SAL_CSp,
                  "If true, use mass weighting when interpolating T/S for "//&
                  "integrals near the bathymetry in FV pressure gradient "//&
                  "calculations.", default=.false.)
+  call get_param(param_file, mdl, "MASS_WEIGHT_IN_PRESSURE_GRADIENT_IS", CS%useMassWghtInterpis, &
+                 "If true, use mass weighting when interpolating T/S for "//&
+                 "integrals near the top in FV pressure gradient calculations. "//&
+                 "Defaults to MASS_WEIGHT_IN_PRESSURE_GRADIENT.", default=CS%useMassWghtInterp)
   call get_param(param_file, mdl, "USE_INACCURATE_PGF_RHO_ANOM", CS%use_inaccurate_pgf_rho_anom, &
                  "If true, use a form of the PGF that uses the reference density "//&
                  "in an inaccurate way. This is not recommended.", default=.false.)
