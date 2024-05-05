@@ -522,7 +522,7 @@ subroutine mixedlayer_restrat_OM4(h, uhtr, vhtr, tv, forces, dt, MLD_in, VarMix,
     absf = 0.5*(abs(G%CoriolisBu(I,J-1)) + abs(G%CoriolisBu(I,J)))
     ! If needed, res_scaling_fac = min( ds, L_d ) / l_f
     if (res_upscale) res_scaling_fac = &
-          ( sqrt( 0.5 * ( G%dxCu(I,j)**2 + G%dyCu(I,j)**2 ) ) * I_LFront ) &
+          ( sqrt( 0.5 * ( (G%dxCu(I,j)**2) + (G%dyCu(I,j)**2) ) ) * I_LFront ) &
           * min( 1., 0.5*( VarMix%Rd_dx_h(i,j) + VarMix%Rd_dx_h(i+1,j) ) )
 
     ! peak ML visc: u_star * von_Karman * (h_ml*u_star)/(absf*h_ml + 4.0*u_star)
@@ -609,7 +609,7 @@ subroutine mixedlayer_restrat_OM4(h, uhtr, vhtr, tv, forces, dt, MLD_in, VarMix,
     absf = 0.5*(abs(G%CoriolisBu(I-1,J)) + abs(G%CoriolisBu(I,J)))
     ! If needed, res_scaling_fac = min( ds, L_d ) / l_f
     if (res_upscale) res_scaling_fac = &
-          ( sqrt( 0.5 * ( (G%dxCv(i,J))**2 + (G%dyCv(i,J))**2 ) ) * I_LFront ) &
+          ( sqrt( 0.5 * ( (G%dxCv(i,J)**2) + (G%dyCv(i,J)**2) ) ) * I_LFront ) &
           * min( 1., 0.5*( VarMix%Rd_dx_h(i,j) + VarMix%Rd_dx_h(i,j+1) ) )
 
     ! peak ML visc: u_star * von_Karman * (h_ml*u_star)/(absf*h_ml + 4.0*u_star)
@@ -1936,12 +1936,12 @@ end function mixedlayer_restrat_unit_tests
 !> Returns true if any cell of u and u_true are not identical. Returns false otherwise.
 logical function test_answer(verbose, u, u_true, label, tol)
   logical,            intent(in) :: verbose !< If true, write results to stdout
-  real,               intent(in) :: u      !< Values to test
-  real,               intent(in) :: u_true !< Values to test against (correct answer)
+  real,               intent(in) :: u      !< Values to test in arbitrary units [A]
+  real,               intent(in) :: u_true !< Values to test against (correct answer) [A]
   character(len=*),   intent(in) :: label  !< Message
-  real, optional,     intent(in) :: tol    !< The tolerance for differences between u and u_true
+  real, optional,     intent(in) :: tol    !< The tolerance for differences between u and u_true [A]
   ! Local variables
-  real :: tolerance ! The tolerance for differences between u and u_true
+  real :: tolerance ! The tolerance for differences between u and u_true [A]
   integer :: k
 
   tolerance = 0.0 ; if (present(tol)) tolerance = tol

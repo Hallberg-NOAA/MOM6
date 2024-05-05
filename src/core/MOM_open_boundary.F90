@@ -2359,7 +2359,7 @@ subroutine radiation_open_bdry_conds(OBC, u_new, u_old, v_new, v_old, G, GV, US,
             dhdy = segment%grad_normal(J,1,k)
           endif
           if (dhdt*dhdx < 0.0) dhdt = 0.0
-          cff_new = max(dhdx*dhdx + dhdy*dhdy, eps)
+          cff_new = max((dhdx*dhdx) + (dhdy*dhdy), eps)
           rx_new = min(dhdt*dhdx, cff_new*rx_max)
           ry_new = min(cff_new,max(dhdt*dhdy,-cff_new))
           if (gamma_u < 1.0) then
@@ -2501,7 +2501,7 @@ subroutine radiation_open_bdry_conds(OBC, u_new, u_old, v_new, v_old, G, GV, US,
                 dhdy = segment%grad_tan(j+1,1,k)
               endif
               if (dhdt*dhdx < 0.0) dhdt = 0.0
-              cff_new = max(dhdx*dhdx + dhdy*dhdy, eps)
+              cff_new = max((dhdx*dhdx) + (dhdy*dhdy), eps)
               rx_new = min(dhdt*dhdx, cff_new*rx_max)
               ry_new = min(cff_new,max(dhdt*dhdy,-cff_new))
               rx_tang_obl(I,J,k) = rx_new
@@ -2604,7 +2604,7 @@ subroutine radiation_open_bdry_conds(OBC, u_new, u_old, v_new, v_old, G, GV, US,
           endif
           if (dhdt*dhdx < 0.0) dhdt = 0.0
 
-          cff_new = max(dhdx*dhdx + dhdy*dhdy, eps)
+          cff_new = max((dhdx*dhdx) + (dhdy*dhdy), eps)
           rx_new = min(dhdt*dhdx, cff_new*rx_max)
           ry_new = min(cff_new,max(dhdt*dhdy,-cff_new))
           if (gamma_u < 1.0) then
@@ -2746,7 +2746,7 @@ subroutine radiation_open_bdry_conds(OBC, u_new, u_old, v_new, v_old, G, GV, US,
                 dhdy = segment%grad_tan(j+1,1,k)
               endif
               if (dhdt*dhdx < 0.0) dhdt = 0.0
-              cff_new = max(dhdx*dhdx + dhdy*dhdy, eps)
+              cff_new = max((dhdx*dhdx) + (dhdy*dhdy), eps)
               rx_new = min(dhdt*dhdx, cff_new*rx_max)
               ry_new = min(cff_new,max(dhdt*dhdy,-cff_new))
               rx_tang_obl(I,J,k) = rx_new
@@ -2848,7 +2848,7 @@ subroutine radiation_open_bdry_conds(OBC, u_new, u_old, v_new, v_old, G, GV, US,
             dhdx = segment%grad_normal(I,1,k)
           endif
           if (dhdt*dhdy < 0.0) dhdt = 0.0
-          cff_new = max(dhdx*dhdx + dhdy*dhdy, eps)
+          cff_new = max((dhdx*dhdx) + (dhdy*dhdy), eps)
           ry_new = min(dhdt*dhdy, cff_new*ry_max)
           rx_new = min(cff_new,max(dhdt*dhdx,-cff_new))
           if (gamma_u < 1.0) then
@@ -2990,7 +2990,7 @@ subroutine radiation_open_bdry_conds(OBC, u_new, u_old, v_new, v_old, G, GV, US,
                 dhdx = segment%grad_tan(i+1,1,k)
               endif
               if (dhdt*dhdy < 0.0) dhdt = 0.0
-              cff_new = max(dhdx*dhdx + dhdy*dhdy, eps)
+              cff_new = max((dhdx*dhdx) + (dhdy*dhdy), eps)
               ry_new = min(dhdt*dhdy, cff_new*ry_max)
               rx_new = min(cff_new,max(dhdt*dhdx,-cff_new))
               rx_tang_obl(I,J,k) = rx_new
@@ -3093,7 +3093,7 @@ subroutine radiation_open_bdry_conds(OBC, u_new, u_old, v_new, v_old, G, GV, US,
           endif
           if (dhdt*dhdy < 0.0) dhdt = 0.0
 
-          cff_new = max(dhdx*dhdx + dhdy*dhdy, eps)
+          cff_new = max((dhdx*dhdx) + (dhdy*dhdy), eps)
           ry_new = min(dhdt*dhdy, cff_new*ry_max)
           rx_new = min(cff_new,max(dhdt*dhdx,-cff_new))
           if (gamma_u < 1.0) then
@@ -3235,7 +3235,7 @@ subroutine radiation_open_bdry_conds(OBC, u_new, u_old, v_new, v_old, G, GV, US,
                 dhdx = segment%grad_tan(i+1,1,k)
               endif
               if (dhdt*dhdy < 0.0) dhdt = 0.0
-              cff_new = max(dhdx*dhdx + dhdy*dhdy, eps)
+              cff_new = max((dhdx*dhdx) + (dhdy*dhdy), eps)
               ry_new = min(dhdt*dhdy, cff_new*ry_max)
               rx_new = min(cff_new,max(dhdt*dhdx,-cff_new))
               rx_tang_obl(I,J,k) = rx_new
@@ -3435,9 +3435,9 @@ subroutine gradient_at_q_points(G, GV, segment, uvel, vvel)
         do k=1,GV%ke
           do J=max(segment%HI%jsd, G%HI%jsd+1),min(segment%HI%jed, G%HI%jed-1)
             segment%grad_gradient(j,1,k) = (((vvel(i-1,J,k) - vvel(i-2,J,k))*G%IdxBu(I-2,J)) - &
-                 (vvel(i-1,J-1,k) - vvel(i-2,J-1,k))*G%IdxBu(I-2,J-1)) * G%mask2dCu(I-2,j)
+                 ((vvel(i-1,J-1,k) - vvel(i-2,J-1,k))*G%IdxBu(I-2,J-1))) * G%mask2dCu(I-2,j)
             segment%grad_gradient(j,2,k) = (((vvel(i,J,k) - vvel(i-1,J,k))*G%IdxBu(I-1,J)) - &
-                 (vvel(i,J-1,k) - vvel(i-1,J-1,k))*G%IdxBu(I-1,J-1)) * G%mask2dCu(I-1,j)
+                 ((vvel(i,J-1,k) - vvel(i-1,J-1,k))*G%IdxBu(I-1,J-1))) * G%mask2dCu(I-1,j)
           enddo
         enddo
       endif
@@ -3461,9 +3461,9 @@ subroutine gradient_at_q_points(G, GV, segment, uvel, vvel)
         do k=1,GV%ke
           do J=max(segment%HI%jsd, G%HI%jsd+1),min(segment%HI%jed, G%HI%jed-1)
             segment%grad_gradient(j,1,k) = (((vvel(i+3,J,k) - vvel(i+2,J,k))*G%IdxBu(I+2,J)) - &
-                 (vvel(i+3,J-1,k) - vvel(i+2,J-1,k))*G%IdxBu(I+2,J-1)) * G%mask2dCu(I+2,j)
+                 ((vvel(i+3,J-1,k) - vvel(i+2,J-1,k))*G%IdxBu(I+2,J-1))) * G%mask2dCu(I+2,j)
             segment%grad_gradient(j,2,k) = (((vvel(i+2,J,k) - vvel(i+1,J,k))*G%IdxBu(I+1,J)) - &
-                 (vvel(i+2,J-1,k) - vvel(i+1,J-1,k))*G%IdxBu(I+1,J-1)) * G%mask2dCu(I+1,j)
+                 ((vvel(i+2,J-1,k) - vvel(i+1,J-1,k))*G%IdxBu(I+1,J-1))) * G%mask2dCu(I+1,j)
           enddo
         enddo
       endif
@@ -3489,9 +3489,9 @@ subroutine gradient_at_q_points(G, GV, segment, uvel, vvel)
         do k=1,GV%ke
           do I=max(segment%HI%isd, G%HI%isd+1),min(segment%HI%ied, G%HI%ied-1)
             segment%grad_gradient(i,1,k) = (((uvel(I,j-1,k) - uvel(I,j-2,k))*G%IdyBu(I,J-2)) - &
-                 (uvel(I-1,j-1,k) - uvel(I-1,j-2,k))*G%IdyBu(I-1,J-2)) * G%mask2dCv(i,J-2)
+                 ((uvel(I-1,j-1,k) - uvel(I-1,j-2,k))*G%IdyBu(I-1,J-2))) * G%mask2dCv(i,J-2)
             segment%grad_gradient(i,2,k) = (((uvel(I,j,k) - uvel(I,j-1,k))*G%IdyBu(I,J-1)) - &
-                 (uvel(I-1,j,k) - uvel(I-1,j-1,k))*G%IdyBu(I-1,J-1)) * G%mask2dCv(i,J-1)
+                 ((uvel(I-1,j,k) - uvel(I-1,j-1,k))*G%IdyBu(I-1,J-1))) * G%mask2dCv(i,J-1)
           enddo
         enddo
       endif
@@ -3515,9 +3515,9 @@ subroutine gradient_at_q_points(G, GV, segment, uvel, vvel)
         do k=1,GV%ke
           do I=max(segment%HI%isd, G%HI%isd+1),min(segment%HI%ied, G%HI%ied-1)
             segment%grad_gradient(i,1,k) = (((uvel(I,j+3,k) - uvel(I,j+2,k))*G%IdyBu(I,J+2)) - &
-                 (uvel(I-1,j+3,k) - uvel(I-1,j+2,k))*G%IdyBu(I-1,J+2)) * G%mask2dCv(i,J+2)
+                 ((uvel(I-1,j+3,k) - uvel(I-1,j+2,k))*G%IdyBu(I-1,J+2))) * G%mask2dCv(i,J+2)
             segment%grad_gradient(i,2,k) = (((uvel(I,j+2,k) - uvel(I,j+1,k))*G%IdyBu(I,J+1)) - &
-                 (uvel(I-1,j+2,k) - uvel(I-1,j+1,k))*G%IdyBu(I-1,J+1)) * G%mask2dCv(i,J+1)
+                 ((uvel(I-1,j+2,k) - uvel(I-1,j+1,k))*G%IdyBu(I-1,J+1))) * G%mask2dCv(i,J+1)
           enddo
         enddo
       endif
@@ -5028,7 +5028,7 @@ subroutine mask_outside_OBCs(G, US, param_file, OBC)
   integer, parameter :: cin = 3, cout = 4, cland = -1, cedge = -2
   character(len=256) :: mesg    ! Message for error messages.
   real, allocatable, dimension(:,:) :: color, color2  ! For sorting inside from outside,
-                                                      ! two different ways
+                                                      ! two different ways [nondim]
 
   if (.not. associated(OBC)) return
 
@@ -5136,7 +5136,7 @@ end subroutine mask_outside_OBCs
 !> flood the cin, cout values
 subroutine flood_fill(G, color, cin, cout, cland)
   type(dyn_horgrid_type), intent(inout) :: G      !< Ocean grid structure
-  real, dimension(:,:),   intent(inout) :: color  !< For sorting inside from outside
+  real, dimension(:,:),   intent(inout) :: color  !< For sorting inside from outside [nondim]
   integer, intent(in) :: cin    !< color for inside the domain
   integer, intent(in) :: cout   !< color for outside the domain
   integer, intent(in) :: cland  !< color for inside the land mask
@@ -5196,7 +5196,7 @@ end subroutine flood_fill
 !> flood the cin, cout values
 subroutine flood_fill2(G, color, cin, cout, cland)
   type(dyn_horgrid_type), intent(inout) :: G       !< Ocean grid structure
-  real, dimension(:,:),   intent(inout) :: color   !< For sorting inside from outside
+  real, dimension(:,:),   intent(inout) :: color   !< For sorting inside from outside [nondim]
   integer, intent(in) :: cin    !< color for inside the domain
   integer, intent(in) :: cout   !< color for outside the domain
   integer, intent(in) :: cland  !< color for inside the land mask
@@ -5394,7 +5394,10 @@ subroutine update_segment_tracer_reservoirs(G, GV, uhr, vhr, h, OBC, dt, Reg)
                           ! For salinity the units would be [ppt S-1 ~> 1]
   integer :: i, j, k, m, n, ntr, nz, ntr_id, fd_id
   integer :: ishift, idir, jshift, jdir
-  real :: resrv_lfac_out, resrv_lfac_in
+  real :: resrv_lfac_out  ! The reservoir inverse length scale scaling factor for the outward
+                          ! direction per field [nondim]
+  real :: resrv_lfac_in   ! The reservoir inverse length scale scaling factor for the inward
+                          ! direction per field [nondim]
   real :: b_in, b_out     ! The 0 and 1 switch for tracer reservoirs
                           ! 1 if the length scale of reservoir is zero [nondim]
   real :: a_in, a_out     ! The 0 and 1(-1) switch for reservoir source weights

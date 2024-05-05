@@ -1594,7 +1594,7 @@ subroutine initialize_velocity_circular(u, v, G, GV, US, param_file, just_read)
 
     x = 2.0*(G%geoLonBu(ig,jg)-G%west_lon) / G%len_lon - 1.0  ! -1<x<1
     y = 2.0*(G%geoLatBu(ig,jg)-G%south_lat) / G%len_lat - 1.0 ! -1<y<1
-    r = sqrt( x**2 + y**2 ) ! Circular stream function is a function of radius only
+    r = sqrt( (x**2) + (y**2) ) ! Circular stream function is a function of radius only
     r = min(1.0, r) ! Flatten stream function in corners of box
     my_psi = 0.5*(1.0 - cos(dpi*r))
     my_psi = my_psi * (circular_max_u * G%US%m_to_L*G%len_lon*1e3 / dpi) ! len_lon is in km
@@ -1915,7 +1915,6 @@ subroutine initialize_sponges_file(G, GV, US, use_temperature, tv, u, v, depth_t
   character(len=40) :: mdl = "initialize_sponges_file"
   character(len=200) :: damping_file, uv_damping_file, state_file, state_uv_file  ! Strings for filenames
   character(len=200) :: filename, inputdir ! Strings for file/path and path.
-  type(verticalGrid_type) :: GV_loc ! A temporary vertical grid structure
 
   logical :: use_ALE ! True if ALE is being used, False if in layered mode
   logical :: time_space_interp_sponge ! If true use sponge data that need to be interpolated in both
@@ -2102,19 +2101,11 @@ subroutine initialize_sponges_file(G, GV, US, use_temperature, tv, u, v, depth_t
       enddo; enddo ; enddo
       deallocate(eta)
 
-      allocate(h(isd:ied,jsd:jed,nz_data))
       if (use_temperature) then
         allocate(tmp_T(isd:ied,jsd:jed,nz_data))
         allocate(tmp_S(isd:ied,jsd:jed,nz_data))
         call MOM_read_data(filename, potemp_var, tmp_T(:,:,:), G%Domain, scale=US%degC_to_C)
         call MOM_read_data(filename, salin_var, tmp_S(:,:,:), G%Domain, scale=US%ppt_to_S)
-      endif
-
-      GV_loc = GV ; GV_loc%ke = nz_data
-      if (use_temperature .and. associated(tv%eqn_of_state)) then
-        call dz_to_thickness(dz, tmp_T, tmp_S, tv%eqn_of_state, h, G, GV_loc, US)
-      else
-        call dz_to_thickness_simple(dz, h, G, GV_loc, US, layer_mode=.true.)
       endif
 
       if (sponge_uv) then
@@ -2132,7 +2123,6 @@ subroutine initialize_sponges_file(G, GV, US, use_temperature, tv, u, v, depth_t
         deallocate(tmp_S)
         deallocate(tmp_T)
       endif
-      deallocate(h)
       deallocate(dz)
 
       if (sponge_uv) then
