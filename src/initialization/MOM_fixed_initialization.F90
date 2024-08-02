@@ -26,6 +26,7 @@ use MOM_shared_initialization, only : read_face_length_list, set_velocity_depth_
 use MOM_shared_initialization, only : set_subgrid_topo_at_vel_from_file
 use MOM_shared_initialization, only : compute_global_grid_integrals, write_ocean_geometry_file
 use MOM_unit_scaling, only : unit_scale_type
+use MOM_verticalGrid, only : verticalGrid_type
 
 use user_initialization, only : user_initialize_topography
 use DOME_initialization, only : DOME_initialize_topography

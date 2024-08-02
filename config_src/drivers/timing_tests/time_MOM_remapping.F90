@@ -61,11 +61,12 @@ tmax(:) = 0.
 do isamp = 1, nsamp
   ! Time reconstruction + remapping
   do ischeme = 1, nschemes
-    call initialize_remapping(CS, remapping_scheme=trim(scheme_labels(ischeme)))
+    call initialize_remapping(CS, remapping_scheme=trim(scheme_labels(ischeme)), &
+                 h_neglect=h_neglect, h_neglect_edge=h_neglect)
     call cpu_time(start)
     do iter = 1, nits ! Make many passes to reduce sampling error
       do ij = 1, nij ! Calling nij times to make similar to cost in MOM_ALE()
-        call remapping_core_h(CS, nk, h0(:,ij), u0(:,ij), nk, h1(:,ij), u1(:,ij), h_neglect)
+        call remapping_core_h(CS, nk, h0(:,ij), u0(:,ij), nk, h1(:,ij), u1(:,ij))
       enddo
     enddo
     call cpu_time(finish)
