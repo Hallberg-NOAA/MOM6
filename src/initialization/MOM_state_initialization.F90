@@ -1189,7 +1189,13 @@ subroutine trim_for_ice(PF, G, GV, US, ALE_CSp, tv, h, just_read)
 
   if (use_remapping) then
     allocate(remap_CS)
-    call initialize_remapping(remap_CS, 'PLM', boundary_extrapolation=.true.)
+    if (remap_answer_date < 20190101) then
+      call initialize_remapping(remap_CS, 'PLM', boundary_extrapolation=.true., &
+                                h_neglect=1.0e-30*GV%m_to_H, h_neglect_edge=1.0e-10*GV%m_to_H)
+    else
+      call initialize_remapping(remap_CS, 'PLM', boundary_extrapolation=.true., &
+                                h_neglect=GV%H_subroundoff,  h_neglect_edge=GV%H_subroundoff)
+    endif
   endif
 
   ! Find edge values of T and S used in reconstructions
@@ -1332,10 +1338,7 @@ subroutine cut_off_column_top(nk, tv, GV, US, G_earth, depth, min_thickness, T, 
   real :: z_out, e_top ! Interface height positions [Z ~> m]
   real :: min_dz       ! The minimum thickness in depth units [Z ~> m]
   real :: dh_surf_rem  ! The remaining thickness to remove in non-Bousinesq mode [H ~> kg m-2]
-  logical :: answers_2018
   integer :: k
-
-  answers_2018 = .true. ; if (present(remap_answer_date)) answers_2018 = (remap_answer_date < 20190101)
 
   ! Keep a copy of the initial thicknesses in reverse order to use in remapping
   do k=1,nk ; h0(k) = h(nk+1-k) ; enddo
@@ -1407,13 +1410,8 @@ subroutine cut_off_column_top(nk, tv, GV, US, G_earth, depth, min_thickness, T, 
       T0(k) = T(nk+1-k)
       h1(k) = h(nk+1-k)
     enddo
-    if (answers_2018) then
-      call remapping_core_h(remap_CS, nk, h0, T0, nk, h1, T1, 1.0e-30*GV%m_to_H, 1.0e-10*GV%m_to_H)
-      call remapping_core_h(remap_CS, nk, h0, S0, nk, h1, S1, 1.0e-30*GV%m_to_H, 1.0e-10*GV%m_to_H)
-    else
-      call remapping_core_h(remap_CS, nk, h0, T0, nk, h1, T1, GV%H_subroundoff, GV%H_subroundoff)
-      call remapping_core_h(remap_CS, nk, h0, S0, nk, h1, S1, GV%H_subroundoff, GV%H_subroundoff)
-    endif
+    call remapping_core_h(remap_CS, nk, h0, T0, nk, h1, T1)
+    call remapping_core_h(remap_CS, nk, h0, S0, nk, h1, S1)
     do k=1,nk
       S(k) = S1(nk+1-k)
       T(k) = T1(nk+1-k)
@@ -2758,8 +2756,10 @@ subroutine MOM_temp_salt_initialize_from_Z(h, tv, depth_tot, G, GV, US, PF, just
     ! Build the target grid (and set the model thickness to it)
 
     call ALE_initRegridding( GV, US, G%max_depth, PF, mdl, regridCS ) ! sets regridCS
+    dz_neglect = set_dz_neglect(GV, US, remap_answer_date, dz_neglect_edge)
     call initialize_remapping( remapCS, remappingScheme, boundary_extrapolation=.false., &
-                               om4_remap_via_sub_cells=om4_remap_via_sub_cells, answer_date=remap_answer_date )
+                               om4_remap_via_sub_cells=om4_remap_via_sub_cells, answer_date=remap_answer_date, &
+                               h_neglect=dz_neglect, h_neglect_edge=dz_neglect_edge )
 
     ! Now remap from source grid to target grid, first setting reconstruction parameters
     if (remap_general) then
@@ -2797,13 +2797,10 @@ subroutine MOM_temp_salt_initialize_from_Z(h, tv, depth_tot, G, GV, US, PF, just
       enddo ; enddo
       deallocate( hTarget )
 
-      dz_neglect = set_dz_neglect(GV, US, remap_answer_date, dz_neglect_edge)
       call ALE_remap_scalar(remapCS, G, GV, nkd, dz1, tmpT1dIn, dz, tv%T, all_cells=remap_full_column, &
-                            old_remap=remap_old_alg, answer_date=remap_answer_date, &
-                            H_neglect=dz_neglect, H_neglect_edge=dz_neglect_edge)
+                            old_remap=remap_old_alg, answer_date=remap_answer_date)
       call ALE_remap_scalar(remapCS, G, GV, nkd, dz1, tmpS1dIn, dz, tv%S, all_cells=remap_full_column, &
-                            old_remap=remap_old_alg, answer_date=remap_answer_date, &
-                            H_neglect=dz_neglect, H_neglect_edge=dz_neglect_edge)
+                            old_remap=remap_old_alg, answer_date=remap_answer_date)
 
       if (GV%Boussinesq .or. GV%semi_Boussinesq) then
         ! This is a simple conversion of the target grid to thickness units that is not

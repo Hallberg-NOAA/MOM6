@@ -175,8 +175,8 @@ subroutine build_hycom1_column(CS, remapCS, eqn_of_state, nz, depth, h, T, S, p_
           ( p_col(nz) - p_col(1) )
     enddo
     ! Remap from original h and T,S to get T,S_col_new
-    call remapping_core_h(remapCS, nz, h(:), T, CS%nk, h_col_new, T_col_new, h_neglect, h_neglect_edge)
-    call remapping_core_h(remapCS, nz, h(:), S, CS%nk, h_col_new, S_col_new, h_neglect, h_neglect_edge)
+    call remapping_core_h(remapCS, nz, h(:), T, CS%nk, h_col_new, T_col_new)
+    call remapping_core_h(remapCS, nz, h(:), S, CS%nk, h_col_new, S_col_new)
     call build_hycom1_target_anomaly(CS, remapCS, eqn_of_state, CS%nk, depth, &
         h_col_new, T_col_new, S_col_new, p_col_new, r_col_new, RiA_new, h_neglect, h_neglect_edge)
     do k= 2,CS%nk

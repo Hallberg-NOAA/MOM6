@@ -40,6 +40,11 @@ type, public :: remapping_CS ; private
   !> If true, use the OM4 version of the remapping algorithm that makes poor assumptions
   !! about the reconstructions in top and bottom layers of the source grid
   logical :: om4_remap_via_sub_cells = .false.
+
+  !> A negligibly small width for the purpose of cell reconstructions in the same units as h0 [H]
+  real :: h_neglect
+  !> A negligibly small width for the purpose of edge value calculations in the same units as h0 [H].
+  real :: h_neglect_edge
 end type
 
 !> Class to assist in unit tests
@@ -114,7 +119,8 @@ contains
 !> Set parameters within remapping object
 subroutine remapping_set_param(CS, remapping_scheme, boundary_extrapolation,  &
                check_reconstruction, check_remapping, force_bounds_in_subcell, &
-               om4_remap_via_sub_cells, answers_2018, answer_date)
+               om4_remap_via_sub_cells, answers_2018, answer_date, &
+               h_neglect, h_neglect_edge)
   type(remapping_CS),         intent(inout) :: CS !< Remapping control structure
   character(len=*), optional, intent(in)    :: remapping_scheme !< Remapping scheme to use
   logical, optional,          intent(in)    :: boundary_extrapolation !< Indicate to extrapolate in boundary cells
@@ -124,6 +130,10 @@ subroutine remapping_set_param(CS, remapping_scheme, boundary_extrapolation,  &
   logical, optional,          intent(in)    :: om4_remap_via_sub_cells !< If true, use OM4 remapping algorithm
   logical, optional,          intent(in)    :: answers_2018 !< If true use older, less accurate expressions.
   integer, optional,          intent(in)    :: answer_date  !< The vintage of the expressions to use
+  real,    optional,          intent(in)    :: h_neglect !< A negligibly small width for the purpose of cell
+                                                         !! reconstructions in the same units as h0 [H]
+  real,    optional,          intent(in)    :: h_neglect_edge !< A negligibly small width for the purpose of edge
+                                                         !! value calculations in the same units as h0 [H].
 
   if (present(remapping_scheme)) then
     call setReconstructionType( remapping_scheme, CS )
@@ -152,6 +162,12 @@ subroutine remapping_set_param(CS, remapping_scheme, boundary_extrapolation,  &
   endif
   if (present(answer_date)) then
     CS%answer_date = answer_date
+  endif
+  if (present(h_neglect)) then
+    CS%h_neglect = h_neglect
+  endif
+  if (present(h_neglect_edge)) then
+    CS%h_neglect_edge = h_neglect_edge
   endif
 
 end subroutine remapping_set_param
@@ -182,7 +198,7 @@ end subroutine extract_member_remapping_CS
 !! \todo Remove h_neglect argument by moving into remapping_CS
 !! \todo Remove PCM_cell argument by adding new method in Recon1D class
 !! \todo Inline the two versions of remap_via_sub_cells() in remapping_core_h() to eliminate remap_via_sub_cells()
-subroutine remapping_core_h(CS, n0, h0, u0, n1, h1, u1, h_neglect, h_neglect_edge, PCM_cell)
+subroutine remapping_core_h(CS, n0, h0, u0, n1, h1, u1, PCM_cell)
   type(remapping_CS),  intent(in)  :: CS !< Remapping control structure
   integer,             intent(in)  :: n0 !< Number of cells on source grid
   real, dimension(n0), intent(in)  :: h0 !< Cell widths on source grid [H]
@@ -190,12 +206,6 @@ subroutine remapping_core_h(CS, n0, h0, u0, n1, h1, u1, h_neglect, h_neglect_edg
   integer,             intent(in)  :: n1 !< Number of cells on target grid
   real, dimension(n1), intent(in)  :: h1 !< Cell widths on target grid [H]
   real, dimension(n1), intent(out) :: u1 !< Cell averages on target grid [A]
-  real,                intent(in)  :: h_neglect !< A negligibly small width for the
-                                         !! purpose of cell reconstructions
-                                         !! in the same units as h0 [H]
-  real, optional,      intent(in)  :: h_neglect_edge !< A negligibly small width for the purpose
-                                         !! of edge value calculations in the same units as h0 [H].
-                                         !! The default is h_neglect.
   logical, dimension(n0), optional, intent(in) :: PCM_cell !< If present, use PCM remapping for
                                          !! cells in the source grid where this is true.
 
@@ -204,20 +214,18 @@ subroutine remapping_core_h(CS, n0, h0, u0, n1, h1, u1, h_neglect, h_neglect_edg
   real, dimension(n0,2)           :: ppoly_r_S     ! Edge slope of polynomial [A H-1]
   real, dimension(n0,CS%degree+1) :: ppoly_r_coefs ! Coefficients of polynomial reconstructions [A]
   real :: uh_err       ! A bound on the error in the sum of u*h, as estimated by the remapping code [A H]
-  real :: hNeglect_edge ! Negligibly small cell widths in the same units as h0 [H]
   integer :: iMethod   ! An integer indicating the integration method used
 
-  hNeglect_edge = h_neglect ; if (present(h_neglect_edge)) hNeglect_edge = h_neglect_edge
 
   call build_reconstructions_1d( CS, n0, h0, u0, ppoly_r_coefs, ppoly_r_E, ppoly_r_S, iMethod, &
-                                 h_neglect, hNeglect_edge, PCM_cell )
+                                 CS%h_neglect, CS%h_neglect_edge, PCM_cell )
 
   if (CS%om4_remap_via_sub_cells) then
 
     if (CS%check_reconstruction) call check_reconstructions_1d(n0, h0, u0, CS%degree, &
                                    CS%boundary_extrapolation, ppoly_r_coefs, ppoly_r_E)
 
-    ! This calls the OM4 version of the remapmping algorithms
+    ! This calls the OM4 version of the remapping algorithms
     call remap_via_sub_cells_om4( n0, h0, u0, ppoly_r_E, ppoly_r_coefs, n1, h1, iMethod, &
                                   CS%force_bounds_in_subcell, u1, uh_err )
 
@@ -235,7 +243,7 @@ end subroutine remapping_core_h
 
 !> Remaps column of values u0 on grid h0 to implied grid h1
 !! where the interfaces of h1 differ from those of h0 by dx.
-subroutine remapping_core_w( CS, n0, h0, u0, n1, dx, u1, h_neglect, h_neglect_edge )
+subroutine remapping_core_w( CS, n0, h0, u0, n1, dx, u1)
   type(remapping_CS),    intent(in)  :: CS !< Remapping control structure
   integer,               intent(in)  :: n0 !< Number of cells on source grid
   real, dimension(n0),   intent(in)  :: h0 !< Cell widths on source grid [H]
@@ -243,26 +251,17 @@ subroutine remapping_core_w( CS, n0, h0, u0, n1, dx, u1, h_neglect, h_neglect_ed
   integer,               intent(in)  :: n1 !< Number of cells on target grid
   real, dimension(n1+1), intent(in)  :: dx !< Cell widths on target grid [H]
   real, dimension(n1),   intent(out) :: u1 !< Cell averages on target grid [A]
-  real,                  intent(in)  :: h_neglect !< A negligibly small width for the
-                                           !! purpose of cell reconstructions
-                                           !! in the same units as h0 [H].
-  real, optional,        intent(in)  :: h_neglect_edge !< A negligibly small width for the purpose
-                                           !! of edge value calculations in the same units as h0 [H].
-                                           !! The default is h_neglect.
   ! Local variables
   real, dimension(n0,2)           :: ppoly_r_E     ! Edge value of polynomial [A]
   real, dimension(n0,2)           :: ppoly_r_S     ! Edge slope of polynomial [A H-1]
   real, dimension(n0,CS%degree+1) :: ppoly_r_coefs ! Coefficients of polynomial reconstructions [A]
   real, dimension(n1) :: h1 !< Cell widths on target grid [H]
   real :: uh_err       ! A bound on the error in the sum of u*h, as estimated by the remapping code [A H]
-  real :: hNeglect_edge  ! Negligibly small thicknesses [H]
   integer :: iMethod   ! An integer indicating the integration method used
   integer :: k
 
-  hNeglect_edge = h_neglect ; if (present(h_neglect_edge)) hNeglect_edge = h_neglect_edge
-
   call build_reconstructions_1d( CS, n0, h0, u0, ppoly_r_coefs, ppoly_r_E, ppoly_r_S, iMethod,&
-                                  h_neglect, hNeglect_edge )
+                                 CS%h_neglect, CS%h_neglect_edge )
 
   if (CS%check_reconstruction) call check_reconstructions_1d(n0, h0, u0, CS%degree, &
                                    CS%boundary_extrapolation, ppoly_r_coefs, ppoly_r_E)
@@ -1520,7 +1519,8 @@ end subroutine dzFromH1H2
 !> Constructor for remapping control structure
 subroutine initialize_remapping( CS, remapping_scheme, boundary_extrapolation, &
                 check_reconstruction, check_remapping, force_bounds_in_subcell, &
-                om4_remap_via_sub_cells, answers_2018, answer_date)
+                om4_remap_via_sub_cells, answers_2018, answer_date, &
+                h_neglect, h_neglect_edge)
   ! Arguments
   type(remapping_CS), intent(inout) :: CS !< Remapping control structure
   character(len=*),   intent(in)    :: remapping_scheme !< Remapping scheme to use
@@ -1531,12 +1531,17 @@ subroutine initialize_remapping( CS, remapping_scheme, boundary_extrapolation, &
   logical, optional,  intent(in)    :: om4_remap_via_sub_cells !< If true, use OM4 remapping algorithm
   logical, optional,  intent(in)    :: answers_2018 !< If true use older, less accurate expressions.
   integer, optional,  intent(in)    :: answer_date  !< The vintage of the expressions to use
+  real,    optional,  intent(in)    :: h_neglect !< A negligibly small width for the purpose of cell
+                                                 !! reconstructions in the same units as h0 [H]
+  real,    optional,  intent(in)    :: h_neglect_edge !< A negligibly small width for the purpose of edge
+                                                      !! value calculations in the same units as h0 [H].
 
   ! Note that remapping_scheme is mandatory for initialize_remapping()
   call remapping_set_param(CS, remapping_scheme=remapping_scheme, boundary_extrapolation=boundary_extrapolation,  &
                check_reconstruction=check_reconstruction, check_remapping=check_remapping, &
                force_bounds_in_subcell=force_bounds_in_subcell, &
-               om4_remap_via_sub_cells=om4_remap_via_sub_cells, answers_2018=answers_2018, answer_date=answer_date)
+               om4_remap_via_sub_cells=om4_remap_via_sub_cells, answers_2018=answers_2018, answer_date=answer_date, &
+               h_neglect=h_neglect, h_neglect_edge=h_neglect_edge)
 
 end subroutine initialize_remapping
 
@@ -1636,7 +1641,8 @@ logical function remapping_unit_tests(verbose)
 
   if (verbose) write(test%stdout,*) '  - - - - - 1st generation tests - - - - -'
 
-  call initialize_remapping(CS, 'PPM_H4', answer_date=answer_date)
+  call initialize_remapping(CS, 'PPM_H4', answer_date=answer_date, &
+                            h_neglect=h_neglect, h_neglect_edge=h_neglect_edge)
 
   ! Profile 0: 4 layers of thickness 0.75 and total depth 3, with du/dz=8
   n0 = 4
@@ -1656,7 +1662,7 @@ logical function remapping_unit_tests(verbose)
 
   ! Mapping u1 from h1 to h2
   call dzFromH1H2( n0, h0, n1, h1, dx1 )
-  call remapping_core_w( CS, n0, h0, u0, n1, dx1, u1, h_neglect, h_neglect_edge)
+  call remapping_core_w( CS, n0, h0, u0, n1, dx1, u1)
   call test%real_arr(3, u1, (/8.,0.,-8./), 'remapping_core_w() PPM_H4')
 
   allocate(ppoly0_E(n0,2), ppoly0_S(n0,2), ppoly0_coefs(n0,CS%degree+1))
@@ -2120,7 +2126,7 @@ logical function remapping_unit_tests(verbose)
   u0 = (/1.0, 1.5, 2.5, 3.5, 4.5, 5.5, 6.0, 6.0/)
   allocate( u1(8) )
 
-  call initialize_remapping(CS, 'PLM', answer_date=99990101)
+  call initialize_remapping(CS, 'PLM', answer_date=99990101, h_neglect=1.e-17, h_neglect_edge=1.e-2)
 
   do om4 = 0, 1
     if ( om4 == 0 ) then
@@ -2132,27 +2138,27 @@ logical function remapping_unit_tests(verbose)
     endif
 
     ! Unchanged grid
-    call remapping_core_h( CS, n0, h0, u0, 8, [0.,1.,1.,1.,1.,1.,0.,0.], u1, 1.e-17, 1.e-2)
+    call remapping_core_h( CS, n0, h0, u0, 8, [0.,1.,1.,1.,1.,1.,0.,0.], u1)
     call test%real_arr(8, u1, (/1.0,1.5,2.5,3.5,4.5,5.5,6.0,6.0/), 'PLM: remapped  h=01111100->h=01111100'//om4_tag)
 
     ! Removing vanished layers (unchanged values for non-vanished layers, layer centers 0.5, 1.5, 2.5, 3.5, 4.5)
-    call remapping_core_h( CS, n0, h0, u0, 5, [1.,1.,1.,1.,1.], u1, 1.e-17, 1.e-2)
+    call remapping_core_h( CS, n0, h0, u0, 5, [1.,1.,1.,1.,1.], u1)
     call test%real_arr(5, u1, (/1.5,2.5,3.5,4.5,5.5/), 'PLM: remapped  h=01111100->h=11111'//om4_tag)
 
     ! Remapping to variable thickness layers (layer centers 0.25, 1.0, 2.25, 4.0)
-    call remapping_core_h( CS, n0, h0, u0, 4, [0.5,1.,1.5,2.], u1, 1.e-17, 1.e-2)
+    call remapping_core_h( CS, n0, h0, u0, 4, [0.5,1.,1.5,2.], u1)
     call test%real_arr(4, u1, (/1.25,2.,3.25,5./), 'PLM: remapped  h=01111100->h=h1t2'//om4_tag)
 
     ! Remapping to variable thickness + vanished layers (layer centers 0.25, 1.0, 1.5, 2.25, 4.0)
-    call remapping_core_h( CS, n0, h0, u0, 6, [0.5,1.,0.,1.5,2.,0.], u1, 1.e-17, 1.e-2)
+    call remapping_core_h( CS, n0, h0, u0, 6, [0.5,1.,0.,1.5,2.,0.], u1)
     call test%real_arr(6, u1, (/1.25,2.,2.5,3.25,5.,6./), 'PLM: remapped  h=01111100->h=h10t20'//om4_tag)
 
     ! Remapping to deeper water column (layer centers 0.75, 2.25, 3., 5., 8.)
-    call remapping_core_h( CS, n0, h0, u0, 5, [1.5,1.5,0.,4.,2.], u1, 1.e-17, 1.e-2)
+    call remapping_core_h( CS, n0, h0, u0, 5, [1.5,1.5,0.,4.,2.], u1)
     call test%real_arr(5, u1, (/1.75,3.25,4.,5.5,6./), 'PLM: remapped  h=01111100->h=tt02'//om4_tag)
 
     ! Remapping to slightly shorter water column (layer centers 0.5, 1.5, 2.5,, 3.5, 4.25)
-    call remapping_core_h( CS, n0, h0, u0, 5, [1.,1.,1.,1.,0.5], u1, 1.e-17, 1.e-2)
+    call remapping_core_h( CS, n0, h0, u0, 5, [1.,1.,1.,1.,0.5], u1)
     if ( om4 == 0 ) then
       call test%real_arr(5, u1, (/1.5,2.5,3.5,4.5,5.25/), 'PLM: remapped  h=01111100->h=1111h')
     else
@@ -2160,7 +2166,7 @@ logical function remapping_unit_tests(verbose)
     endif
 
     ! Remapping to much shorter water column (layer centers 0.25, 0.5, 1.)
-    call remapping_core_h( CS, n0, h0, u0, 3, [0.5,0.,1.], u1, 1.e-17, 1.e-2)
+    call remapping_core_h( CS, n0, h0, u0, 3, [0.5,0.,1.], u1)
     if ( om4 == 0 ) then
       call test%real_arr(3, u1, (/1.25,1.5,2./), 'PLM: remapped  h=01111100->h=h01')
     else

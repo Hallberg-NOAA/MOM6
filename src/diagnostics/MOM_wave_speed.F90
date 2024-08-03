@@ -673,15 +673,8 @@ subroutine wave_speed(h, tv, G, GV, US, cg1, CS, halo_size, use_ebt_mode, mono_N
               mode_struct(1:kc)=0.
             endif
 
-            if (CS%remap_answer_date < 20190101) then
-              call remapping_core_h(CS%remapping_CS, kc, Hc(:), mode_struct, &
-                                    nz, h(i,j,:), modal_structure(i,j,:), &
-                                    1.0e-30*GV%m_to_H, 1.0e-10*GV%m_to_H)
-            else
-              call remapping_core_h(CS%remapping_CS, kc, Hc(:), mode_struct, &
-                                    nz, h(i,j,:), modal_structure(i,j,:), &
-                                    GV%H_subroundoff, GV%H_subroundoff)
-            endif
+            call remapping_core_h(CS%remapping_CS, kc, Hc(:), mode_struct, &
+                                  nz, h(i,j,:), modal_structure(i,j,:))
           endif
         else
           cg1(i,j) = 0.0
@@ -1358,8 +1351,7 @@ subroutine wave_speeds(h, tv, G, GV, US, nmodes, cn, CS, w_struct, u_struct, u_s
 
             ! for u (remap) onto all layers
             call remapping_core_h(CS%remapping_CS, kc, Hc(1:kc), mode_struct_fder(1:kc), &
-                                  nz, h(i,j,:), modal_structure_fder(:), &
-                                  GV%H_subroundoff, GV%H_subroundoff)
+                                  nz, h(i,j,:), modal_structure_fder(:))
 
             ! write the wave structure
             do k=1,nz+1
@@ -1534,8 +1526,7 @@ subroutine wave_speeds(h, tv, G, GV, US, nmodes, cn, CS, w_struct, u_struct, u_s
 
                 ! for u (remap) onto all layers
                 call remapping_core_h(CS%remapping_CS, kc, Hc(1:kc), mode_struct_fder(1:kc), &
-                                      nz, h(i,j,:), modal_structure_fder(:), &
-                                      GV%H_subroundoff, GV%H_subroundoff)
+                                      nz, h(i,j,:), modal_structure_fder(:))
 
                 ! write the wave structure
                 ! note that m=1 solves for 2nd mode,...
@@ -1610,10 +1601,11 @@ subroutine tridiag_det(a, c, ks, ke, lam, det, ddet, row_scale)
 end subroutine tridiag_det
 
 !> Initialize control structure for MOM_wave_speed
-subroutine wave_speed_init(CS, use_ebt_mode, mono_N2_column_fraction, mono_N2_depth, remap_answers_2018, &
+subroutine wave_speed_init(CS, GV, use_ebt_mode, mono_N2_column_fraction, mono_N2_depth, remap_answers_2018, &
                            remap_answer_date, better_speed_est, om4_remap_via_sub_cells, &
                            min_speed, wave_speed_tol, c1_thresh)
   type(wave_speed_CS), intent(inout) :: CS  !< Wave speed control struct
+  type(verticalGrid_type), intent(in) :: GV !< Vertical grid structure
   logical, optional, intent(in) :: use_ebt_mode  !< If true, use the equivalent
                                      !! barotropic mode instead of the first baroclinic mode.
   real,    optional, intent(in) :: mono_N2_column_fraction !< The lower fraction of water column over
@@ -1658,9 +1650,17 @@ subroutine wave_speed_init(CS, use_ebt_mode, mono_N2_column_fraction, mono_N2_de
                             c1_thresh=c1_thresh)
 
   ! The remap_answers_2018 argument here is irrelevant, because remapping is hard-coded to use PLM.
-  call initialize_remapping(CS%remapping_CS, 'PLM', boundary_extrapolation=.false., &
-                            om4_remap_via_sub_cells=om4_remap_via_sub_cells, &
-                            answer_date=CS%remap_answer_date)
+  if (CS%remap_answer_date < 20190101) then
+    call initialize_remapping(CS%remapping_CS, 'PLM', boundary_extrapolation=.false., &
+                              om4_remap_via_sub_cells=om4_remap_via_sub_cells, &
+                              answer_date=CS%remap_answer_date, &
+                              h_neglect=1.0e-30*GV%m_to_H, h_neglect_edge=1.0e-10*GV%m_to_H)
+  else
+    call initialize_remapping(CS%remapping_CS, 'PLM', boundary_extrapolation=.false., &
+                              om4_remap_via_sub_cells=om4_remap_via_sub_cells, &
+                              answer_date=CS%remap_answer_date, &
+                              h_neglect=GV%H_subroundoff, h_neglect_edge=GV%H_subroundoff)
+  endif
 
 end subroutine wave_speed_init
 

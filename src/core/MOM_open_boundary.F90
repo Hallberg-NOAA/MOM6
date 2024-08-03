@@ -41,6 +41,7 @@ implicit none ; private
 
 public open_boundary_apply_normal_flow
 public open_boundary_config
+public open_boundary_setup_vert
 public open_boundary_init
 public open_boundary_query
 public open_boundary_end
@@ -382,6 +383,11 @@ type, public :: ocean_OBC_type
                                 !! for remapping.  Values below 20190101 recover the remapping
                                 !! answers from 2018, while higher values use more robust
                                 !! forms of the same remapping expressions.
+  logical :: check_reconstruction !< Flag for remapping to run checks on reconstruction
+  logical :: check_remapping      !< Flag for remapping to run internal checks
+  logical :: force_bounds_in_subcell !< Flag for remapping to hide overshoot using bounds
+  logical :: om4_remap_via_sub_cells !< If true, use the OM4 remapping algorithm
+  character(40) :: remappingScheme !< String selecting the vertical remapping scheme
   type(group_pass_type) :: pass_oblique  !< Structure for group halo pass
 end type ocean_OBC_type
 
@@ -425,7 +431,6 @@ contains
 !> and ALE_init.  Therefore segment data are not fully initialized
 !> here. The remainder of the segment data are initialized in a
 !> later call to update_open_boundary_data
-
 subroutine open_boundary_config(G, US, param_file, OBC)
   type(dyn_horgrid_type),  intent(inout) :: G   !< Ocean grid structure
   type(unit_scale_type),   intent(in)    :: US  !< A dimensional unit scaling type
@@ -439,6 +444,7 @@ subroutine open_boundary_config(G, US, param_file, OBC)
   character(len=1024) :: segment_str      ! The contents (rhs) for parameter "segment_param_str"
   character(len=200) :: config1          ! String for OBC_USER_CONFIG
   real               :: Lscale_in, Lscale_out ! parameters controlling tracer values at the boundaries [L ~> m]
+  real :: dz_neglect, dz_neglect_edge ! Small thicknesses [Z ~> m]
   integer :: default_answer_date  ! The default setting for the various ANSWER_DATE flags.
   logical :: check_reconstruction, check_remapping, force_bounds_in_subcell
   logical :: om4_remap_via_sub_cells ! If true, use the OM4 remapping algorithm
@@ -667,23 +673,23 @@ subroutine open_boundary_config(G, US, param_file, OBC)
       if (Lscale_out>0.) OBC%segment(l)%Tr_InvLscale_out =  1.0/Lscale_out
     enddo
 
-    call get_param(param_file, mdl, "REMAPPING_SCHEME", remappingScheme, &
+    call get_param(param_file, mdl, "REMAPPING_SCHEME", OBC%remappingScheme, &
           "This sets the reconstruction scheme used "//&
           "for vertical remapping for all variables. "//&
           "It can be one of the following schemes: \n"//&
           trim(remappingSchemesDoc), default=remappingDefaultScheme,do_not_log=.true.)
-    call get_param(param_file, mdl, "FATAL_CHECK_RECONSTRUCTIONS", check_reconstruction, &
+    call get_param(param_file, mdl, "FATAL_CHECK_RECONSTRUCTIONS", OBC%check_reconstruction, &
           "If true, cell-by-cell reconstructions are checked for "//&
           "consistency and if non-monotonicity or an inconsistency is "//&
           "detected then a FATAL error is issued.", default=.false.,do_not_log=.true.)
-    call get_param(param_file, mdl, "FATAL_CHECK_REMAPPING", check_remapping, &
+    call get_param(param_file, mdl, "FATAL_CHECK_REMAPPING", OBC%check_remapping, &
           "If true, the results of remapping are checked for "//&
           "conservation and new extrema and if an inconsistency is "//&
           "detected then a FATAL error is issued.", default=.false.,do_not_log=.true.)
     call get_param(param_file, mdl, "BRUSHCUTTER_MODE", OBC%brushcutter_mode, &
          "If true, read external OBC data on the supergrid.", &
          default=.false.)
-    call get_param(param_file, mdl, "REMAP_BOUND_INTERMEDIATE_VALUES", force_bounds_in_subcell, &
+    call get_param(param_file, mdl, "REMAP_BOUND_INTERMEDIATE_VALUES", OBC%force_bounds_in_subcell, &
           "If true, the values on the intermediate grid used for remapping "//&
           "are forced to be bounded, which might not be the case due to "//&
           "round off.", default=.false.,do_not_log=.true.)
@@ -696,16 +702,10 @@ subroutine open_boundary_config(G, US, param_file, OBC)
                  "that were in use at the end of 2018.  Higher values result in the use of more "//&
                  "robust and accurate forms of mathematically equivalent expressions.", &
                  default=default_answer_date)
-    call get_param(param_file, mdl, "OBC_REMAPPING_USE_OM4_SUBCELLS", om4_remap_via_sub_cells, &
+    call get_param(param_file, mdl, "OBC_REMAPPING_USE_OM4_SUBCELLS", OBC%om4_remap_via_sub_cells, &
                  "If true, use the OM4 remapping-via-subcells algorithm for neutral diffusion. "//&
                  "See REMAPPING_USE_OM4_SUBCELLS for more details. "//&
                  "We recommend setting this option to false.", default=.true.)
-
-    allocate(OBC%remap_CS)
-    call initialize_remapping(OBC%remap_CS, remappingScheme, boundary_extrapolation = .false., &
-               check_reconstruction=check_reconstruction, check_remapping=check_remapping, &
-               om4_remap_via_sub_cells=om4_remap_via_sub_cells, &
-               force_bounds_in_subcell=force_bounds_in_subcell, answer_date=OBC%remap_answer_date)
 
   endif ! OBC%number_of_segments > 0
 
@@ -728,6 +728,35 @@ subroutine open_boundary_config(G, US, param_file, OBC)
   endif
 
 end subroutine open_boundary_config
+
+!> Setup vertical remaping for open boundaries
+subroutine open_boundary_setup_vert(GV, US, OBC)
+  type(verticalGrid_type), intent(in)    :: GV  !< Container for vertical grid information
+  type(unit_scale_type),   intent(in)    :: US  !< A dimensional unit scaling type
+  type(ocean_OBC_type),    pointer       :: OBC !< Open boundary control structure
+
+  ! Local variables
+  real :: dz_neglect, dz_neglect_edge ! Small thicknesses [Z ~> m]
+
+  if (associated(OBC)) then
+    if (OBC%number_of_segments > 0) then
+      if (GV%Boussinesq .and. (OBC%remap_answer_date < 20190101)) then
+        dz_neglect = US%m_to_Z * 1.0e-30 ; dz_neglect_edge = US%m_to_Z * 1.0e-10
+      elseif (GV%semi_Boussinesq .and. (OBC%remap_answer_date < 20190101)) then
+        dz_neglect = GV%kg_m2_to_H*GV%H_to_Z * 1.0e-30 ; dz_neglect_edge = GV%kg_m2_to_H*GV%H_to_Z * 1.0e-10
+      else
+        dz_neglect = GV%dZ_subroundoff ; dz_neglect_edge = GV%dZ_subroundoff
+      endif
+      allocate(OBC%remap_CS)
+      call initialize_remapping(OBC%remap_CS, OBC%remappingScheme, boundary_extrapolation = .false., &
+                 check_reconstruction=OBC%check_reconstruction, check_remapping=OBC%check_remapping, &
+                 om4_remap_via_sub_cells=OBC%om4_remap_via_sub_cells, &
+                 force_bounds_in_subcell=OBC%force_bounds_in_subcell, answer_date=OBC%remap_answer_date, &
+                 h_neglect=dz_neglect, h_neglect_edge=dz_neglect_edge)
+    endif
+  endif
+
+end subroutine open_boundary_setup_vert
 
 !> Allocate space for reading OBC data from files. It sets up the required vertical
 !! remapping. In the process, it does funky stuff with the MPI processes.
@@ -3867,7 +3896,6 @@ subroutine update_OBC_segment_data(G, GV, US, OBC, tv, h, Time)
   real, allocatable :: normal_trans_bt(:,:) ! barotropic transport [H L2 T-1 ~> m3 s-1]
   integer :: turns    ! Number of index quarter turns
   real :: time_delta  ! Time since tidal reference date [T ~> s]
-  real :: dz_neglect, dz_neglect_edge ! Small thicknesses [Z ~> m]
 
   is = G%isc ; ie = G%iec ; js = G%jsc ; je = G%jec
   isd = G%isd ; ied = G%ied ; jsd = G%jsd ; jed = G%jed
@@ -3879,14 +3907,6 @@ subroutine update_OBC_segment_data(G, GV, US, OBC, tv, h, Time)
   if (.not. associated(OBC)) return
 
   if (OBC%add_tide_constituents) time_delta = US%s_to_T * time_type_to_real(Time - OBC%time_ref)
-
-  if (GV%Boussinesq .and. (OBC%remap_answer_date < 20190101)) then
-    dz_neglect = US%m_to_Z * 1.0e-30 ; dz_neglect_edge = US%m_to_Z * 1.0e-10
-  elseif (GV%semi_Boussinesq .and. (OBC%remap_answer_date < 20190101)) then
-    dz_neglect = GV%kg_m2_to_H*GV%H_to_Z * 1.0e-30 ; dz_neglect_edge = GV%kg_m2_to_H*GV%H_to_Z * 1.0e-10
-  else
-    dz_neglect = GV%dZ_subroundoff ; dz_neglect_edge = GV%dZ_subroundoff
-  endif
 
   if (OBC%number_of_segments >= 1) then
     call thickness_to_dz(h, tv, dz, G, GV, US)
@@ -4179,22 +4199,19 @@ subroutine update_OBC_segment_data(G, GV, US, OBC, tv, h, Time)
                   call remapping_core_h(OBC%remap_CS, &
                        segment%field(m)%nk_src, segment%field(m)%dz_src(I,J,:), &
                        segment%field(m)%buffer_src(I,J,:), &
-                       GV%ke, dz_stack, segment%field(m)%buffer_dst(I,J,:), &
-                       dz_neglect, dz_neglect_edge)
+                       GV%ke, dz_stack, segment%field(m)%buffer_dst(I,J,:))
                 elseif (G%mask2dCu(I,j)>0.) then
                   dz_stack(:) = dz(i+ishift,j,:)
                   call remapping_core_h(OBC%remap_CS, &
                        segment%field(m)%nk_src, segment%field(m)%dz_src(I,J,:), &
                        segment%field(m)%buffer_src(I,J,:), &
-                       GV%ke, dz_stack, segment%field(m)%buffer_dst(I,J,:), &
-                       dz_neglect, dz_neglect_edge)
+                       GV%ke, dz_stack, segment%field(m)%buffer_dst(I,J,:))
                 elseif (G%mask2dCu(I,j+1)>0.) then
                   dz_stack(:) = dz(i+ishift,j+1,:)
                   call remapping_core_h(OBC%remap_CS, &
                        segment%field(m)%nk_src, segment%field(m)%dz_src(I,j,:), &
                        segment%field(m)%buffer_src(I,J,:), &
-                       GV%ke, dz_stack, segment%field(m)%buffer_dst(I,J,:), &
-                       dz_neglect, dz_neglect_edge)
+                       GV%ke, dz_stack, segment%field(m)%buffer_dst(I,J,:))
                 endif
               enddo
             else
@@ -4209,8 +4226,7 @@ subroutine update_OBC_segment_data(G, GV, US, OBC, tv, h, Time)
                   call remapping_core_h(OBC%remap_CS, &
                        segment%field(m)%nk_src,  scl_fac*segment%field(m)%dz_src(I,j,:), &
                        segment%field(m)%buffer_src(I,j,:), &
-                       GV%ke, dz(i+ishift,j,:), segment%field(m)%buffer_dst(I,j,:), &
-                       dz_neglect, dz_neglect_edge)
+                       GV%ke, dz(i+ishift,j,:), segment%field(m)%buffer_dst(I,j,:))
                 endif
               enddo
             endif
@@ -4229,22 +4245,19 @@ subroutine update_OBC_segment_data(G, GV, US, OBC, tv, h, Time)
                   call remapping_core_h(OBC%remap_CS, &
                        segment%field(m)%nk_src, segment%field(m)%dz_src(I,J,:), &
                        segment%field(m)%buffer_src(I,J,:), &
-                       GV%ke, dz_stack, segment%field(m)%buffer_dst(I,J,:), &
-                       dz_neglect, dz_neglect_edge)
+                       GV%ke, dz_stack, segment%field(m)%buffer_dst(I,J,:))
                 elseif (G%mask2dCv(i,J)>0.) then
                   dz_stack(:) = dz(i,j+jshift,:)
                   call remapping_core_h(OBC%remap_CS, &
                        segment%field(m)%nk_src, segment%field(m)%dz_src(I,J,:), &
                        segment%field(m)%buffer_src(I,J,:), &
-                       GV%ke, dz_stack, segment%field(m)%buffer_dst(I,J,:), &
-                       dz_neglect, dz_neglect_edge)
+                       GV%ke, dz_stack, segment%field(m)%buffer_dst(I,J,:))
                 elseif (G%mask2dCv(i+1,J)>0.) then
                   dz_stack(:) = dz(i+1,j+jshift,:)
                   call remapping_core_h(OBC%remap_CS, &
                        segment%field(m)%nk_src, segment%field(m)%dz_src(I,J,:), &
                        segment%field(m)%buffer_src(I,J,:), &
-                       GV%ke, dz_stack, segment%field(m)%buffer_dst(I,J,:), &
-                       dz_neglect, dz_neglect_edge)
+                       GV%ke, dz_stack, segment%field(m)%buffer_dst(I,J,:))
                 endif
               enddo
             else
@@ -4259,8 +4272,7 @@ subroutine update_OBC_segment_data(G, GV, US, OBC, tv, h, Time)
                   call remapping_core_h(OBC%remap_CS, &
                        segment%field(m)%nk_src, scl_fac* segment%field(m)%dz_src(i,J,:), &
                        segment%field(m)%buffer_src(i,J,:), &
-                       GV%ke, dz(i,j+jshift,:), segment%field(m)%buffer_dst(i,J,:), &
-                       dz_neglect, dz_neglect_edge)
+                       GV%ke, dz(i,j+jshift,:), segment%field(m)%buffer_dst(i,J,:))
                 endif
               enddo
             endif
@@ -5567,10 +5579,9 @@ subroutine remap_OBC_fields(G, GV, h_old, h_new, OBC, PCM_cell)
 
           if (present(PCM_cell)) then
             call remapping_core_h(OBC%remap_CS, nz, h1, segment%tr_Reg%Tr(m)%tres(I,j,:), nz, h2, tr_column, &
-                                  h_neglect, h_neglect, PCM_cell=PCM)
+                                  PCM_cell=PCM)
           else
-            call remapping_core_h(OBC%remap_CS, nz, h1, segment%tr_Reg%Tr(m)%tres(I,j,:), nz, h2, tr_column, &
-                                  h_neglect, h_neglect)
+            call remapping_core_h(OBC%remap_CS, nz, h1, segment%tr_Reg%Tr(m)%tres(I,j,:), nz, h2, tr_column)
           endif
 
           ! Possibly underflow any very tiny tracer concentrations to 0?
@@ -5585,7 +5596,7 @@ subroutine remap_OBC_fields(G, GV, h_old, h_new, OBC, PCM_cell)
 
         if (segment%radiation .and. (OBC%gamma_uv < 1.0)) then
           call remapping_core_h(OBC%remap_CS, nz, h1, segment%rx_norm_rad(I,j,:), nz, h2, r_norm_col, &
-                                h_neglect, h_neglect, PCM_cell=PCM)
+                                PCM_cell=PCM)
 
           do k=1,nz
             segment%rx_norm_rad(I,j,k) = r_norm_col(k)
@@ -5595,13 +5606,13 @@ subroutine remap_OBC_fields(G, GV, h_old, h_new, OBC, PCM_cell)
 
         if (segment%oblique .and. (OBC%gamma_uv < 1.0)) then
           call remapping_core_h(OBC%remap_CS, nz, h1, segment%rx_norm_obl(I,j,:), nz, h2, rxy_col, &
-                                h_neglect, h_neglect, PCM_cell=PCM)
+                                PCM_cell=PCM)
           segment%rx_norm_obl(I,j,:) = rxy_col(:)
           call remapping_core_h(OBC%remap_CS, nz, h1, segment%ry_norm_obl(I,j,:), nz, h2, rxy_col, &
-                                h_neglect, h_neglect, PCM_cell=PCM)
+                                PCM_cell=PCM)
           segment%ry_norm_obl(I,j,:) = rxy_col(:)
           call remapping_core_h(OBC%remap_CS, nz, h1, segment%cff_normal(I,j,:), nz, h2, rxy_col, &
-                                h_neglect, h_neglect, PCM_cell=PCM)
+                                PCM_cell=PCM)
           segment%cff_normal(I,j,:) = rxy_col(:)
 
           do k=1,nz
@@ -5635,10 +5646,9 @@ subroutine remap_OBC_fields(G, GV, h_old, h_new, OBC, PCM_cell)
 
           if (present(PCM_cell)) then
             call remapping_core_h(OBC%remap_CS, nz, h1, segment%tr_Reg%Tr(m)%tres(i,J,:), nz, h2, tr_column, &
-                                  h_neglect, h_neglect, PCM_cell=PCM)
+                                  PCM_cell=PCM)
           else
-            call remapping_core_h(OBC%remap_CS, nz, h1, segment%tr_Reg%Tr(m)%tres(i,J,:), nz, h2, tr_column, &
-                                  h_neglect, h_neglect)
+            call remapping_core_h(OBC%remap_CS, nz, h1, segment%tr_Reg%Tr(m)%tres(i,J,:), nz, h2, tr_column)
           endif
 
           ! Possibly underflow any very tiny tracer concentrations to 0?
@@ -5653,7 +5663,7 @@ subroutine remap_OBC_fields(G, GV, h_old, h_new, OBC, PCM_cell)
 
         if (segment%radiation .and. (OBC%gamma_uv < 1.0)) then
           call remapping_core_h(OBC%remap_CS, nz, h1, segment%ry_norm_rad(i,J,:), nz, h2, r_norm_col, &
-                                h_neglect, h_neglect, PCM_cell=PCM)
+                                PCM_cell=PCM)
 
           do k=1,nz
             segment%ry_norm_rad(i,J,k) = r_norm_col(k)
@@ -5663,13 +5673,13 @@ subroutine remap_OBC_fields(G, GV, h_old, h_new, OBC, PCM_cell)
 
         if (segment%oblique .and. (OBC%gamma_uv < 1.0)) then
           call remapping_core_h(OBC%remap_CS, nz, h1, segment%rx_norm_obl(i,J,:), nz, h2, rxy_col, &
-                                h_neglect, h_neglect, PCM_cell=PCM)
+                                PCM_cell=PCM)
           segment%rx_norm_obl(i,J,:) = rxy_col(:)
           call remapping_core_h(OBC%remap_CS, nz, h1, segment%ry_norm_obl(i,J,:), nz, h2, rxy_col, &
-                                h_neglect, h_neglect, PCM_cell=PCM)
+                                PCM_cell=PCM)
           segment%ry_norm_obl(i,J,:) = rxy_col(:)
           call remapping_core_h(OBC%remap_CS, nz, h1, segment%cff_normal(i,J,:), nz, h2, rxy_col, &
-                                h_neglect, h_neglect, PCM_cell=PCM)
+                                PCM_cell=PCM)
           segment%cff_normal(i,J,:) = rxy_col(:)
 
           do k=1,nz

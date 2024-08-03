@@ -179,8 +179,10 @@ subroutine MOM_initialize_tracer_from_Z(h, tr, G, GV, US, PF, src_file, src_var_
     allocate( dzSrc(isd:ied,jsd:jed,kd) )
     allocate( hSrc(isd:ied,jsd:jed,kd) )
     ! Set parameters for reconstructions
+    dz_neglect = set_dz_neglect(GV, US, remap_answer_date, dz_neglect_edge)
     call initialize_remapping( remapCS, remapScheme, boundary_extrapolation=.false., &
-                               om4_remap_via_sub_cells=om4_remap_via_sub_cells, answer_date=remap_answer_date )
+                               om4_remap_via_sub_cells=om4_remap_via_sub_cells, answer_date=remap_answer_date, &
+                               h_neglect=dz_neglect, h_neglect_edge=dz_neglect_edge )
     ! Next we initialize the regridding package so that it knows about the target grid
 
     do j = js, je ; do i = is, ie
@@ -208,9 +210,7 @@ subroutine MOM_initialize_tracer_from_Z(h, tr, G, GV, US, PF, src_file, src_var_
     if (h_is_in_Z_units) then
       ! Because h is in units of [Z ~> m], dzSrc is already in the right units, but we need to
       ! specify negligible thickness values with the right units.
-      dz_neglect = set_dz_neglect(GV, US, remap_answer_date, dz_neglect_edge)
-      call ALE_remap_scalar(remapCS, G, GV, kd, dzSrc, tr_z, h, tr, all_cells=.false., answer_date=remap_answer_date, &
-                            H_neglect=dz_neglect, H_neglect_edge=dz_neglect_edge)
+      call ALE_remap_scalar(remapCS, G, GV, kd, dzSrc, tr_z, h, tr, all_cells=.false., answer_date=remap_answer_date)
     else
       ! Equation of state data is not available, so a simpler rescaling will have to suffice,
       ! but it might be problematic in non-Boussinesq mode.

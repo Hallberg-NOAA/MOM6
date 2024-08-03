@@ -184,6 +184,7 @@ subroutine init_oda(Time, G, GV, US, diag_CS, CS)
   character(len=80) :: bias_correction_file, inc_file
   integer :: default_answer_date  ! The default setting for the various ANSWER_DATE flags.
   logical :: om4_remap_via_sub_cells ! If true, use the OM4 remapping algorithm
+  real :: h_neglect, h_neglect_edge                 ! small thicknesses [H ~> m or kg m-2]
 
   if (associated(CS)) call MOM_error(FATAL, 'Calling oda_init with associated control structure')
   allocate(CS)
@@ -323,6 +324,14 @@ subroutine init_oda(Time, G, GV, US, diag_CS, CS)
        default="ZSTAR", fail_if_missing=.false.)
   call get_param(PF, mdl, "REMAPPING_USE_OM4_SUBCELLS", om4_remap_via_sub_cells, &
                  do_not_log=.true., default=.true.)
+  if (CS%answer_date >= 20190101) then
+    h_neglect = GV%H_subroundoff ; h_neglect_edge = GV%H_subroundoff
+  elseif (GV%Boussinesq) then
+    h_neglect = GV%m_to_H * 1.0e-30 ; h_neglect_edge = GV%m_to_H * 1.0e-10
+  else
+    h_neglect = GV%kg_m2_to_H * 1.0e-30 ; h_neglect_edge = GV%kg_m2_to_H * 1.0e-10
+  endif
+
   call initialize_regridding(CS%regridCS, CS%GV, CS%US, dG%max_depth,PF,'oda_driver',coord_mode,'','')
   call initialize_remapping(CS%remapCS, remap_scheme, om4_remap_via_sub_cells=om4_remap_via_sub_cells)
   call set_regrid_params(CS%regridCS, min_thickness=0.)
@@ -415,7 +424,6 @@ subroutine set_prior_tracer(Time, G, GV, h, tv, CS)
   real, dimension(SZI_(G),SZJ_(G),CS%nk) :: S  ! Salinity on the analysis grid [S ~> ppt]
   integer :: i, j, m
   integer :: isc, iec, jsc, jec
-  real :: h_neglect, h_neglect_edge                 ! small thicknesses [H ~> m or kg m-2]
 
   ! return if not time for analysis
   if (Time < CS%Time) return
@@ -427,14 +435,6 @@ subroutine set_prior_tracer(Time, G, GV, h, tv, CS)
   call set_PElist(CS%filter_pelist)
   !call MOM_mesg('Setting prior')
 
-  if (CS%answer_date >= 20190101) then
-    h_neglect = GV%H_subroundoff ; h_neglect_edge = GV%H_subroundoff
-  elseif (GV%Boussinesq) then
-    h_neglect = GV%m_to_H * 1.0e-30 ; h_neglect_edge = GV%m_to_H * 1.0e-10
-  else
-    h_neglect = GV%kg_m2_to_H * 1.0e-30 ; h_neglect_edge = GV%kg_m2_to_H * 1.0e-10
-  endif
-
   ! computational domain for the analysis grid
   isc=CS%Grid%isc;iec=CS%Grid%iec;jsc=CS%Grid%jsc;jec=CS%Grid%jec
   ! array extents for the ensemble member
@@ -443,9 +443,9 @@ subroutine set_prior_tracer(Time, G, GV, h, tv, CS)
   ! remap temperature and salinity from the ensemble member to the analysis grid
   do j=G%jsc,G%jec ; do i=G%isc,G%iec
     call remapping_core_h(CS%remapCS, GV%ke, h(i,j,:), tv%T(i,j,:), &
-         CS%nk, CS%h(i,j,:), T(i,j,:), h_neglect, h_neglect_edge)
+         CS%nk, CS%h(i,j,:), T(i,j,:))
     call remapping_core_h(CS%remapCS, GV%ke, h(i,j,:), tv%S(i,j,:), &
-         CS%nk, CS%h(i,j,:), S(i,j,:), h_neglect, h_neglect_edge)
+         CS%nk, CS%h(i,j,:), S(i,j,:))
   enddo ; enddo
   ! cast ensemble members to the analysis domain
   do m=1,CS%ensemble_size
@@ -711,9 +711,9 @@ subroutine apply_oda_tracer_increments(dt, Time_end, G, GV, tv, h, CS)
   isc=G%isc; iec=G%iec; jsc=G%jsc; jec=G%jec
   do j=jsc,jec; do i=isc,iec
     call remapping_core_h(CS%remapCS, CS%nk, CS%h(i,j,:), T_tend(i,j,:), &
-         G%ke, h(i,j,:), T_tend_inc(i,j,:), h_neglect, h_neglect_edge)
+         G%ke, h(i,j,:), T_tend_inc(i,j,:))
     call remapping_core_h(CS%remapCS, CS%nk, CS%h(i,j,:), S_tend(i,j,:), &
-         G%ke, h(i,j,:), S_tend_inc(i,j,:), h_neglect, h_neglect_edge)
+         G%ke, h(i,j,:), S_tend_inc(i,j,:))
   enddo; enddo
 
 

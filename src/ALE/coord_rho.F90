@@ -272,9 +272,9 @@ subroutine build_rho_column_iteratively(CS, remapCS, nz, depth, h, T, S, eqn_of_
       h1(k) = x1(k+1) - x1(k)
     enddo
 
-    call remapping_core_h(remapCS, nz, h0, S, nz, h1, S_tmp, h_neglect, h_neglect_edge)
+    call remapping_core_h(remapCS, nz, h0, S, nz, h1, S_tmp)
 
-    call remapping_core_h(remapCS, nz, h0, T, nz, h1, T_tmp, h_neglect, h_neglect_edge)
+    call remapping_core_h(remapCS, nz, h0, T, nz, h1, T_tmp)
 
     ! Compute the deviation between two successive grids
     deviation = 0.0
