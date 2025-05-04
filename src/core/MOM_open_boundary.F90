@@ -4835,11 +4835,11 @@ subroutine register_segment_tracer(tr_ptr, ntr_index, param_file, GV, segment, &
     if (segment%is_E_or_W) then
       allocate(segment%tr_Reg%Tr(ntseg)%t(IsdB:IedB,jsd:jed,1:GV%ke), source=0.0)
       allocate(segment%tr_Reg%Tr(ntseg)%tres(IsdB:IedB,jsd:jed,1:GV%ke), source=0.0)
-      segment%tr_Reg%Tr(ntseg)%is_initialized=.false.
+      segment%tr_Reg%Tr(ntseg)%is_initialized = .false.
     elseif (segment%is_N_or_S) then
       allocate(segment%tr_Reg%Tr(ntseg)%t(isd:ied,JsdB:JedB,1:GV%ke), source=0.0)
       allocate(segment%tr_Reg%Tr(ntseg)%tres(isd:ied,JsdB:JedB,1:GV%ke), source=0.0)
-      segment%tr_Reg%Tr(ntseg)%is_initialized=.false.
+      segment%tr_Reg%Tr(ntseg)%is_initialized = .false.
     endif
   endif
 
@@ -6226,8 +6226,10 @@ subroutine rotate_OBC_segment_data(segment_in, segment, turns)
   type(OBC_segment_type), intent(inout) :: segment  !< The rotated segment to initialize
   integer, intent(in) :: turns  !< The number of quarter turns of the grid to apply
 
+  ! Local variables
   integer :: n
   integer :: num_fields
+  integer :: isd, ied, jsd, jed, IsdB, IedB, JsdB, JedB, ke
 
   num_fields = segment_in%num_fields
   allocate(segment%field(num_fields))
@@ -6357,11 +6359,43 @@ subroutine rotate_OBC_segment_data(segment_in, segment, turns)
   if (allocated(segment_in%nudged_tangential_grad)) &
       call rotate_array(segment_in%nudged_tangential_grad, turns, segment%nudged_tangential_grad)
   if (associated(segment_in%tr_Reg)) then
+    isd = segment%HI%isd ; ied = segment%HI%ied ; IsdB = segment%HI%IsdB ; IedB = segment%HI%IedB
+    jsd = segment%HI%jsd ; jed = segment%HI%jed ; JsdB = segment%HI%JsdB ; JedB = segment%HI%JedB
+
+    allocate(segment%tr_Reg)
+    segment%tr_Reg%ntseg = segment_in%tr_Reg%ntseg
+
     do n = 1, segment_in%tr_Reg%ntseg
-      call rotate_array(segment_in%tr_Reg%tr(n)%t, turns, segment%tr_Reg%tr(n)%t)
-      call rotate_array(segment_in%tr_Reg%tr(n)%tres, turns, segment%tr_Reg%tr(n)%tres)
-      ! Testing this to see if it works for contant tres values. Probably wrong otherwise.
-      segment%tr_Reg%Tr(n)%is_initialized=.true.
+      ! segment_in already points to the rotated tracer fields in the registry.
+      if (associated(segment_in%tr_Reg%Tr(n)%Tr)) &
+        segment%tr_Reg%Tr(n)%Tr => segment_in%tr_Reg%Tr(n)%Tr
+      segment%tr_Reg%Tr(n)%name = segment_in%tr_Reg%Tr(n)%name
+      segment%tr_Reg%Tr(n)%ntr_index = segment_in%tr_Reg%Tr(n)%ntr_index
+      segment%tr_Reg%Tr(n)%fd_index = segment_in%tr_Reg%Tr(n)%fd_index
+      segment%tr_Reg%Tr(n)%scale = segment_in%tr_Reg%Tr(n)%scale
+      segment%tr_Reg%Tr(n)%OBC_inflow_conc = segment_in%tr_Reg%Tr(n)%OBC_inflow_conc
+
+      if (allocated(segment_in%tr_Reg%tr(n)%t)) then
+        ke = size(segment_in%tr_Reg%tr(n)%t, 3)
+        if (segment%is_E_or_W) then
+          allocate(segment%tr_Reg%Tr(n)%t(IsdB:IedB,jsd:jed,1:ke), source=0.0)
+        elseif (segment%is_N_or_S) then
+          allocate(segment%tr_Reg%Tr(n)%t(isd:ied,JsdB:JedB,1:ke), source=0.0)
+        endif
+        call rotate_array(segment_in%tr_Reg%tr(n)%t, turns, segment%tr_Reg%tr(n)%t)
+      endif
+
+      if (allocated(segment_in%tr_Reg%tr(n)%tres)) then
+        ke = size(segment_in%tr_Reg%tr(n)%tres, 3)
+        if (segment%is_E_or_W) then
+          allocate(segment%tr_Reg%Tr(n)%tres(IsdB:IedB,jsd:jed,1:ke), source=0.0)
+        elseif (segment%is_N_or_S) then
+          allocate(segment%tr_Reg%Tr(n)%tres(isd:ied,JsdB:JedB,1:ke), source=0.0)
+        endif
+        call rotate_array(segment_in%tr_Reg%tr(n)%tres, turns, segment%tr_Reg%tr(n)%tres)
+      endif
+
+      segment%tr_Reg%Tr(n)%is_initialized = segment_in%tr_Reg%Tr(n)%is_initialized
     enddo
   endif
 
