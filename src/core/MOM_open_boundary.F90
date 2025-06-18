@@ -2012,17 +2012,6 @@ subroutine open_boundary_dealloc(OBC)
   if (associated(OBC%cff_normal_v)) deallocate(OBC%cff_normal_v)
   if (associated(OBC%tres_x)) deallocate(OBC%tres_x)
   if (associated(OBC%tres_y)) deallocate(OBC%tres_y)
-
-  if (associated(OBC%rx_normal)) nullify(OBC%rx_normal)
-  if (associated(OBC%ry_normal)) nullify(OBC%ry_normal)
-  if (associated(OBC%rx_oblique_u)) nullify(OBC%rx_oblique_u)
-  if (associated(OBC%ry_oblique_u)) nullify(OBC%ry_oblique_u)
-  if (associated(OBC%rx_oblique_v)) nullify(OBC%rx_oblique_v)
-  if (associated(OBC%ry_oblique_v)) nullify(OBC%ry_oblique_v)
-  if (associated(OBC%cff_normal_u)) nullify(OBC%cff_normal_u)
-  if (associated(OBC%cff_normal_v)) nullify(OBC%cff_normal_v)
-  if (associated(OBC%tres_x)) nullify(OBC%tres_x)
-  if (associated(OBC%tres_y)) nullify(OBC%tres_y)
   if (associated(OBC%remap_z_CS)) deallocate(OBC%remap_z_CS)
   if (associated(OBC%remap_h_CS)) deallocate(OBC%remap_h_CS)
   deallocate(OBC)
@@ -3433,13 +3422,13 @@ subroutine radiation_open_bdry_conds(OBC, u_new, u_old, v_new, v_old, G, GV, US,
       call uvchksum("radiation_OBCs: OBC%cff_normal_[uv]", OBC%cff_normal_u, OBC%cff_normal_v, G%HI, &
                   haloshift=0, symmetric=sym, scalar_pair=.true., unscale=1.0/US%L_T_to_m_s**2)
     endif
-    if (OBC%ntr == 0) return
-    if (.not. associated (OBC%tres_x) .or. .not. associated (OBC%tres_y)) return
-    do m=1,OBC%ntr
-      write(var_num,'(I3.3)') m
-      call uvchksum("radiation_OBCs: OBC%tres_[xy]_"//var_num, OBC%tres_x(:,:,:,m), OBC%tres_y(:,:,:,m), G%HI, &
-                    haloshift=0, symmetric=sym, scalar_pair=.true., unscale=1.0)
-    enddo
+    if ((OBC%ntr > 0) .and. associated(OBC%tres_x) .and. associated(OBC%tres_y)) then
+      do m=1,OBC%ntr
+        write(var_num,'(I3.3)') m
+        call uvchksum("radiation_OBCs: OBC%tres_[xy]_"//var_num, OBC%tres_x(:,:,:,m), OBC%tres_y(:,:,:,m), G%HI, &
+                      haloshift=0, symmetric=sym, scalar_pair=.true., unscale=1.0)
+      enddo
+    endif
   endif
 
 end subroutine radiation_open_bdry_conds
