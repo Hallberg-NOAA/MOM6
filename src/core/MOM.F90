@@ -117,7 +117,8 @@ use MOM_open_boundary,         only : register_temp_salt_segments, update_segmen
 use MOM_open_boundary,         only : setup_OBC_tracer_reservoirs, fill_temp_salt_segments
 use MOM_open_boundary,         only : open_boundary_register_restarts, remap_OBC_fields
 use MOM_open_boundary,         only : open_boundary_setup_vert, initialize_segment_data
-use MOM_open_boundary,         only : update_OBC_segment_data, rotate_OBC_config, rotate_OBC_init
+use MOM_open_boundary,         only : update_OBC_segment_data, rotate_OBC_config
+use MOM_open_boundary,         only : rotate_OBC_segment_fields, rotate_OBC_segment_tracer_registry
 use MOM_open_boundary,         only : open_boundary_halo_update, write_OBC_info, chksum_OBC_segments
 use MOM_porous_barriers,       only : porous_widths_layer, porous_widths_interface, porous_barriers_init
 use MOM_porous_barriers,       only : porous_barrier_CS
@@ -3129,14 +3130,21 @@ subroutine initialize_MOM(Time, Time_init, param_file, dirs, CS, &
     ! reservoirs are used.
     call open_boundary_register_restarts(HI, GV, US, CS%OBC, CS%tracer_Reg, &
                           param_file, restart_CSp, use_temperature)
-  endif
-  ! Solutions with OBCs and OBGC tracers are correct when this call to initialize_segment_data
-  ! occurs after call_tracer_register_obc_segments.
-  if (associated(OBC_in)) then
-    call initialize_segment_data(G_in, GV, US, OBC_in, param_file)
-  endif
 
-  if (CS%debug_OBCs .and. associated(CS%OBC)) call write_OBC_info(CS%OBC, G, GV, US)
+    ! Solutions with OBCs and OBGC tracers are correct when this call to initialize_segment_data
+    ! occurs after call_tracer_register_obc_segments.
+    call initialize_segment_data(G_in, GV, US, OBC_in, param_file)
+
+    if (CS%rotate_index) then
+      ! rotate_OBC_segment_fields must be called after initialize_segment_data and register_temp_salt_segments
+      ! because segment%temp_segment_data_exists is set in register_temp_salt_segments and the temperature
+      ! and salinity scaling factors are copied over in rotate_OBC_segment_fields.
+      call rotate_OBC_segment_fields(OBC_in, G, CS%OBC)
+      call rotate_OBC_segment_tracer_registry(OBC_in, G, CS%OBC)
+    endif
+
+    if (CS%debug_OBCs) call write_OBC_info(CS%OBC, G, GV, US)
+  endif
 
   if (present(waves_CSp)) then
     call waves_register_restarts(waves_CSp, HI, GV, US, param_file, restart_CSp)
@@ -3314,13 +3322,6 @@ subroutine initialize_MOM(Time, Time_init, param_file, dirs, CS, &
     endif
   endif
 
-  if (associated(CS%OBC)) then
-    if (CS%rotate_index) then
-      call rotate_OBC_init(OBC_in, G, CS%OBC)
-    endif
-    call MOM_initialize_OBCs(CS%h, CS%tv, CS%OBC, Time, G, GV, US, param_file, restart_CSp, CS%tracer_Reg)
-  endif
-
   ! Allocate any derived densities or other equation of state derived fields.
   if (.not.(GV%Boussinesq .or. GV%semi_Boussinesq)) then
     allocate(CS%tv%SpV_avg(isd:ied,jsd:jed,nz), source=0.0)
@@ -3328,9 +3329,11 @@ subroutine initialize_MOM(Time, Time_init, param_file, dirs, CS, &
   endif
 
   if (associated(CS%OBC)) then
+    call MOM_initialize_OBCs(CS%h, CS%tv, CS%OBC, Time, G, GV, US, param_file, restart_CSp, CS%tracer_Reg)
+
     if (use_temperature) then
-      call pass_var(CS%tv%T, G%Domain)
-      call pass_var(CS%tv%S, G%Domain)
+      call pass_var(CS%tv%T, G%Domain, complete=.false.)
+      call pass_var(CS%tv%S, G%Domain, complete=.true.)
     endif
     call calc_derived_thermo(CS%tv, CS%h, G, GV, US)
     ! Call this during initialization to fill boundary arrays from fixed values
