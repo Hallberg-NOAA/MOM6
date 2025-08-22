@@ -673,7 +673,7 @@ subroutine step_MOM(forces_in, fluxes_in, sfc_state, Time_start, time_int_in, CS
   if (do_dyn) then
     n_max = 1
     if (time_interval > CS%dt) n_max = ceiling(time_interval/CS%dt - 0.001)
-    ntstep = 1 ! initialization
+
     dt = time_interval / real(n_max)
     thermo_does_span_coupling = (CS%thermo_spans_coupling .and. &
                                 (CS%dt_therm > 1.5*cycle_time))
@@ -686,7 +686,8 @@ subroutine step_MOM(forces_in, fluxes_in, sfc_state, Time_start, time_int_in, CS
     elseif (.not.do_thermo) then
       dt_therm = CS%dt_therm
       if (present(cycle_length)) dt_therm = min(CS%dt_therm, cycle_length)
-      ! ntstep is not used.
+      ntstep = 1 ! ntstep is initialized to avoid an error in a secondary logical test,
+                 ! but the nonzero value of ntstep does not matter when do_thermo is false.
     else
       ntstep = MAX(1, MIN(n_max, floor(CS%dt_therm/dt + 0.001)))
       dt_therm = dt*ntstep
@@ -698,7 +699,7 @@ subroutine step_MOM(forces_in, fluxes_in, sfc_state, Time_start, time_int_in, CS
     elseif (.not.do_thermo) then
       dt_tr_adv = CS%dt_tr_adv
       if (present(cycle_length)) dt_tr_adv = min(CS%dt_tr_adv, cycle_length)
-      ! ntstep is not used.
+      ! ntastep is not used.
     else
       ntastep = MAX(1, MIN(n_max, floor(CS%dt_tr_adv/dt + 0.001)))
       dt_tr_adv = dt*ntastep
@@ -3179,7 +3180,7 @@ subroutine initialize_MOM(Time, Time_init, param_file, dirs, CS, &
       CS%tv%T => T_in
       CS%tv%S => S_in
 
-      if (associated(OBC_in)) then
+      if (associated(CS%OBC)) then
         ! Log this parameter in MOM_initialize_state
         call get_param(param_file, "MOM", "OBC_RESERVOIR_INIT_BUG", OBC_reservoir_init_bug, &
                    "If true, set the OBC tracer reservoirs at the startup of a new run from the "//&
@@ -3260,12 +3261,12 @@ subroutine initialize_MOM(Time, Time_init, param_file, dirs, CS, &
       call ice_shelf_query(ice_shelf_CSp,G,CS%frac_shelf_h, CS%mass_shelf)
       call MOM_initialize_state(CS%u, CS%v, CS%h, CS%tv, Time, G, GV, US, &
           param_file, dirs, restart_CSp, CS%ALE_CSp, CS%tracer_Reg, &
-          CS%sponge_CSp, CS%ALE_sponge_CSp,CS%oda_incupd_CSp, CS%OBC, Time_in, &
-          frac_shelf_h=CS%frac_shelf_h, mass_shelf=CS%mass_shelf)
+          CS%sponge_CSp, CS%ALE_sponge_CSp, CS%oda_incupd_CSp, CS%OBC, Time_in, &
+          frac_shelf_h=CS%frac_shelf_h, mass_shelf=CS%mass_shelf, OBC_for_bug=CS%OBC)
     else
       call MOM_initialize_state(CS%u, CS%v, CS%h, CS%tv, Time, G, GV, US, &
           param_file, dirs, restart_CSp, CS%ALE_CSp, CS%tracer_Reg, &
-          CS%sponge_CSp, CS%ALE_sponge_CSp, CS%oda_incupd_CSp, CS%OBC, Time_in)
+          CS%sponge_CSp, CS%ALE_sponge_CSp, CS%oda_incupd_CSp, CS%OBC, Time_in, OBC_for_bug=CS%OBC)
     endif
 
     ! Reset the first direction if it was found in a restart file.
