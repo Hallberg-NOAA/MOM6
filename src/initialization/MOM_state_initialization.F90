@@ -113,7 +113,8 @@ contains
 !! conditions or by reading them from a restart (or saves) file.
 subroutine MOM_initialize_state(u, v, h, tv, Time, G, GV, US, PF, dirs, &
                                 restart_CS, ALE_CSp, tracer_Reg, sponge_CSp, &
-                                ALE_sponge_CSp, oda_incupd_CSp, OBC, Time_in, frac_shelf_h, mass_shelf)
+                                ALE_sponge_CSp, oda_incupd_CSp, OBC_for_remap, &
+                                Time_in, frac_shelf_h, mass_shelf, OBC_for_bug)
   type(ocean_grid_type),      intent(inout) :: G    !< The ocean's grid structure.
   type(verticalGrid_type),    intent(in)    :: GV   !< The ocean's vertical grid structure.
   type(unit_scale_type),      intent(in)    :: US   !< A dimensional unit scaling type
@@ -137,8 +138,10 @@ subroutine MOM_initialize_state(u, v, h, tv, Time, G, GV, US, PF, dirs, &
   type(tracer_registry_type), pointer       :: tracer_Reg !< A pointer to the tracer registry
   type(sponge_CS),            pointer       :: sponge_CSp !< The layerwise sponge control structure.
   type(ALE_sponge_CS),        pointer       :: ALE_sponge_CSp !< The ALE sponge control structure.
-  type(ocean_OBC_type),       pointer       :: OBC   !< The open boundary condition control structure.
-                          ! OBC is only used in MOM_initialize_state if OBC_RESERVOIR_INIT_BUG is true.
+  type(ocean_OBC_type),       pointer       :: OBC_for_remap !< The open boundary condition control
+                                                    !! structure that may be used for remapping velocities.
+                                                    !! This must be on the unrotated grid, but only the
+                                                    !! position and directions of the OBC faces are used.
   type(oda_incupd_CS),        pointer       :: oda_incupd_CSp !< The oda_incupd control structure.
   type(time_type), optional,  intent(in)    :: Time_in !< Time at the start of the run segment.
   real, dimension(SZI_(G),SZJ_(G)), &
@@ -147,6 +150,9 @@ subroutine MOM_initialize_state(u, v, h, tv, Time, G, GV, US, PF, dirs, &
   real, dimension(SZI_(G),SZJ_(G)), &
                      optional, intent(in)   :: mass_shelf      !< The mass per unit area of the overlying
                                                                !! ice shelf [ R Z ~> kg m-2 ]
+  type(ocean_OBC_type), optional, pointer   :: OBC_for_bug  !< An open boundary condition control structure
+                                                    !! that might be used to store OBC temperatures and
+                                                    !! salinities if OBC_RESERVOIR_INIT_BUG is true.
   ! Local variables
   real :: depth_tot(SZI_(G),SZJ_(G))   ! The nominal total depth of the ocean [Z ~> m]
   real :: dz(SZI_(G),SZJ_(G),SZK_(GV)) ! The layer thicknesses in geopotential (z) units [Z ~> m]
@@ -432,7 +438,7 @@ subroutine MOM_initialize_state(u, v, h, tv, Time, G, GV, US, PF, dirs, &
     endif
   endif  ! not from_Z_file.
 
-  if (use_temperature .and. associated(OBC)) then
+  if (present(OBC_for_bug)) then ; if (use_temperature .and. associated(OBC_for_bug)) then
     call get_param(PF, mdl, "ENABLE_BUGS_BY_DEFAULT", enable_bugs, &
                  default=.true., do_not_log=.true.)  ! This is logged from MOM.F90.
     ! Log this parameter later with the other OBC parameters.
@@ -445,9 +451,9 @@ subroutine MOM_initialize_state(u, v, h, tv, Time, G, GV, US, PF, dirs, &
       ! the temperatures and salinities can change due to the remapping and reading from the restarts.
       call pass_var(tv%T, G%Domain, complete=.false.)
       call pass_var(tv%S, G%Domain, complete=.true.)
-      call fill_temp_salt_segments(G, GV, US, OBC, tv)
+      call fill_temp_salt_segments(G, GV, US, OBC_for_bug, tv)
     endif
-  endif
+  endif ; endif
 
   ! Convert thicknesses from geometric distances in depth units to thickness units or mass-per-unit-area.
   if (new_sim .and. convert) call dz_to_thickness(dz, tv, h, G, GV, US)
@@ -496,10 +502,10 @@ subroutine MOM_initialize_state(u, v, h, tv, Time, G, GV, US, PF, dirs, &
 
       if (new_sim .and. debug) &
         call hchksum(h, "Pre-ALE_regrid: h ", G%HI, haloshift=1, unscale=GV%H_to_MKS)
-      ! In this call, OBC is only used for the directions of OBCs when setting thicknesses at
+      ! In this call, OBC_for_remap is only used for the directions of OBCs when setting thicknesses at
       ! velocity points.
-      call ALE_regrid_accelerated(ALE_CSp, G, GV, US, h, tv, regrid_iterations, u, v, OBC, tracer_Reg, &
-                                  dt=dt, initial=.true.)
+      call ALE_regrid_accelerated(ALE_CSp, G, GV, US, h, tv, regrid_iterations, u, v, OBC_for_remap, &
+                                  tracer_Reg, dt=dt, initial=.true.)
     endif
   endif
 
