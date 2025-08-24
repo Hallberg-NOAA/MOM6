@@ -2803,6 +2803,8 @@ subroutine initialize_MOM(Time, Time_init, param_file, dirs, CS, &
     call get_param(param_file, "MOM", "INDEX_TURNS", turns, &
         "Number of counterclockwise quarter-turn index rotations.", &
         default=1, debuggingParam=.true.)
+  else
+    turns = 0
   endif
 
   ! Set up the model domain and grids.
@@ -2873,13 +2875,13 @@ subroutine initialize_MOM(Time, Time_init, param_file, dirs, CS, &
   endif
   CS%HFrz = (US%Z_to_m * GV%m_to_H) * HFrz_z
 
-  if (associated(OBC_in)) then
-    ! These calls allocate the arrays on the segments for open boundary data and initialize the
-    ! relevant vertical remapping structures.   They can only occur after the vertical grid has been
-    ! initialized.
-    call open_boundary_setup_vert(GV, US, OBC_in)
-    call initialize_segment_data(G_in, GV, US, OBC_in, param_file)
-  endif
+!  if (associated(OBC_in)) then
+!    ! These calls allocate the arrays on the segments for open boundary data and initialize the
+!    ! relevant vertical remapping structures.   They can only occur after the vertical grid has been
+!    ! initialized.
+!    call open_boundary_setup_vert(GV, US, OBC_in)
+!    call initialize_segment_data(GV, US, OBC_in, param_file, turns=0)
+!  endif
 
   !   Shift from using the temporary dynamic grid type to using the final (potentially static)
   ! and properly rotated ocean-specific grid type and horizontal index type.
@@ -2908,6 +2910,13 @@ subroutine initialize_MOM(Time, Time_init, param_file, dirs, CS, &
     CS%OBC => OBC_in
   endif
   ! dG_in is retained for now so that it can be used with write_ocean_geometry_file() below.
+
+  if (associated(CS%OBC)) then
+    ! This call allocates the arrays on the segments for open boundary data and initializes the
+    ! relevant vertical remapping structures.
+    call open_boundary_setup_vert(GV, US, CS%OBC)
+    call initialize_segment_data(GV, US, CS%OBC, param_file, turns)
+  endif
 
   if (is_root_PE()) call check_MOM6_scaling_factors(CS%GV, US)
 
@@ -3087,7 +3096,7 @@ subroutine initialize_MOM(Time, Time_init, param_file, dirs, CS, &
     ! could occur with the call to update_OBC_data or after the main initialization.
     if (use_temperature) &
       call register_temp_salt_segments(GV, US, CS%OBC, CS%tracer_Reg, param_file)
-    !This is the equivalent call to register_temp_salt_segments for external tracers with OBC
+    ! This is the equivalent call to register_temp_salt_segments for external tracers with OBC
     call call_tracer_register_obc_segments(GV, param_file, CS%tracer_flow_CSp, CS%tracer_Reg, CS%OBC)
 
     ! This needs the number of tracers and to have called any code that sets whether

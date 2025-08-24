@@ -314,6 +314,7 @@ type, public :: ocean_OBC_type
   logical :: zero_biharmonic = .false.                !< If True, zeros the Laplacian of flow on open boundaries for
                                                       !! use in the biharmonic viscosity term.
   logical :: brushcutter_mode = .false.               !< If True, read data on supergrid.
+  logical :: initialize_segment_data_called = .false. !< This is set to true when initialize_segment_data is called.
   logical, allocatable :: tracer_x_reservoirs_used(:) !< Dimensioned by the number of tracers, set globally,
                                                       !! true for those with x reservoirs (needed for restarts).
   logical, allocatable :: tracer_y_reservoirs_used(:) !< Dimensioned by the number of tracers, set globally,
@@ -839,31 +840,29 @@ subroutine open_boundary_setup_vert(GV, US, OBC)
 
 end subroutine open_boundary_setup_vert
 
-
 !> Get and store properties about the fields on the OBC segments and allocate space for reading
 !! OBC data from files.  In the process, it does funky stuff with the MPI processes.
-subroutine initialize_segment_data(G, GV, US, OBC, PF)
-  type(ocean_grid_type),        intent(in)    :: G   !< Ocean grid structure
+subroutine initialize_segment_data(GV, US, OBC, PF, turns)
   type(verticalGrid_type),      intent(in)    :: GV  !< Container for vertical grid information
   type(unit_scale_type),        intent(in)    :: US  !< A dimensional unit scaling type
   type(ocean_OBC_type), target, intent(inout) :: OBC !< Open boundary control structure
   type(param_file_type),        intent(in)    :: PF  !< Parameter file handle
+  integer,                      intent(in)    :: turns !< Number of quarter turns of the grid
 
-  integer :: n, n_seg, m, num_fields, mm
+  integer :: n, n_seg, m, num_manifest_fields, mm
   character(len=1024) :: segstr
   character(len=256) :: filename
   character(len=20)  :: segname, suffix
   character(len=32)  :: fieldname
   real               :: value  ! A value that is parsed from the segment data string [various units]
-  real :: dz_neglect, dz_neglect_edge ! Small thicknesses in vertical height units [Z ~> m]
   character(len=32), dimension(MAX_OBC_FIELDS) :: fields  ! segment field names
   character(len=128) :: inputdir
   type(OBC_segment_type), pointer :: segment => NULL() ! pointer to segment type list
   character(len=256) :: mesg    ! Message for error messages.
   integer, dimension(4) :: siz
-  integer :: is, ie, js, je
   integer :: isd, ied, jsd, jed
   integer :: IsdB, IedB, JsdB, JedB
+  integer :: qturns ! The number of quarter turns in the range of 0 to 3
   integer, dimension(:), allocatable :: saved_pelist
   integer :: current_pe
   integer, dimension(1) :: single_pelist
@@ -871,7 +870,9 @@ subroutine initialize_segment_data(G, GV, US, OBC, PF)
   !will be able to dynamically switch between sub-sampling refined grid data or model grid
   integer :: IO_needs(2) ! Sums to determine global OBC data use and update patterns.
 
-  is = G%isc ; ie = G%iec ; js = G%jsc ; je = G%jec
+  qturns = modulo(turns, 4)
+
+  OBC%initialize_segment_data_called  = .true.
 
   ! ###IS THIS STILL TRUE?
   ! There is a problem with the order of the OBC initialization
@@ -917,14 +918,15 @@ subroutine initialize_segment_data(G, GV, US, OBC, PF)
       call MOM_error(FATAL, mesg)
     endif
 
-    call parse_segment_manifest_str(trim(segstr), num_fields, fields)
-    if (num_fields == 0) then
+    call parse_segment_manifest_str(trim(segstr), num_manifest_fields, fields)
+    !There are OBC%num_obgc_tracers obgc tracers that are not listed in param file
+    segment%num_fields = num_manifest_fields + OBC%num_obgc_tracers
+
+    if (segment%num_fields == 0) then
       call MOM_mesg('initialize_segment_data: num_fields = 0')
       cycle ! cycle to next segment
     endif
 
-    !There are OBC%num_obgc_tracers obgc tracers are there that are not listed in param file
-    segment%num_fields = num_fields + OBC%num_obgc_tracers
     allocate(segment%field(segment%num_fields))
 
     segment%temp_segment_data_exists = .false.
@@ -933,15 +935,13 @@ subroutine initialize_segment_data(G, GV, US, OBC, PF)
 ! CODE HERE FOR OTHER OPTIONS (CLAMPED, NUDGED,..)
 !!
 
-    isd = segment%HI%isd ; ied = segment%HI%ied
-    jsd = segment%HI%jsd ; jed = segment%HI%jed
-    IsdB = segment%HI%IsdB ; IedB = segment%HI%IedB
-    JsdB = segment%HI%JsdB ; JedB = segment%HI%JedB
+    isd = segment%HI%isd ; ied = segment%HI%ied ; IsdB = segment%HI%IsdB ; IedB = segment%HI%IedB
+    jsd = segment%HI%jsd ; jed = segment%HI%jed ; JsdB = segment%HI%JsdB ; JedB = segment%HI%JedB
 
     obgc_segments_props_list => OBC%obgc_segments_props !pointer to the head node
 
     do m=1,segment%num_fields
-      if (m <= num_fields) then
+      if (m <= num_manifest_fields) then
         ! These are tracers with segments specified in MOM6 style override files
         call parse_segment_data_str(trim(segstr), m, trim(fields(m)), value, filename, fieldname)
         segment%field(m)%genre = ''
@@ -954,7 +954,7 @@ subroutine initialize_segment_data(G, GV, US, OBC, PF)
         call get_obgc_segments_props(obgc_segments_props_list, fields(m), filename, fieldname, &
                                      segment%field(m)%resrv_lfac_in, segment%field(m)%resrv_lfac_out)
         ! Make sure the obgc tracer is not specified in the MOM6 param file too.
-        do mm=1,num_fields
+        do mm=1,num_manifest_fields
           if (trim(fields(m)) == trim(fields(mm))) then
             if (is_root_pe()) &
               call MOM_error(FATAL,"MOM_open_boundary:initialize_segment_data(): obgc tracer " //trim(fields(m))// &
@@ -963,11 +963,12 @@ subroutine initialize_segment_data(G, GV, US, OBC, PF)
         enddo
       endif
 
-      segment%field(m)%name = trim(fields(m))
+      segment%field(m)%name = rotated_field_name(trim(fields(m)), turns)
+
       ! The scale factor for tracers may also be set in register_segment_tracer, and a constant input
       ! value is rescaled there.
       segment%field(m)%scale = scale_factor_from_name(fields(m), GV, US, segment%tr_Reg)
-      segment%field(m)%on_face = field_is_on_face(fields(m), segment%is_E_or_W)
+      segment%field(m)%on_face = field_is_on_face(segment%field(m)%name, segment%is_E_or_W)
 
       if (trim(filename) /= 'none') then
         OBC%update_OBC = .true. ! Data is assumed to be time-dependent if we are reading from file
@@ -1033,6 +1034,13 @@ subroutine initialize_segment_data(G, GV, US, OBC, PF)
 
       else  ! This data is not being read from a file.
         segment%field(m)%value = segment%field(m)%scale * value
+        ! Change the sign of the specified velocities, depending on the number of quarter turns of the grid.
+        if ( ( ((segment%field(m)%name == 'U') .or. (segment%field(m)%name == 'Uamp')) .and. &
+               ((qturns == 1) .or. (qturns == 2)) ) .or. &
+             ( ((segment%field(m)%name == 'V') .or. (segment%field(m)%name == 'Vamp')) .and. &
+               ((qturns == 3) .or. (qturns == 2)) ) ) &
+          segment%field(m)%value = -segment%field(m)%value
+
         segment%field(m)%use_IO = .false.
 
         ! Check if this is a tidal field. If so, the number
@@ -1078,6 +1086,10 @@ subroutine initialize_segment_data(G, GV, US, OBC, PF)
       write(mesg,'("Values needed for OBC segment ",I0)') n
       call MOM_error(FATAL, mesg)
     endif
+
+    ! write(stderr, '(A)') trim(suffix)//" segment checksum"
+    if (OBC%debug) call chksum_OBC_segment_data(OBC%segment(n_seg), GV, US, OBC%nk_OBC_debug, n)
+
   enddo
 
   call Set_PElist(saved_pelist)
@@ -3872,7 +3884,6 @@ subroutine deallocate_OBC_segment_data(segment)
 
   if (associated(segment%tr_Reg)) call segment_tracer_registry_end(segment%tr_Reg)
 
-
 end subroutine deallocate_OBC_segment_data
 
 !> Set tangential velocities outside of open boundaries to silly values
@@ -5911,7 +5922,8 @@ subroutine rotate_OBC_config(OBC_in, G_in, OBC, G, turns)
     ! Data stored in setup_[uv]_point_obc is needed for allocate_obc_segment_data
     call allocate_OBC_segment_data(OBC, OBC%segment(l_seg))
     ! Initialize the field-related data of a rotated segment.
-    call rotate_OBC_segment_data(OBC_in%segment(l_seg), OBC%segment(l_seg), turns)
+    if (OBC%initialize_segment_data_called) &
+      call rotate_OBC_segment_data(OBC_in%segment(l_seg), OBC%segment(l_seg), turns)
   enddo
 
   ! The horizontal segment map
@@ -6013,14 +6025,18 @@ subroutine rotate_OBC_config(OBC_in, G_in, OBC, G, turns)
       OBC%tidal_longitudes = OBC_in%tidal_longitudes
   endif
 
-  ! remap_z_CS and remap_h_CS are set up by initialize_segment_data, so we copy the fields here.
-  if (ASSOCIATED(OBC_in%remap_z_CS)) then
-    allocate(OBC%remap_z_CS)
-    OBC%remap_z_CS = OBC_in%remap_z_CS
-  endif
-  if (ASSOCIATED(OBC_in%remap_h_CS)) then
-    allocate(OBC%remap_h_CS)
-    OBC%remap_h_CS = OBC_in%remap_h_CS
+  ! remap_z_CS and remap_h_CS are set up by initialize_segment_data, so we copy the types here
+  ! if they are already associated.
+  if (OBC%initialize_segment_data_called) then
+    ! This block of code is unnecessary if initialize_segment_data is called after rotate_OBC_config.
+    if (ASSOCIATED(OBC_in%remap_z_CS)) then
+      allocate(OBC%remap_z_CS)
+      OBC%remap_z_CS = OBC_in%remap_z_CS
+    endif
+    if (ASSOCIATED(OBC_in%remap_h_CS)) then
+      allocate(OBC%remap_h_CS)
+      OBC%remap_h_CS = OBC_in%remap_h_CS
+    endif
   endif
 
 end subroutine rotate_OBC_config
@@ -6245,15 +6261,9 @@ subroutine rotate_OBC_segment_data(segment_in, segment, turns)
   logical :: flip_normal_vel_sign, flip_tang_vel_sign
   integer :: n
   integer :: num_fields
-  integer :: isd, ied, jsd, jed, IsdB, IedB, JsdB, JedB, ke
 
   num_fields = segment_in%num_fields
   allocate(segment%field(num_fields))
-
-  isd = segment%HI%isd ; ied = segment%HI%ied
-  jsd = segment%HI%jsd ; jed = segment%HI%jed
-  IsdB = segment%HI%IsdB ; IedB = segment%HI%IedB
-  JsdB = segment%HI%JsdB ; JedB = segment%HI%JedB
 
   call rotate_OBC_segment_values_needed(segment_in, segment, turns)
 
@@ -6274,30 +6284,7 @@ subroutine rotate_OBC_segment_data(segment_in, segment, turns)
       call rotate_array(segment_in%field(n)%buffer_dst, turns, segment%field(n)%buffer_dst)
     endif
 
-    if (modulo(turns, 2) /= 0) then
-      select case (segment_in%field(n)%name)
-        case ('U')
-          segment%field(n)%name = 'V'
-        case ('Uamp')
-          segment%field(n)%name = 'Vamp'
-        case ('Uphase')
-          segment%field(n)%name = 'Vphase'
-        case ('V')
-          segment%field(n)%name = 'U'
-        case ('Vamp')
-          segment%field(n)%name = 'Uamp'
-        case ('Vphase')
-          segment%field(n)%name = 'Uphase'
-        case ('DVDX')
-          segment%field(n)%name = 'DUDY'
-        case ('DUDY')
-          segment%field(n)%name = 'DVDX'
-        case default
-          segment%field(n)%name = segment_in%field(n)%name
-      end select
-    else
-      segment%field(n)%name = segment_in%field(n)%name
-    endif
+    segment%field(n)%name = rotated_field_name(segment_in%field(n)%name, turns)
 
     if (allocated(segment_in%field(n)%buffer_src)) then
       call allocate_rotated_seg_data(segment_in%field(n)%buffer_src, segment_in%HI, &
@@ -6407,8 +6394,33 @@ subroutine rotate_OBC_segment_data(segment_in, segment, turns)
 
   segment%temp_segment_data_exists = segment_in%temp_segment_data_exists
   segment%salt_segment_data_exists = segment_in%salt_segment_data_exists
+
 end subroutine rotate_OBC_segment_data
 
+
+!> Return the that the field would have after being rotated by the given number of quarter turns
+function rotated_field_name(input_name, turns)
+  character(len=*),    intent(in) :: input_name !< The unrotated field name
+  integer,             intent(in) :: turns !< Number of quarter turns of the grid
+  character(len=len(input_name)) :: rotated_field_name !< The rotated field name
+
+  if (modulo(turns, 2) /= 0) then
+    select case (input_name)
+      case ('U')      ; rotated_field_name = 'V'
+      case ('Uamp')   ; rotated_field_name = 'Vamp'
+      case ('Uphase') ; rotated_field_name = 'Vphase'
+      case ('V')      ; rotated_field_name = 'U'
+      case ('Vamp')   ; rotated_field_name = 'Uamp'
+      case ('Vphase') ; rotated_field_name = 'Uphase'
+      case ('DVDX')   ; rotated_field_name = 'DUDY'
+      case ('DUDY')   ; rotated_field_name = 'DVDX'
+      case default    ; rotated_field_name = input_name
+    end select
+  else
+    rotated_field_name = input_name
+  endif
+
+end function rotated_field_name
 
 !> Allocate an array of data for a field on a segment based on the size of a potentially rotated source array
 subroutine allocate_rotated_seg_data(src_array, HI_in, tgt_array, segment)
@@ -6542,11 +6554,11 @@ subroutine write_OBC_info(OBC, G, GV, US)
     if (unrot_dir == OBC_DIRECTION_W)  write(mesg, '(" Segment ", I0, " is Western")') n
     call MOM_mesg(mesg, verb=1)
 
-    ! write(mesg, '("  range:", 4(x,I0))') segment%Is_obc, segment%Ie_obc, segment%Js_obc, segment%Je_obc
+    ! write(mesg, '("  range:", 4(1x,I0))') segment%Is_obc, segment%Ie_obc, segment%Js_obc, segment%Je_obc
     if (modulo(turns, 2) == 0) then
-      write(mesg, '("  size:", 2(x,I0))') 1+abs(segment%Ie_obc-segment%Is_obc), 1+abs(segment%Je_obc-segment%Js_obc)
+      write(mesg, '("  size: ", I0," ",I0)') 1+abs(segment%Ie_obc-segment%Is_obc), 1+abs(segment%Je_obc-segment%Js_obc)
     else
-      write(mesg, '("  size:", 2(x,I0))') 1+abs(segment%Je_obc-segment%Js_obc), 1+abs(segment%Ie_obc-segment%Is_obc)
+      write(mesg, '("  size: ", I0," ",I0)') 1+abs(segment%Je_obc-segment%Js_obc), 1+abs(segment%Ie_obc-segment%Is_obc)
     endif
     call MOM_mesg(mesg, verb=1)
 
