@@ -264,6 +264,10 @@ type, public :: barotropic_CS ; private
                              !!   HARMONIC, ARITHMETIC, HYBRID, and FROM_BT_CONT
   logical :: strong_drag     !< If true, use a stronger estimate of the retarding
                              !! effects of strong bottom drag.
+  logical :: rescale_strong_drag !< If true, reduce the barotropic contribution to the layer
+                             !! accelerations to account for the difference between the forces that
+                             !! can be counteracted  by the stronger drag with BT_STRONG_DRAG and the
+                             !! average of the layer viscous remnants after a baroclinic timestep.
   logical :: linear_wave_drag  !< If true, apply a linear drag to the barotropic
                              !! velocities, using rates set by lin_drag_u & _v
                              !! divided by the depth of the ocean.
@@ -355,14 +359,15 @@ type, public :: barotropic_CS ; private
 
   !>@{ Diagnostic IDs
   integer :: id_PFu_bt = -1, id_PFv_bt = -1, id_Coru_bt = -1, id_Corv_bt = -1
-  integer :: id_LDu_bt = -1, id_LDv_bt = -1
+  integer :: id_LDu_bt = -1, id_LDv_bt = -1, id_eta_cor = -1
   integer :: id_ubtforce = -1, id_vbtforce = -1, id_uaccel = -1, id_vaccel = -1
-  integer :: id_visc_rem_u = -1, id_visc_rem_v = -1, id_eta_cor = -1
+  integer :: id_visc_rem_u = -1, id_visc_rem_v = -1, id_bt_rem_u = -1, id_bt_rem_v = -1
   integer :: id_ubt = -1, id_vbt = -1, id_eta_bt = -1, id_ubtav = -1, id_vbtav = -1
   integer :: id_ubt_st = -1, id_vbt_st = -1, id_eta_st = -1
   integer :: id_ubtdt = -1, id_vbtdt = -1
   integer :: id_ubt_hifreq = -1, id_vbt_hifreq = -1, id_eta_hifreq = -1
   integer :: id_uhbt_hifreq = -1, id_vhbt_hifreq = -1, id_eta_pred_hifreq = -1
+  integer :: id_etaPF_hifreq = -1, id_etaPF_anom = -1
   integer :: id_gtotn = -1, id_gtots = -1, id_gtote = -1, id_gtotw = -1
   integer :: id_uhbt = -1, id_frhatu = -1, id_vhbt = -1, id_frhatv = -1
   integer :: id_frhatu1 = -1, id_frhatv1 = -1
@@ -1995,6 +2000,17 @@ subroutine btstep(U_in, V_in, eta_in, dt, bc_accel_u, bc_accel_v, forces, pbce, 
   if (id_clock_pass_post > 0) call cpu_clock_end(id_clock_pass_post)
   if (id_clock_calc_post > 0) call cpu_clock_begin(id_clock_calc_post)
 
+  if (CS%strong_drag .and. CS%rescale_strong_drag) then
+    do j=js,je ; do I=is-1,ie
+      if (G%mask2dCu(I,j) * av_rem_u(I,j) > 0.0) &
+        u_accel_bt(I,j) = u_accel_bt(I,j) * min(bt_rem_u(I,j)**nstep / av_rem_u(I,j), 1.0)
+    enddo ; enddo
+    do J=js-1,je ; do i=is,ie
+      if (G%mask2dCv(i,J) * av_rem_v(i,J) > 0.0) &
+        v_accel_bt(i,J) = v_accel_bt(i,J) * min(bt_rem_v(i,J)**nstep / av_rem_v(i,J), 1.0)
+    enddo ; enddo
+  endif
+
   ! Now calculate each layer's accelerations.
   call btstep_layer_accel(dt, u_accel_bt, v_accel_bt, pbce, gtot_E, gtot_W, gtot_N, gtot_S, &
                           e_anom, G, GV, CS, accel_layer_u, accel_layer_v)
@@ -2134,6 +2150,10 @@ subroutine btstep(U_in, V_in, eta_in, dt, bc_accel_u, bc_accel_v, forces, pbce, 
 
     if (CS%id_frhatu1 > 0) call post_data(CS%id_frhatu1, CS%frhatu1, CS%diag)
     if (CS%id_frhatv1 > 0) call post_data(CS%id_frhatv1, CS%frhatv1, CS%diag)
+
+    if (CS%id_bt_rem_u > 0) call post_data(CS%id_bt_rem_u, bt_rem_u(IsdB:IedB,jsd:jed), CS%diag)
+    if (CS%id_bt_rem_v > 0) call post_data(CS%id_bt_rem_v, bt_rem_v(isd:ied,JsdB:JedB), CS%diag)
+    if (CS%id_etaPF_anom > 0) call post_data(CS%id_etaPF_anom, e_anom(isd:ied,jsd:jed), CS%diag)
 
     if (use_BT_cont) then
       if (CS%id_BTC_FA_u_EE > 0) call post_data(CS%id_BTC_FA_u_EE, BT_cont%FA_u_EE, CS%diag)
@@ -2462,6 +2482,8 @@ subroutine btstep_timeloop(eta, ubt, vbt, uhbt0, Datu, BTCL_u, vhbt0, Datv, BTCL
   real, dimension(SZIW_(CS),SZJW_(CS)) :: &
     p_surf_dyn, & !< A dynamic surface pressure under rigid ice [L2 T-2 ~> m2 s-2]
     cfl_ltd_vol   !< The volume available after removing sinks used to limit uhbt_int and vhbt_int [H L2 ~> m3]
+  real, dimension(SZI_(G),SZJ_(G)) :: &
+    eta_anom_PF   ! The eta anomalies used to find the pressure force anomalies [H ~> m or kg m-2]
   real :: wt_end      ! The weighting of the final value of eta_PF [nondim]
   real :: Instep      ! The inverse of the number of barotropic time steps to take [nondim]
   real :: trans_wt1, trans_wt2 ! The weights used to compute ubt_trans and vbt_trans [nondim]
@@ -2533,7 +2555,7 @@ subroutine btstep_timeloop(eta, ubt, vbt, uhbt0, Datu, BTCL_u, vhbt0, Datv, BTCL
 
   do_hifreq_output = .false.
   if ((CS%id_ubt_hifreq > 0) .or. (CS%id_vbt_hifreq > 0) .or. &
-      (CS%id_eta_hifreq > 0) .or. (CS%id_eta_pred_hifreq > 0) .or. &
+      (CS%id_eta_hifreq > 0) .or. (CS%id_eta_pred_hifreq > 0) .or. (CS%id_etaPF_hifreq > 0) .or. &
       (CS%id_uhbt_hifreq > 0) .or. (CS%id_vhbt_hifreq > 0)) &
     do_hifreq_output = query_averaging_enabled(CS%diag, time_int_in, time_end_in)
   if (do_hifreq_output) then
@@ -2957,6 +2979,18 @@ subroutine btstep_timeloop(eta, ubt, vbt, uhbt0, Datu, BTCL_u, vhbt0, Datv, BTCL
       if (CS%id_ubt_hifreq > 0) call post_data(CS%id_ubt_hifreq, ubt(IsdB:IedB,jsd:jed), CS%diag)
       if (CS%id_vbt_hifreq > 0) call post_data(CS%id_vbt_hifreq, vbt(isd:ied,JsdB:JedB), CS%diag)
       if (CS%id_eta_hifreq > 0) call post_data(CS%id_eta_hifreq, eta(isd:ied,jsd:jed), CS%diag)
+      if (CS%id_etaPF_hifreq > 0) then
+        if (CS%BT_project_velocity) then
+          do j=js,je ; do i=is,ie
+            eta_anom_PF(i,j) = eta(i,j) - eta_PF(i,j)
+          enddo ; enddo
+        else
+          do j=js,je ; do i=is,ie
+            eta_anom_PF(i,j) = eta_pred(i,j) - eta_PF(i,j)
+          enddo ; enddo
+        endif
+        call post_data(CS%id_etaPF_hifreq, eta_anom_PF(isd:ied,jsd:jed), CS%diag)
+      endif
       if (CS%id_uhbt_hifreq > 0) call post_data(CS%id_uhbt_hifreq, uhbt(IsdB:IedB,jsd:jed), CS%diag)
       if (CS%id_vhbt_hifreq > 0) call post_data(CS%id_vhbt_hifreq, vhbt(isd:ied,JsdB:JedB), CS%diag)
       if (CS%BT_project_velocity) then
@@ -5761,6 +5795,12 @@ subroutine barotropic_init(u, v, h, Time, G, GV, US, param_file, diag, CS, &
                  "with the barotropic time-step instead of implicit with "//&
                  "the baroclinic time-step and dividing by the number of "//&
                  "barotropic steps.", default=.false.)
+  call get_param(param_file, mdl, "RESCALE_STRONG_DRAG", CS%rescale_strong_drag, &
+                 "If true, reduce the barotropic contribution to the layer accelerations "//&
+                 "to account for the difference between the forces that can be counteracted "//&
+                 "by the stronger drag with BT_STRONG_DRAG and the average of the layer "//&
+                 "viscous remnants after a baroclinic timestep.", &
+                 default=.false., do_not_log=.not.CS%strong_drag)
   call get_param(param_file, mdl, "BT_LINEAR_WAVE_DRAG", CS%linear_wave_drag, &
                  "If true, apply a linear drag to the barotropic velocities, "//&
                  "using rates set by lin_drag_u & _v divided by the depth of "//&
@@ -6220,6 +6260,9 @@ subroutine barotropic_init(u, v, h, Time, G, GV, US, param_file, diag, CS, &
       'Zonal Anomalous Barotropic Pressure Force Acceleration', 'm s-2', conversion=US%L_T2_to_m_s2)
   CS%id_PFv_bt = register_diag_field('ocean_model', 'PFvBT', diag%axesCv1, Time, &
       'Meridional Anomalous Barotropic Pressure Force Acceleration', 'm s-2', conversion=US%L_T2_to_m_s2)
+  CS%id_etaPF_anom = register_diag_field('ocean_model', 'etaPF_anom', diag%axesT1, Time, &
+      'Eta anomalies used for pressure forces averaged over a baroclinic timestep', &
+      thickness_units, conversion=GV%H_to_MKS)
   if (CS%linear_wave_drag .or. (CS%use_filter .and. CS%linear_freq_drag)) then
     CS%id_LDu_bt = register_diag_field('ocean_model', 'WaveDraguBT', diag%axesCu1, Time, &
       'Zonal Barotropic Linear Wave Drag Acceleration', 'm s-2', conversion=US%L_T2_to_m_s2)
@@ -6265,6 +6308,10 @@ subroutine barotropic_init(u, v, h, Time, G, GV, US, param_file, diag, CS, &
       'Viscous remnant at u', 'nondim')
   CS%id_visc_rem_v = register_diag_field('ocean_model', 'visc_rem_v', diag%axesCvL, Time, &
       'Viscous remnant at v', 'nondim')
+  CS%id_bt_rem_u = register_diag_field('ocean_model', 'bt_rem_u', diag%axesCu1, Time, &
+      'Barotropic viscous remnant per barotropic step at u', 'nondim')
+  CS%id_bt_rem_v = register_diag_field('ocean_model', 'bt_rem_v', diag%axesCv1, Time, &
+      'Barotropic viscous remnant per barotropic step at v', 'nondim')
   CS%id_gtotn = register_diag_field('ocean_model', 'gtot_n', diag%axesT1, Time, &
       'gtot to North', 'm s-2', conversion=GV%m_to_H*(US%L_T_to_m_s**2))
   CS%id_gtots = register_diag_field('ocean_model', 'gtot_s', diag%axesT1, Time, &
@@ -6282,6 +6329,8 @@ subroutine barotropic_init(u, v, h, Time, G, GV, US, param_file, diag, CS, &
   ! if (.not.CS%BT_project_velocity) &  ! The following diagnostic is redundant with BT_project_velocity.
   CS%id_eta_pred_hifreq = register_diag_field('ocean_model', 'eta_pred_hifreq', diag%axesT1, Time, &
       'High Frequency Predictor Barotropic SSH', thickness_units, conversion=GV%H_to_MKS)
+  CS%id_etaPF_hifreq = register_diag_field('ocean_model', 'etaPF_hifreq', diag%axesT1, Time, &
+      'High Frequency Barotropic SSH anomalies used for pressure forces', thickness_units, conversion=GV%H_to_MKS)
   CS%id_uhbt_hifreq = register_diag_field('ocean_model', 'uhbt_hifreq', diag%axesCu1, Time, &
       'High Frequency Barotropic zonal transport', &
       'm3 s-1', conversion=GV%H_to_m*US%L_to_m*US%L_T_to_m_s)
