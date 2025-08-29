@@ -40,6 +40,7 @@ implicit none ; private
 
 public open_boundary_apply_normal_flow
 public open_boundary_config
+public open_boundary_setup_vert
 public open_boundary_halo_update
 public open_boundary_query
 public open_boundary_end
@@ -801,9 +802,46 @@ subroutine open_boundary_config(G, US, param_file, OBC)
 
 end subroutine open_boundary_config
 
+!> Setup vertical remapping for open boundaries
+subroutine open_boundary_setup_vert(GV, US, OBC)
+  type(verticalGrid_type), intent(in)    :: GV  !< Container for vertical grid information
+  type(unit_scale_type),   intent(in)    :: US  !< A dimensional unit scaling type
+  type(ocean_OBC_type),    pointer       :: OBC !< Open boundary control structure
 
-!> Set up vertical remapping and allocate space for reading OBC data from files. It sets up the required vertical
-!! remapping. In the process, it does funky stuff with the MPI processes.
+  ! Local variables
+  real :: dz_neglect, dz_neglect_edge ! Small thicknesses in vertical height units [Z ~> m]
+
+  if (associated(OBC)) then
+    if (OBC%number_of_segments > 0) then
+      ! Set up vertical remapping for open boundaries.  Remapping happens independently on each PE,
+      ! so this block could be skipped for PEs without open boundary conditions that use remapping.
+      if (GV%Boussinesq .and. (OBC%remap_answer_date < 20190101)) then
+        dz_neglect = US%m_to_Z * 1.0e-30 ; dz_neglect_edge = US%m_to_Z * 1.0e-10
+      elseif (GV%semi_Boussinesq .and. (OBC%remap_answer_date < 20190101)) then
+        dz_neglect = GV%kg_m2_to_H*GV%H_to_Z * 1.0e-30 ; dz_neglect_edge = GV%kg_m2_to_H*GV%H_to_Z * 1.0e-10
+      else
+        dz_neglect = GV%dZ_subroundoff ; dz_neglect_edge = GV%dZ_subroundoff
+      endif
+      allocate(OBC%remap_z_CS)
+      call initialize_remapping(OBC%remap_z_CS, OBC%remappingScheme, boundary_extrapolation=.false., &
+                 check_reconstruction=OBC%check_reconstruction, check_remapping=OBC%check_remapping, &
+                 om4_remap_via_sub_cells=OBC%om4_remap_via_sub_cells, &
+                 force_bounds_in_subcell=OBC%force_bounds_in_subcell, answer_date=OBC%remap_answer_date, &
+                 h_neglect=dz_neglect, h_neglect_edge=dz_neglect_edge)
+      allocate(OBC%remap_h_CS)
+      call initialize_remapping(OBC%remap_h_CS, OBC%remappingScheme, boundary_extrapolation=.false., &
+                 check_reconstruction=OBC%check_reconstruction, check_remapping=OBC%check_remapping, &
+                 om4_remap_via_sub_cells=OBC%om4_remap_via_sub_cells, &
+                 force_bounds_in_subcell=OBC%force_bounds_in_subcell, answer_date=OBC%remap_answer_date, &
+                 h_neglect=GV%H_subroundoff, h_neglect_edge=GV%H_subroundoff)
+    endif
+  endif
+
+end subroutine open_boundary_setup_vert
+
+
+!> Get and store properties about the fields on the OBC segments and allocate space for reading
+!! OBC data from files.  In the process, it does funky stuff with the MPI processes.
 subroutine initialize_segment_data(G, GV, US, OBC, PF)
   type(ocean_grid_type),        intent(in)    :: G   !< Ocean grid structure
   type(verticalGrid_type),      intent(in)    :: GV  !< Container for vertical grid information
@@ -834,30 +872,6 @@ subroutine initialize_segment_data(G, GV, US, OBC, PF)
   integer :: IO_needs(2) ! Sums to determine global OBC data use and update patterns.
 
   is = G%isc ; ie = G%iec ; js = G%jsc ; je = G%jec
-
-  if (OBC%number_of_segments > 0) then
-    ! Set up vertical remapping for open boundaries.  Remapping happens independently on each PE,
-    ! so this block could be skipped for PEs without open boundary conditions that use remapping.
-    if (GV%Boussinesq .and. (OBC%remap_answer_date < 20190101)) then
-      dz_neglect = US%m_to_Z * 1.0e-30 ; dz_neglect_edge = US%m_to_Z * 1.0e-10
-    elseif (GV%semi_Boussinesq .and. (OBC%remap_answer_date < 20190101)) then
-      dz_neglect = GV%kg_m2_to_H*GV%H_to_Z * 1.0e-30 ; dz_neglect_edge = GV%kg_m2_to_H*GV%H_to_Z * 1.0e-10
-    else
-      dz_neglect = GV%dZ_subroundoff ; dz_neglect_edge = GV%dZ_subroundoff
-    endif
-    allocate(OBC%remap_z_CS)
-    call initialize_remapping(OBC%remap_z_CS, OBC%remappingScheme, boundary_extrapolation=.false., &
-               check_reconstruction=OBC%check_reconstruction, check_remapping=OBC%check_remapping, &
-               om4_remap_via_sub_cells=OBC%om4_remap_via_sub_cells, &
-               force_bounds_in_subcell=OBC%force_bounds_in_subcell, answer_date=OBC%remap_answer_date, &
-               h_neglect=dz_neglect, h_neglect_edge=dz_neglect_edge)
-    allocate(OBC%remap_h_CS)
-    call initialize_remapping(OBC%remap_h_CS, OBC%remappingScheme, boundary_extrapolation=.false., &
-               check_reconstruction=OBC%check_reconstruction, check_remapping=OBC%check_remapping, &
-               om4_remap_via_sub_cells=OBC%om4_remap_via_sub_cells, &
-               force_bounds_in_subcell=OBC%force_bounds_in_subcell, answer_date=OBC%remap_answer_date, &
-               h_neglect=GV%H_subroundoff, h_neglect_edge=GV%H_subroundoff)
-  endif
 
   ! There is a problem with the order of the OBC initialization
   ! with respect to ALE_init. Currently handling this by copying the
