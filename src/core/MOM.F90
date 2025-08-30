@@ -2804,6 +2804,8 @@ subroutine initialize_MOM(Time, Time_init, param_file, dirs, CS, &
     call get_param(param_file, "MOM", "INDEX_TURNS", turns, &
         "Number of counterclockwise quarter-turn index rotations.", &
         default=1, debuggingParam=.true.)
+  else
+    turns = 0
   endif
 
   ! Set up the model domain and grids.
@@ -2874,14 +2876,6 @@ subroutine initialize_MOM(Time, Time_init, param_file, dirs, CS, &
   endif
   CS%HFrz = (US%Z_to_m * GV%m_to_H) * HFrz_z
 
-  ! Finish OBC configuration that depend on the vertical grid
-  if (associated(OBC_in)) then
-    call open_boundary_setup_vert(GV, US, OBC_in)
-    ! This allocates the arrays on the segments for open boundary data
-    ! It can not occur this early in the run sequence.
-    ! call initialize_segment_data(G_in, GV, US, OBC_in, param_file)
-  endif
-
   !   Shift from using the temporary dynamic grid type to using the final (potentially static)
   ! and properly rotated ocean-specific grid type and horizontal index type.
   if (CS%rotate_index) then
@@ -2909,6 +2903,11 @@ subroutine initialize_MOM(Time, Time_init, param_file, dirs, CS, &
     CS%OBC => OBC_in
   endif
   ! dG_in is retained for now so that it can be used with write_ocean_geometry_file() below.
+
+  if (associated(CS%OBC)) then
+    ! This call initializes the relevant vertical remapping structures.
+    call open_boundary_setup_vert(GV, US, CS%OBC)
+  endif
 
   if (is_root_PE()) call check_MOM6_scaling_factors(CS%GV, US)
 
@@ -3102,7 +3101,7 @@ subroutine initialize_MOM(Time, Time_init, param_file, dirs, CS, &
     ! could occur with the call to update_OBC_data or after the main initialization.
     if (use_temperature) &
       call register_temp_salt_segments(GV, US, CS%OBC, CS%tracer_Reg, param_file)
-    !This is the equivalent call to register_temp_salt_segments for external tracers with OBC
+    ! This is the equivalent call to register_temp_salt_segments for external tracers with OBC
     call call_tracer_register_obc_segments(GV, param_file, CS%tracer_flow_CSp, CS%tracer_Reg, CS%OBC)
 
     ! This needs the number of tracers and to have called any code that sets whether
@@ -3110,17 +3109,9 @@ subroutine initialize_MOM(Time, Time_init, param_file, dirs, CS, &
     call open_boundary_register_restarts(HI, GV, US, CS%OBC, CS%tracer_Reg, &
                           param_file, restart_CSp, use_temperature)
 
-    ! Solutions with OBCs and OBGC tracers are correct when this call to initialize_segment_data
-    ! occurs after call_tracer_register_obc_segments.
-    call initialize_segment_data(G_in, GV, US, OBC_in, param_file)
-
-    if (CS%rotate_index) then
-      ! rotate_OBC_segment_fields must be called after initialize_segment_data and register_temp_salt_segments
-      ! because segment%temp_segment_data_exists is set in register_temp_salt_segments and the temperature
-      ! and salinity scaling factors are copied over in rotate_OBC_segment_fields.
-      call rotate_OBC_segment_fields(OBC_in, G, CS%OBC)
-      call rotate_OBC_segment_tracer_registry(OBC_in, G, CS%OBC)
-    endif
+    ! This call allocates the arrays on the segments for open boundary data, but it must occur
+    ! after any calls to call_tracer_register_obc_segments.
+    call initialize_segment_data(GV, US, CS%OBC, param_file, turns)
 
     if (CS%debug_OBCs) call write_OBC_info(CS%OBC, G, GV, US)
   endif
