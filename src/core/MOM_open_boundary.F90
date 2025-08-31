@@ -314,7 +314,6 @@ type, public :: ocean_OBC_type
   logical :: zero_biharmonic = .false.                !< If True, zeros the Laplacian of flow on open boundaries for
                                                       !! use in the biharmonic viscosity term.
   logical :: brushcutter_mode = .false.               !< If True, read data on supergrid.
-  logical :: initialize_segment_data_called = .false. !< This is set to true when initialize_segment_data is called.
   logical, allocatable :: tracer_x_reservoirs_used(:) !< Dimensioned by the number of tracers, set globally,
                                                       !! true for those with x reservoirs (needed for restarts).
   logical, allocatable :: tracer_y_reservoirs_used(:) !< Dimensioned by the number of tracers, set globally,
@@ -871,14 +870,6 @@ subroutine initialize_segment_data(GV, US, OBC, PF, turns)
   integer :: IO_needs(2) ! Sums to determine global OBC data use and update patterns.
 
   qturns = modulo(turns, 4)
-
-  OBC%initialize_segment_data_called  = .true.
-
-  ! ###IS THIS STILL TRUE?
-  ! There is a problem with the order of the OBC initialization
-  ! with respect to ALE_init. Currently handling this by copying the
-  ! param file so that I can use it later in step_MOM in order to finish
-  ! initializing segments on the first step.
 
   call get_param(PF, mdl, "INPUTDIR", inputdir, default=".")
   inputdir = slasher(inputdir)
@@ -5921,9 +5912,6 @@ subroutine rotate_OBC_config(OBC_in, G_in, OBC, G, turns)
     call rotate_OBC_segment_config(OBC_in%segment(l_seg), G_in, OBC%segment(l_seg), G, turns)
     ! Data stored in setup_[uv]_point_obc is needed for allocate_obc_segment_data
     call allocate_OBC_segment_data(OBC, OBC%segment(l_seg))
-    ! Initialize the field-related data of a rotated segment.
-    if (OBC%initialize_segment_data_called) &
-      call rotate_OBC_segment_data(OBC_in%segment(l_seg), OBC%segment(l_seg), turns)
   enddo
 
   ! The horizontal segment map
@@ -6023,20 +6011,6 @@ subroutine rotate_OBC_config(OBC_in, G_in, OBC, G, turns)
 
     if (OBC%add_eq_phase .or.  OBC%add_nodal_terms)  &
       OBC%tidal_longitudes = OBC_in%tidal_longitudes
-  endif
-
-  ! remap_z_CS and remap_h_CS are set up by initialize_segment_data, so we copy the types here
-  ! if they are already associated.
-  if (OBC%initialize_segment_data_called) then
-    ! This block of code is unnecessary if initialize_segment_data is called after rotate_OBC_config.
-    if (ASSOCIATED(OBC_in%remap_z_CS)) then
-      allocate(OBC%remap_z_CS)
-      OBC%remap_z_CS = OBC_in%remap_z_CS
-    endif
-    if (ASSOCIATED(OBC_in%remap_h_CS)) then
-      allocate(OBC%remap_h_CS)
-      OBC%remap_h_CS = OBC_in%remap_h_CS
-    endif
   endif
 
 end subroutine rotate_OBC_config
@@ -6250,152 +6224,6 @@ subroutine rotate_OBC_segment_values_needed(segment_in, segment, turns)
   segment%values_needed = segment_in%values_needed
 
 end subroutine rotate_OBC_segment_values_needed
-
-!> Rotate an OBC segment's fields from the input to the model index map.
-subroutine rotate_OBC_segment_data(segment_in, segment, turns)
-  type(OBC_segment_type), intent(in) :: segment_in  !< The unrotated segment to use as a source
-  type(OBC_segment_type), intent(inout) :: segment  !< The rotated segment to initialize
-  integer, intent(in) :: turns  !< The number of quarter turns of the grid to apply
-
-  ! Local variables
-  logical :: flip_normal_vel_sign, flip_tang_vel_sign
-  integer :: n
-  integer :: num_fields
-
-  num_fields = segment_in%num_fields
-  allocate(segment%field(num_fields))
-
-  call rotate_OBC_segment_values_needed(segment_in, segment, turns)
-
-  segment%num_fields = segment_in%num_fields
-  do n = 1, num_fields
-    segment%field(n)%handle = segment_in%field(n)%handle
-    segment%field(n)%dz_handle = segment_in%field(n)%dz_handle
-    segment%field(n)%use_IO = segment_in%field(n)%use_IO
-    segment%field(n)%genre = segment_in%field(n)%genre
-    segment%field(n)%scale = segment_in%field(n)%scale
-    segment%field(n)%resrv_lfac_in = segment_in%field(n)%resrv_lfac_in
-    segment%field(n)%resrv_lfac_out = segment_in%field(n)%resrv_lfac_out
-    segment%field(n)%on_face = segment_in%field(n)%on_face
-
-    if (allocated(segment_in%field(n)%buffer_dst)) then
-      call allocate_rotated_seg_data(segment_in%field(n)%buffer_dst, segment_in%HI, &
-                                     segment%field(n)%buffer_dst, segment)
-      call rotate_array(segment_in%field(n)%buffer_dst, turns, segment%field(n)%buffer_dst)
-    endif
-
-    segment%field(n)%name = rotated_field_name(segment_in%field(n)%name, turns)
-
-    if (allocated(segment_in%field(n)%buffer_src)) then
-      call allocate_rotated_seg_data(segment_in%field(n)%buffer_src, segment_in%HI, &
-                                     segment%field(n)%buffer_src, segment)
-      call rotate_array(segment_in%field(n)%buffer_src, turns, segment%field(n)%buffer_src)
-    endif
-
-    segment%field(n)%nk_src = segment_in%field(n)%nk_src
-
-    if (allocated(segment_in%field(n)%dz_src)) then
-      call allocate_rotated_seg_data(segment_in%field(n)%dz_src, segment_in%HI, segment%field(n)%dz_src, segment)
-      call rotate_array(segment_in%field(n)%dz_src, turns, segment%field(n)%dz_src)
-    endif
-
-    segment%field(n)%value = segment_in%field(n)%value
-  enddo
-
-  if (allocated(segment_in%SSH)) &
-      call rotate_array(segment_in%SSH, turns, segment%SSH)
-  if (allocated(segment_in%cg)) &
-      call rotate_array(segment_in%cg, turns, segment%cg)
-  if (allocated(segment_in%htot)) &
-      call rotate_array(segment_in%htot, turns, segment%htot)
-  if (allocated(segment_in%dztot)) &
-      call rotate_array(segment_in%dztot, turns, segment%dztot)
-  if (allocated(segment_in%h)) &
-      call rotate_array(segment_in%h, turns, segment%h)
-  if (allocated(segment_in%normal_vel)) &
-      call rotate_array(segment_in%normal_vel, turns, segment%normal_vel)
-  if (allocated(segment_in%normal_trans)) &
-      call rotate_array(segment_in%normal_trans, turns, segment%normal_trans)
-  if (allocated(segment_in%normal_vel_bt)) &
-      call rotate_array(segment_in%normal_vel_bt, turns, segment%normal_vel_bt)
-  if (allocated(segment_in%tangential_vel)) &
-      call rotate_array(segment_in%tangential_vel, turns, segment%tangential_vel)
-  if (allocated(segment_in%tangential_grad)) &
-      call rotate_array(segment_in%tangential_grad, turns, segment%tangential_grad)
-  if (allocated(segment_in%grad_normal)) &
-      call rotate_array(segment_in%grad_normal, turns, segment%grad_normal)
-  if (allocated(segment_in%grad_tan)) &
-      call rotate_array(segment_in%grad_tan, turns, segment%grad_tan)
-  if (allocated(segment_in%grad_gradient)) &
-      call rotate_array(segment_in%grad_gradient, turns, segment%grad_gradient)
-  if (modulo(turns, 2) /= 0) then
-    if (allocated(segment_in%rx_norm_rad)) &
-        call rotate_array(segment_in%rx_norm_rad, turns, segment%ry_norm_rad)
-    if (allocated(segment_in%ry_norm_rad)) &
-        call rotate_array(segment_in%ry_norm_rad, turns, segment%rx_norm_rad)
-    if (allocated(segment_in%rx_norm_obl)) &
-        call rotate_array(segment_in%rx_norm_obl, turns, segment%ry_norm_obl)
-    if (allocated(segment_in%ry_norm_obl)) &
-        call rotate_array(segment_in%ry_norm_obl, turns, segment%rx_norm_obl)
-  else
-    if (allocated(segment_in%rx_norm_rad)) &
-        call rotate_array(segment_in%rx_norm_rad, turns, segment%rx_norm_rad)
-    if (allocated(segment_in%ry_norm_rad)) &
-        call rotate_array(segment_in%ry_norm_rad, turns, segment%ry_norm_rad)
-    if (allocated(segment_in%rx_norm_obl)) &
-        call rotate_array(segment_in%rx_norm_obl, turns, segment%rx_norm_obl)
-    if (allocated(segment_in%ry_norm_obl)) &
-        call rotate_array(segment_in%ry_norm_obl, turns, segment%ry_norm_obl)
-  endif
-  if (allocated(segment_in%cff_normal)) &
-      call rotate_array(segment_in%cff_normal, turns, segment%cff_normal)
-  if (allocated(segment_in%nudged_normal_vel)) &
-      call rotate_array(segment_in%nudged_normal_vel, turns, segment%nudged_normal_vel)
-  if (allocated(segment_in%nudged_tangential_vel)) &
-      call rotate_array(segment_in%nudged_tangential_vel, turns, segment%nudged_tangential_vel)
-  if (allocated(segment_in%nudged_tangential_grad)) &
-      call rotate_array(segment_in%nudged_tangential_grad, turns, segment%nudged_tangential_grad)
-
-  ! Change the sign of the normal or tangential velocities or transports that have been read in from
-  ! a file, depending on the orientation of the face and the number of quarter turns of the grid.
-  flip_normal_vel_sign = .false. ; flip_tang_vel_sign = .false.
-  do n = 1, num_fields
-    if (((segment%field(n)%name == 'U') .or. (segment%field(n)%name == 'Uamp')) .and. &
-        ((modulo(turns, 4) == 1) .or. (modulo(turns, 4) == 2)) ) then
-      if (allocated(segment%field(n)%buffer_dst)) &
-        segment%field(n)%buffer_dst(:,:,:) = -segment%field(n)%buffer_dst(:,:,:)
-      segment%field(n)%value = -segment%field(n)%value
-      if (segment%is_E_or_W) flip_normal_vel_sign = .true.
-      if (segment%is_N_or_S) flip_tang_vel_sign = .true.
-    elseif (((segment%field(n)%name == 'V') .or. (segment%field(n)%name == 'Vamp')) .and. &
-            ((modulo(turns, 4) == 3) .or. (modulo(turns, 4) == 2)) ) then
-      if (allocated(segment%field(n)%buffer_dst)) &
-        segment%field(n)%buffer_dst(:,:,:) = -segment%field(n)%buffer_dst(:,:,:)
-      segment%field(n)%value = -segment%field(n)%value
-      if (segment%is_N_or_S) flip_normal_vel_sign = .true.
-      if (segment%is_E_or_W) flip_tang_vel_sign = .true.
-    endif
-  enddo
-
-  if (flip_normal_vel_sign) then
-    segment%normal_trans(:,:,:) = -segment%normal_trans(:,:,:)
-    segment%normal_vel(:,:,:) = -segment%normal_vel(:,:,:)
-    segment%normal_vel_bt(:,:) = -segment%normal_vel_bt(:,:)
-    if (allocated(segment%nudged_normal_vel)) &
-      segment%nudged_normal_vel(:,:,:) = -segment%nudged_normal_vel(:,:,:)
-  endif
-
-  if (flip_tang_vel_sign) then
-    if (allocated(segment%tangential_vel)) &
-      segment%tangential_vel(:,:,:) = -segment%tangential_vel(:,:,:)
-    if (allocated(segment%nudged_tangential_vel)) &
-      segment%nudged_tangential_vel(:,:,:) = -segment%nudged_tangential_vel(:,:,:)
-  endif
-
-  segment%temp_segment_data_exists = segment_in%temp_segment_data_exists
-  segment%salt_segment_data_exists = segment_in%salt_segment_data_exists
-
-end subroutine rotate_OBC_segment_data
 
 
 !> Return the that the field would have after being rotated by the given number of quarter turns
