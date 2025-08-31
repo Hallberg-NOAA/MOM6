@@ -112,13 +112,12 @@ use MOM_MEKE_types,            only : MEKE_type
 use MOM_mixed_layer_restrat,   only : mixedlayer_restrat, mixedlayer_restrat_init, mixedlayer_restrat_CS
 use MOM_mixed_layer_restrat,   only : mixedlayer_restrat_register_restarts
 use MOM_obsolete_diagnostics,  only : register_obsolete_diagnostics
-use MOM_open_boundary,         only : ocean_OBC_type, OBC_registry_type, open_boundary_end
+use MOM_open_boundary,         only : ocean_OBC_type, open_boundary_end
 use MOM_open_boundary,         only : register_temp_salt_segments, update_segment_tracer_reservoirs
-use MOM_open_boundary,         only : setup_OBC_tracer_reservoirs, fill_temp_salt_segments
+use MOM_open_boundary,         only : setup_OBC_tracer_reservoirs
 use MOM_open_boundary,         only : open_boundary_register_restarts, remap_OBC_fields
 use MOM_open_boundary,         only : open_boundary_setup_vert, initialize_segment_data
 use MOM_open_boundary,         only : update_OBC_segment_data, rotate_OBC_config
-use MOM_open_boundary,         only : rotate_OBC_segment_fields, rotate_OBC_segment_tracer_registry
 use MOM_open_boundary,         only : open_boundary_halo_update, write_OBC_info, chksum_OBC_segments
 use MOM_porous_barriers,       only : porous_widths_layer, porous_widths_interface, porous_barriers_init
 use MOM_porous_barriers,       only : porous_barrier_CS
@@ -2615,7 +2614,7 @@ subroutine initialize_MOM(Time, Time_init, param_file, dirs, CS, &
                "The time between OBC segment data updates for OBGC tracers. "//&
                "This must be an integer multiple of DT and DT_THERM. "//&
                "The default is set to DT.", &
-               units="s", default=US%T_to_s*CS%dt, scale=US%s_to_T, do_not_log=.not.associated(CS%OBC))
+               units="s", default=US%T_to_s*CS%dt, scale=US%s_to_T, do_not_log=.not.associated(OBC_in))
 
   ! This is here in case these values are used inappropriately.
   use_frazil = .false. ; bound_salinity = .false. ; use_p_surf_in_EOS = .false.
@@ -2904,11 +2903,6 @@ subroutine initialize_MOM(Time, Time_init, param_file, dirs, CS, &
   endif
   ! dG_in is retained for now so that it can be used with write_ocean_geometry_file() below.
 
-  if (associated(CS%OBC)) then
-    ! This call initializes the relevant vertical remapping structures.
-    call open_boundary_setup_vert(GV, US, CS%OBC)
-  endif
-
   if (is_root_PE()) call check_MOM6_scaling_factors(CS%GV, US)
 
   call callTree_waypoint("grids initialized (initialize_MOM)")
@@ -3078,21 +3072,10 @@ subroutine initialize_MOM(Time, Time_init, param_file, dirs, CS, &
   call mixedlayer_restrat_register_restarts(HI, GV, US, param_file, &
            CS%mixedlayer_restrat_CSp, restart_CSp)
 
-  if (CS%rotate_index .and. associated(OBC_in) .and. use_temperature) then
-    ! NOTE: register_temp_salt_segments includes allocation of tracer fields
-    !   along segments.  Bit reproducibility requires that MOM_initialize_state
-    !   be called on the input index map, so we must setup both OBC and OBC_in.
-    !
-    ! XXX: This call on OBC_in allocates the tracer fields on the unrotated
-    !   grid, but also incorrectly stores a pointer to a tracer_type for the
-    !   rotated registry (e.g. segment%tr_reg%Tr(n)%Tr) from CS%tracer_reg.
-    !
-    !   While incorrect and potentially dangerous, it does not seem that this
-    !   pointer is used during initialization, so we leave it for now.
-    call register_temp_salt_segments(GV, US, OBC_in, CS%tracer_Reg, param_file)
-  endif
-
   if (associated(CS%OBC)) then
+    ! This call initializes the relevant vertical remapping structures.
+    call open_boundary_setup_vert(GV, US, CS%OBC)
+
     ! Set up remaining information about open boundary conditions that is needed for OBCs.
     ! Package specific changes to OBCs occur here.
     call call_OBC_register(G, GV, US, param_file, CS%update_OBC_CSp, CS%OBC, CS%tracer_Reg)
@@ -3308,6 +3291,7 @@ subroutine initialize_MOM(Time, Time_init, param_file, dirs, CS, &
       call pass_var(CS%tv%S, G%Domain, complete=.true.)
     endif
     call calc_derived_thermo(CS%tv, CS%h, G, GV, US)
+
     ! Call this during initialization to fill boundary arrays from fixed values
     call update_OBC_segment_data(G, GV, US, CS%OBC, CS%tv, CS%h, Time)
   endif
