@@ -532,7 +532,7 @@ subroutine CorAdCalc(u, v, h, uh, vh, CAu, CAv, OBC, AD, G, GV, US, CS, pbv, Wav
 
     if (Stokes_VF) then
       if (CS%id_CAuS>0 .or. CS%id_CAvS>0) then
-        do J=Jsq-1,Jeq+1 ; do I=Isq-1,Ieq+1
+        do J=js-1,Jeq ; do I=is-1,Ieq
           qS(I,J) = stk_vort(I,J) * Ih_q(I,J)
         enddo; enddo
       endif
@@ -1114,9 +1114,9 @@ subroutine CorAdCalc(u, v, h, uh, vh, CAu, CAv, OBC, AD, G, GV, US, CS, pbv, Wav
       if (CS%id_CAuS>0 .or. CS%id_CAvS>0) then
         ! Computing the diagnostic Stokes contribution to CAv
         do J=Jsq,Jeq ; do i=is,ie
-          CAvS(I,j,k) = 0.25 * &
+          CAvS(i,J,k) = 0.25 * &
                 ((qS(I,J) * (uh(I,j+1,k) + uh(I,j,k))) + &
-                 (qS(I,J-1) * (uh(I-1,j,k) + uh(I-1,j+1,k)))) * G%IdyCv(i,J)
+                 (qS(I-1,J) * (uh(I-1,j,k) + uh(I-1,j+1,k)))) * G%IdyCv(i,J)
         enddo; enddo
       endif
     endif
