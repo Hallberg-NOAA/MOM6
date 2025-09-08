@@ -495,9 +495,6 @@ subroutine step_MOM_dyn_split_RK2(u_inst, v_inst, h, tv, visc, Time_local, dt, f
   call create_group_pass(CS%pass_hp_uv, hp, G%Domain, halo=cor_stencil)
   call create_group_pass(CS%pass_hp_uv, u_av, v_av, G%Domain, halo=max(cor_stencil,vel_stencil))
   call create_group_pass(CS%pass_hp_uv, uh(:,:,:), vh(:,:,:), G%Domain, halo=max(cor_stencil,vel_stencil))
-  if (cor_stencil > 2) then
-    call create_group_pass(CS%pass_hp_uv, h, G%Domain, halo=cor_stencil)
-  endif
   call create_group_pass(CS%pass_h, h, g%domain, halo=max(cor_stencil,cont_stencil))
   call create_group_pass(CS%pass_av_uvh, u_av, v_av, g%domain, halo=max(cor_stencil,vel_stencil))
   call create_group_pass(CS%pass_av_uvh, uh(:,:,:), vh(:,:,:), G%Domain, halo=max(cor_stencil,vel_stencil))
@@ -807,12 +804,7 @@ subroutine step_MOM_dyn_split_RK2(u_inst, v_inst, h, tv, visc, Time_local, dt, f
 
     ! These should be done with a pass that excludes uh & vh.
 !   call do_group_pass(CS%pass_hp_uv, G%Domain, clock=id_clock_pass)
-  endif
-
-  if (G%nonblocking_updates) then
-    call start_group_pass(CS%pass_av_uvh, G%Domain, clock=id_clock_pass)
-  else
-    call do_group_pass(CS%pass_av_uvh, G%domain, clock=id_clock_pass)
+    call pass_vector(u_av, v_av, G%Domain, halo=max(cor_stencil,vel_stencil), clock=id_clock_pass)
   endif
 
   ! h_av = (h + hp)/2
@@ -873,9 +865,6 @@ subroutine step_MOM_dyn_split_RK2(u_inst, v_inst, h, tv, visc, Time_local, dt, f
     call cpu_clock_end(id_clock_pres)
     if (showCallTree) call callTree_wayPoint("done with PressureForce[hp=(1-b).h+b.h] (step_MOM_dyn_split_RK2)")
   endif
-
-  if (G%nonblocking_updates) &
-    call complete_group_pass(CS%pass_av_uvh, G%Domain, clock=id_clock_pass)
 
   if (BT_cont_BT_thick) then
     call btcalc(h, G, GV, CS%barotropic_CSp, CS%BT_cont%h_u, CS%BT_cont%h_v, &
@@ -1360,7 +1349,7 @@ subroutine initialize_dyn_split_RK2(u, v, h, tv, uh, vh, eta, Time, G, GV, US, p
                       diag, CS, HA_CSp, restart_CS, dt, Accel_diag, Cont_diag, MIS, &
                       VarMix, MEKE, thickness_diffuse_CSp,                  &
                       OBC, update_OBC_CSp, ALE_CSp, set_visc, &
-                      visc, dirs, ntrunc, pbv, calc_dtbt, cont_stencil)
+                      visc, dirs, ntrunc, pbv, calc_dtbt, cont_stencil, dyn_h_stencil)
   type(ocean_grid_type),            intent(inout) :: G          !< ocean grid structure
   type(verticalGrid_type),          intent(in)    :: GV         !< ocean vertical grid structure
   type(unit_scale_type),            intent(in)    :: US         !< A dimensional unit scaling type
@@ -1406,6 +1395,9 @@ subroutine initialize_dyn_split_RK2(u, v, h, tv, uh, vh, eta, Time, G, GV, US, p
   type(porous_barrier_type),        intent(in)    :: pbv        !< porous barrier fractional cell metrics
   integer,                          intent(out)   :: cont_stencil !< The stencil for thickness
                                                                 !! from the continuity solver.
+  integer,                          intent(out)   :: dyn_h_stencil !< The stencil for thickness for the
+                                                                !! the dynamics based on the continuity
+                                                                !! solver and Coriolis scheme.
 
   ! local variables
   real, dimension(SZI_(G),SZJ_(G),SZK_(GV)) :: h_tmp ! A temporary copy of the layer thicknesses [H ~> m or kg m-2]
@@ -1435,7 +1427,6 @@ subroutine initialize_dyn_split_RK2(u, v, h, tv, uh, vh, eta, Time, G, GV, US, p
     return
   endif
   CS%module_is_initialized = .true.
-
 
   CS%diag => diag
 
@@ -1573,6 +1564,7 @@ subroutine initialize_dyn_split_RK2(u, v, h, tv, uh, vh, eta, Time, G, GV, US, p
   cont_stencil = continuity_stencil(CS%continuity_CSp)
   call CoriolisAdv_init(Time, G, GV, US, param_file, diag, CS%ADp, CS%CoriolisAdv)
   cor_stencil = CoriolisAdv_stencil(CS%CoriolisAdv)
+  dyn_h_stencil = max(cont_stencil, CoriolisAdv_stencil(CS%CoriolisAdv))
   if (CS%calculate_SAL) call SAL_init(h, tv, G, GV, US, param_file, CS%SAL_CSp, restart_CS)
   if (CS%use_tides) then
     call tidal_forcing_init(Time, G, US, param_file, CS%tides_CSp, CS%HA_CSp)
@@ -1646,7 +1638,7 @@ subroutine initialize_dyn_split_RK2(u, v, h, tv, uh, vh, eta, Time, G, GV, US, p
                    filename=dirs%input_filename, directory=dirs%restart_input_dir, &
                    success=read_h2, scale=1.0/GV%H_to_mks)
       if (read_uv .and. read_h2) then
-        call pass_var(CS%h_av, G%Domain, halo=cor_stencil, clock=id_clock_pass_init)
+        call pass_var(CS%h_av, G%Domain, clock=id_clock_pass_init)
       else
         do k=1,nz ; do j=jsd,jed ; do i=isd,ied ; h_tmp(i,j,k) = h(i,j,k) ; enddo ; enddo ; enddo
         call continuity(CS%u_av, CS%v_av, h, h_tmp, uh, vh, dt, G, GV, US, CS%continuity_CSp, CS%OBC, pbv)
@@ -1654,8 +1646,6 @@ subroutine initialize_dyn_split_RK2(u, v, h, tv, uh, vh, eta, Time, G, GV, US, p
         do k=1,nz ; do j=jsd,jed ; do i=isd,ied
           CS%h_av(i,j,k) = 0.5*(h(i,j,k) + h_tmp(i,j,k))
         enddo ; enddo ; enddo
-        call pass_var(CS%h_av, G%Domain, halo=cor_stencil, clock=id_clock_pass_init)
-
       endif
       call pass_vector(CS%u_av, CS%v_av, G%Domain, halo=cor_stencil, clock=id_clock_pass_init, complete=.false.)
       call pass_vector(uh, vh, G%Domain, halo=cor_stencil, clock=id_clock_pass_init, complete=.true.)
