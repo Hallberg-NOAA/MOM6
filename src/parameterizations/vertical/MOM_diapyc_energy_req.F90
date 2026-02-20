@@ -35,6 +35,8 @@ type, public :: diapyc_energy_req_CS ; private
   real :: VonKar               !< The von Karman coefficient as used in this module [nondim]
   logical :: use_test_Kh_profile !< If true, use the internal test diffusivity profile in place of
                                !! any that might be passed in as an argument.
+  integer :: kl_cent           !< The first layer to solve for with an interior-layer centered
+                               !! tridiagonal solver for the updated temperatures after mixing
   type(diag_ctrl), pointer :: diag => NULL() !< A structure that is used to
                                !! regulate the timing of diagnostic output.
 
@@ -42,7 +44,7 @@ type, public :: diapyc_energy_req_CS ; private
   integer :: id_ERt=-1, id_ERb=-1, id_ERc=-1, id_ERh=-1, id_Kddt=-1, id_Kd=-1
   integer :: id_CHCt=-1, id_CHCb=-1, id_CHCc=-1, id_CHCh=-1
   integer :: id_T0=-1, id_Tf=-1, id_S0=-1, id_Sf=-1, id_N2_0=-1, id_N2_f=-1
-  integer :: id_h=-1, id_zInt=-1
+  integer :: id_h=-1, id_zInt=-1, id_Tf_cent=-1, id_dT_cent=-1
   !>@}
 end type diapyc_energy_req_CS
 
@@ -188,6 +190,11 @@ subroutine diapyc_energy_req_calc(h_in, dz_in, T_in, S_in, Kd, energy_Kd, dt, tv
     dSV_dS, &   ! Partial derivative of specific volume with salinity [R-1 S-1 ~> m3 kg-1 ppt-1].
     T0, S0, &   ! Initial temperatures and salinities [C ~> degC] and [S ~> ppt].
     Tf, Sf, &   ! New final values of the temperatures and salinities [C ~> degC] and [S ~> ppt].
+    Tf_cent, &  ! The final temperature when using a tridiagonal solver centered on solving first
+                ! for the temperature of layer CS%kl_cent [C ~> degC]
+    dT_cent, &  ! The difference in final temperature between using a tridiagonal solver centered
+                ! on solving first for the temperature of layer CS%kl_cent and one that solves for
+                ! the top layer first [C ~> degC]
     Th_a, &     ! An effective temperature times a thickness in the layer above, including implicit
                 ! mixing effects with other yet higher layers [C H ~> degC m or degC kg m-2].
     Sh_a, &     ! An effective salinity times a thickness in the layer above, including implicit
@@ -284,6 +291,9 @@ subroutine diapyc_energy_req_calc(h_in, dz_in, T_in, S_in, Kd, energy_Kd, dt, tv
                     ! change in the column height [R L2 Z T-2 ~> J m-2].
   real :: htot      ! A running sum of thicknesses [H ~> m or kg m-2].
   real :: dztot     ! A running sum of vertical distances across layers [Z ~> m]
+  real :: hp_ab     ! A limited version of the product of pivot thicknessness plus the diffusive
+                    ! coupling distance for the layers and interfaces above and below layer
+                    ! CS%kl_cent with the layer-centered tridiagonal solver [H2 ~> m2 or kg2 m-4].
   logical :: do_print
 
   ! The following are a bunch of diagnostic arrays for debugging purposes.
@@ -308,7 +318,9 @@ subroutine diapyc_energy_req_calc(h_in, dz_in, T_in, S_in, Kd, energy_Kd, dt, tv
   real :: T_chg_totA, T_chg_totB ! Vertically integrated temperature changes [C H ~> degC m or degC kg m-2]
   real :: T_chg_totC, T_chg_totD ! Vertically integrated temperature changes [C H ~> degC m or degC kg m-2]
   real :: PE_chg(6) ! The potential energy change within the first few iterations [R Z L2 T-2 ~> J m-2]
+  real :: T_min, T_max ! The minimum and maximum temperatures in the water column [C ~> degC]
 
+  character(len=256) :: mesg ! String for error messages
   integer :: k, nz, itt, k_cent
   logical :: surface_BL, bottom_BL, central, halves, debug
   nz = GV%ke
@@ -872,6 +884,86 @@ subroutine diapyc_energy_req_calc(h_in, dz_in, T_in, S_in, Kd, energy_Kd, dt, tv
     endif
   endif
 
+  ! This is an inside-out tridiagonal solver for Tf centered on layer CS%kl_cent
+  hp_a(1) = h_tr(1)
+  do K=2,CS%kl_cent
+    b1 = 1.0 / (hp_a(k-1) + Kddt_h(K))
+    Te_a(k-1) = b1 * (h_tr(k-1)*T0(k-1) + Kddt_h(K-1)*Te_a(k-2))
+
+    c1_a(K) = Kddt_h(K) * b1
+    hp_a(k) = h_tr(k) + (hp_a(k-1) * b1)*Kddt_h(K)
+  enddo
+  hp_b(nz) = h_tr(nz)
+  do K=nz,CS%kl_cent+1,-1
+    b1 = 1.0 / (hp_b(k) + Kddt_h(K))
+    Te_b(k) = b1 * (h_tr(k)*T0(k) + Kddt_h(K+1)*Te_b(k+1))
+
+    c1_b(K) = Kddt_h(K) * b1
+    hp_b(k-1) = h_tr(k-1) + (hp_b(k) * b1)*Kddt_h(K)
+  enddo
+  k = CS%kl_cent
+  ! The general expression for b1 at the central layer is derived from:
+  ! (h_tr(k) + (Kddt_h(K+1) + Kddt_h(K)))*Tf(k) = (h_tr(k)*T0(k) + (Kddt_h(K+1)*Tf(k+1) + Kddt_h(K)*Tf(k-1)))
+  !  Tf(k-1) = Te_a(k-1) + c1_a(K)*Tf(k)
+  !  Tf(k+1) = Te_b(k+1) + c1_b(K+1)*Tf(k)
+  ! So:
+  ! (h_tr(k) + ((1.-c1_b(K+1))*Kddt_h(K+1) + (1.-c1_a(K))*Kddt_h(K)))*Tf(k) = &
+  !     (h_tr(k)*T0(k) + (Kddt_h(K+1)*Te_b(k+1) + Kddt_h(K)*Te_a(k-1)))
+  ! Tf(k) = b1 * (h_tr(k)*T0(k) + (Kddt_h(K+1)*Te_b(k+1) + Kddt_h(K)*Te_a(k-1)))
+  ! b1 = 1.0 / (h_tr(k) + ((1.-c1_b(K+1))*Kddt_h(K+1) + (1.-c1_a(K))*Kddt_h(K)))
+  !    1.-c1_a(K) = hp_a(k-1) / (hp_a(k-1) + Kddt_h(K))
+  !    1.-c1_b(K+1) = hp_b(k+1) / (hp_b(k+1) + Kddt_h(K+1))
+  ! b1 = 1.0 / (h_tr(k) + Kddt_h(K+1)*hp_b(k+1) / (hp_b(k+1) + Kddt_h(K+1)) + &
+  !                       Kddt_h(K)*hp_a(k-1) / (hp_a(k-1) + Kddt_h(K)) )
+  !   Refactor b1 to get down to just one division by multiplying by hp_ab / hp_ab with
+  ! hp_ab = (hp_b(k+1) + Kddt_h(K+1)) * (hp_a(k-1) + Kddt_h(K))
+  !   Modify hp_ab slightly to avoid division by 0, analogously to the floor on h_tr above:
+  hp_ab = max((hp_b(k+1) + Kddt_h(K+1)) * (hp_a(k-1) + Kddt_h(K)), GV%H_subroundoff**2)
+  b1 = hp_ab / (hp_ab * h_tr(k) + ( Kddt_h(K+1)*hp_b(k+1) * (hp_a(k-1) + Kddt_h(K)) + &
+                                    Kddt_h(K)*hp_a(k-1) * (hp_b(k+1) + Kddt_h(K+1)) ) )
+  ! Or equivalently:
+  ! b1 = hp_ab / (hp_ab * h_tr(k) + ( (Kddt_h(K)+Kddt_h(K+1)) * hp_a(k-1)*hp_b(k+1) + &
+  !                                    Kddt_h(K)*Kddt_h(K+1) * (hp_a(k-1)+hp_b(k+1)) ) )
+  if ((Kddt_h(K) == 0.0) .and. (Kddt_h(K+1) == 0.0)) then
+    b1 = 1.0 / h_tr(k)
+    ! Equivalent to Tf(k) = T0(k)
+  elseif ((Kddt_h(K) == 0.0) .or. (CS%kl_cent == 1)) then
+    b1 = (hp_b(k+1) + Kddt_h(K+1)) / ((hp_b(k+1) + Kddt_h(K+1)) * h_tr(k) + ( Kddt_h(K+1)*hp_b(k+1) ) )
+  elseif ((Kddt_h(K+1) == 0.0) .or. (CS%kl_cent == nz)) then
+    b1 = (hp_a(k-1) + Kddt_h(K)) / ((hp_a(k-1) + Kddt_h(K)) * h_tr(k) + ( Kddt_h(K)*hp_a(k-1) ) )
+  else
+    hp_ab = max((hp_b(k+1) + Kddt_h(K+1)) * (hp_a(k-1) + Kddt_h(K)), GV%H_subroundoff**2)
+    b1 = hp_ab / (hp_ab * h_tr(k) + ( Kddt_h(K+1)*hp_b(k+1) * (hp_a(k-1) + Kddt_h(K)) + &
+                                      Kddt_h(K)*hp_a(k-1) * (hp_b(k+1) + Kddt_h(K+1)) ) )
+  endif
+  Tf_cent(k) = b1 * (h_tr(k)*T0(k) + (Kddt_h(K+1)*Te_b(k+1) + Kddt_h(K)*Te_a(k-1)))
+  do k=CS%kl_cent-1,1,-1
+    Tf_cent(k) = Te_a(k) + c1_a(K+1)*Tf_cent(k+1)
+  enddo
+  do k=CS%kl_cent+1,nz
+    Tf_cent(k) = Te_b(k) + c1_b(K)*Tf_cent(k-1)
+  enddo
+
+  ! Find the temperature range and test for consistency of the two tridiagonal solvers.
+  T_min = Tf(1) ; T_max = Tf(1)
+  do k=1,nz
+    T_min = min(T_min, Tf(k))
+    T_max = max(T_max, Tf(k))
+  enddo
+  do k=1,nz
+    dT_cent(k) = Tf_cent(k) - Tf(k)
+  enddo
+  if (T_max > T_min) then ; do k=1,nz
+    write(mesg,'("T(",I0,"): ",ES11.4," and ",ES11.4," differ by ",ES11.4)') k, Tf(k), Tf_cent(k), dT_cent(k)
+    if (abs(dT_cent(k)) > 1.0e-14*(T_max - T_min)) then
+      call MOM_error(FATAL, "diapyc_energy_req_calc gives inconsistent results from tridiag solvers, "//trim(mesg))
+    endif
+    ! if (may_print) call MOM_error(WARNING, "Results from tridiag solvers: "//trim(mesg))
+  enddo ; endif
+
+  if (CS%id_Tf_cent>0) call post_data(CS%id_Tf_cent, Tf_cent, CS%diag)
+  if (CS%id_dT_cent>0) call post_data(CS%id_dT_cent, dT_cent, CS%diag)
+
 end subroutine diapyc_energy_req_calc
 
 !> This subroutine calculates the change in potential energy and or derivatives
@@ -884,7 +976,7 @@ subroutine find_PE_chg(Kddt_h0, dKddt_h, hp_a, hp_b, Th_a, Sh_a, Th_b, Sh_b, &
                                 !! the time step and  divided by the average of the
                                 !! thicknesses around the interface [H ~> m or kg m-2].
   real, intent(in)  :: dKddt_h  !< The trial change in the diffusivity at an interface times
-                                !! the time step and  divided by the average of the
+                                !! the time step and divided by the average of the
                                 !! thicknesses around the interface [H ~> m or kg m-2].
   real, intent(in)  :: hp_a     !< The effective pivot thickness of the layer above the
                                 !! interface, given by h_k plus a term that
@@ -1054,6 +1146,9 @@ subroutine diapyc_energy_req_init(Time, G, GV, US, param_file, diag, CS)
   call get_param(param_file, mdl, 'VON_KARMAN_CONST', CS%vonKar, &
                  'The value the von Karman constant as used for mixed layer viscosity.', &
                  units='nondim', default=0.41)
+  call get_param(param_file, mdl, "ENERGY_REQ_KL_CENT", CS%kl_cent, &
+                 "The first layer to solve for with an interior-layer centered tridiagonal "//&
+                 "solver for the updated temperatures after mixing", default=GV%ke/2)
 
   CS%id_ERt = register_diag_field('ocean_model', 'EnReqTest_ERt', diag%axesZi, Time, &
                  "Diffusivity Energy Requirements, top-down", &
@@ -1099,6 +1194,12 @@ subroutine diapyc_energy_req_init(Time, G, GV, US, param_file, diag, CS)
                  "Squared buoyancy frequency before mixing", "second-2", conversion=US%s_to_T**2)
   CS%id_N2_f = register_diag_field('ocean_model', 'EnReqTest_N2_f', diag%axesZi, Time, &
                  "Squared buoyancy frequency after mixing", "second-2", conversion=US%s_to_T**2)
+  CS%id_Tf_cent = register_diag_field('ocean_model', 'EnReqTest_Tf_c', diag%axesZL, Time, &
+                 "Temperature after mixing solving first for the value in layer KL_CENT", &
+                 "deg C", conversion=US%C_to_degC)
+  CS%id_dT_cent = register_diag_field('ocean_model', 'EnReqTest_dT_cent', diag%axesZL, Time, &
+                 "Temperature difference after mixing solving first for the value in layer KL_CENT vs bottom up", &
+                 "deg C", conversion=US%C_to_degC)
 
 end subroutine diapyc_energy_req_init
 
