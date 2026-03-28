@@ -332,7 +332,7 @@ subroutine register_tracer_diagnostics(Reg, h, Time, diag, G, GV, US, use_ALE, u
 !    call query_vardesc(Tr%vd, name, units=units, longname=longname, &
 !                       cmor_field_name=cmorname, cmor_longname=cmor_longname, &
 !                       caller="register_tracer_diagnostics")
-    name = Tr%name ; units=adjustl(Tr%units) ; longname = Tr%longname
+    name = Tr%name ; units = adjustl(Tr%units) ; longname = Tr%longname
     cmorname = Tr%cmor_name ; cmor_longname = Tr%cmor_longname
     shortnm = Tr%flux_nameroot
     flux_longname = Tr%flux_longname
@@ -612,7 +612,7 @@ subroutine register_tracer_diagnostics(Reg, h, Time, diag, G, GV, US, use_ALE, u
     ! Vertical regridding/remapping tendencies
     if (use_ALE .and. Tr%remap_tr) then
       var_lname = "Vertical remapping tracer concentration tendency for "//trim(Reg%Tr(m)%name)
-      Tr%id_remap_conc= register_diag_field('ocean_model', &
+      Tr%id_remap_conc = register_diag_field('ocean_model', &
           trim(Tr%flux_nameroot)//'_tendency_vert_remap', diag%axesTL, Time, var_lname, &
           trim(units)//' s-1', conversion=Tr%conc_scale*US%s_to_T)
 

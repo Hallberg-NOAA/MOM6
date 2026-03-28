@@ -367,9 +367,9 @@ subroutine ocean_model_init(Ocean_sfc, OS, Time_init, Time_in, wind_stagger, gas
                  units="m", default=-1.0, scale=OS%US%m_to_Z, do_not_log=.true.)
 
   if (HFrz > 0.0) then
-    use_melt_pot=.true.
+    use_melt_pot = .true.
   else
-    use_melt_pot=.false.
+    use_melt_pot = .false.
   endif
 
   !allocate(OS%sfc_state)
@@ -424,7 +424,7 @@ subroutine ocean_model_init(Ocean_sfc, OS, Time_init, Time_in, wind_stagger, gas
   if (present(calve_ice_shelf_bergs)) then
     if (calve_ice_shelf_bergs) then
       call convert_shelf_state_to_ocean_type(Ocean_sfc, OS%Ice_shelf_CSp, OS%US)
-      OS%calve_ice_shelf_bergs=.true.
+      OS%calve_ice_shelf_bergs = .true.
     endif
   endif
 

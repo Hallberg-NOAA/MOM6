@@ -79,7 +79,7 @@ subroutine get_MOM_input(param_file, dirs, check_params, default_input_filename,
 
   ! Read namelist parameters
   ! NOTE: Every rank is reading MOM_input_nml
-  ierr=1 ; do while (ierr /= 0)
+  ierr = 1 ; do while (ierr /= 0)
     read(unit, nml=MOM_input_nml, iostat=io, end=10)
     ierr = check_nml_error(io, 'MOM_input_nml')
   enddo

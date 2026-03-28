@@ -2869,9 +2869,9 @@ integer function xyz_method(axes, x_cell_method, y_cell_method, v_cell_method, v
     if (present(v_cell_method)) call MOM_error(FATAL, "xyz_method: " // &
        'Vertical cell method was specified along with the vertically extensive flag.')
     if (v_extensive) then
-      mstr='sum'
+      mstr = 'sum'
     else
-      mstr='mean'
+      mstr = 'mean'
     endif
   elseif (present(v_cell_method)) then
     mstr = v_cell_method
@@ -2945,16 +2945,16 @@ subroutine attach_cell_methods(id, axes, ostring, cell_methods, &
         call get_MOM_diag_axis_name(axes%handles(1), axis_name)
         call MOM_diag_field_add_attribute(id, 'cell_methods', trim(axis_name)//':'//trim(x_cell_method))
         ostring = trim(adjustl(ostring))//' '//trim(axis_name)//':'//trim(x_cell_method)
-        if (trim(x_cell_method)=='mean') x_mean=.true.
-        if (trim(x_cell_method)=='sum') x_sum=.true.
+        if (trim(x_cell_method) == 'mean') x_mean = .true.
+        if (trim(x_cell_method) == 'sum') x_sum = .true.
       endif
     else
       if (len(trim(axes%x_cell_method))>0) then
         call get_MOM_diag_axis_name(axes%handles(1), axis_name)
         call MOM_diag_field_add_attribute(id, 'cell_methods', trim(axis_name)//':'//trim(axes%x_cell_method))
         ostring = trim(adjustl(ostring))//' '//trim(axis_name)//':'//trim(axes%x_cell_method)
-        if (trim(axes%x_cell_method)=='mean') x_mean=.true.
-        if (trim(axes%x_cell_method)=='sum') x_sum=.true.
+        if (trim(axes%x_cell_method) == 'mean') x_mean = .true.
+        if (trim(axes%x_cell_method) == 'sum') x_sum = .true.
       endif
     endif
     if (present(y_cell_method)) then
@@ -2962,16 +2962,16 @@ subroutine attach_cell_methods(id, axes, ostring, cell_methods, &
         call get_MOM_diag_axis_name(axes%handles(2), axis_name)
         call MOM_diag_field_add_attribute(id, 'cell_methods', trim(axis_name)//':'//trim(y_cell_method))
         ostring = trim(adjustl(ostring))//' '//trim(axis_name)//':'//trim(y_cell_method)
-        if (trim(y_cell_method)=='mean') y_mean=.true.
-        if (trim(y_cell_method)=='sum') y_sum=.true.
+        if (trim(y_cell_method) == 'mean') y_mean = .true.
+        if (trim(y_cell_method) == 'sum') y_sum = .true.
       endif
     else
       if (len(trim(axes%y_cell_method))>0) then
         call get_MOM_diag_axis_name(axes%handles(2), axis_name)
         call MOM_diag_field_add_attribute(id, 'cell_methods', trim(axis_name)//':'//trim(axes%y_cell_method))
         ostring = trim(adjustl(ostring))//' '//trim(axis_name)//':'//trim(axes%y_cell_method)
-        if (trim(axes%y_cell_method)=='mean') y_mean=.true.
-        if (trim(axes%y_cell_method)=='sum') y_sum=.true.
+        if (trim(axes%y_cell_method) == 'mean') y_mean = .true.
+        if (trim(axes%y_cell_method) == 'sum') y_sum = .true.
       endif
     endif
     if (present(v_cell_method)) then

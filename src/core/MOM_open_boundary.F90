@@ -2444,22 +2444,22 @@ subroutine open_boundary_impose_normal_slope(OBC, G, depth)
     segment => OBC%segment(n)
     if (.not. segment%on_pe) cycle
     if (segment%direction == OBC_DIRECTION_E) then
-      I=segment%HI%IsdB
+      I = segment%HI%IsdB
       do j=segment%HI%jsd,segment%HI%jed
         depth(i+1,j) = depth(i,j)
       enddo
     elseif (segment%direction == OBC_DIRECTION_W) then
-      I=segment%HI%IsdB
+      I = segment%HI%IsdB
       do j=segment%HI%jsd,segment%HI%jed
         depth(i,j) = depth(i+1,j)
       enddo
     elseif (segment%direction == OBC_DIRECTION_N) then
-      J=segment%HI%JsdB
+      J = segment%HI%JsdB
       do i=segment%HI%isd,segment%HI%ied
         depth(i,j+1) = depth(i,j)
       enddo
     elseif (segment%direction == OBC_DIRECTION_S) then
-      J=segment%HI%JsdB
+      J = segment%HI%JsdB
       do i=segment%HI%isd,segment%HI%ied
         depth(i,j) = depth(i,j+1)
       enddo
@@ -2490,7 +2490,7 @@ subroutine open_boundary_impose_land_mask(OBC, G, areaCu, areaCv, US)
     if (segment%is_E_or_W) then
       ! Sweep along u-segments and delete the OBC for blocked points.
       ! Also, mask all points outside.
-      I=segment%HI%IsdB
+      I = segment%HI%IsdB
       do j=segment%HI%jsd,segment%HI%jed
         if (G%mask2dCu(I,j) == 0) OBC%segnum_u(I,j) = 0
         if (segment%direction == OBC_DIRECTION_W) then
@@ -2508,7 +2508,7 @@ subroutine open_boundary_impose_land_mask(OBC, G, areaCu, areaCv, US)
       enddo
     else
       ! Sweep along v-segments and delete the OBC for blocked points.
-      J=segment%HI%JsdB
+      J = segment%HI%JsdB
       do i=segment%HI%isd,segment%HI%ied
         if (G%mask2dCv(i,J) == 0) OBC%segnum_v(i,J) = 0
         if (segment%direction == OBC_DIRECTION_S) then
@@ -2533,12 +2533,12 @@ subroutine open_boundary_impose_land_mask(OBC, G, areaCu, areaCv, US)
     ! Set the OBCmask values to help eliminate certain terms at u- or v- OBC points.
     ! Testing suggests this could be applied at all u- or v- OBC points without changing answers.
     if (segment%is_E_or_W) then
-      I=segment%HI%IsdB
+      I = segment%HI%IsdB
       do j=segment%HI%jsd,segment%HI%jed
         G%OBCmaskCu(I,j) = 0.0 ; G%IdxCu_OBCmask(I,j) = 0.0
       enddo
     else
-      J=segment%HI%JsdB
+      J = segment%HI%JsdB
       do i=segment%HI%isd,segment%HI%ied
         G%OBCmaskCv(i,J) = 0.0 ; G%IdyCv_OBCmask(i,J) = 0.0
       enddo
@@ -2550,7 +2550,7 @@ subroutine open_boundary_impose_land_mask(OBC, G, areaCu, areaCv, US)
     if (.not. segment%on_pe .or. .not. segment%specified) cycle
     if (segment%is_E_or_W) then
       ! Sweep along u-segments and for %specified BC points reset the u-point area which was masked out
-      I=segment%HI%IsdB
+      I = segment%HI%IsdB
       do j=segment%HI%jsd,segment%HI%jed
         if (segment%direction == OBC_DIRECTION_E) then
           areaCu(I,j) = G%areaT(i,j)   ! Both of these are in [L2 ~> m2]
@@ -2560,7 +2560,7 @@ subroutine open_boundary_impose_land_mask(OBC, G, areaCu, areaCv, US)
       enddo
     else
       ! Sweep along v-segments and for %specified BC points reset the v-point area which was masked out
-      J=segment%HI%JsdB
+      J = segment%HI%JsdB
       do i=segment%HI%isd,segment%HI%ied
         if (segment%direction == OBC_DIRECTION_S) then
           areaCv(i,J) = G%areaT(i,j+1) ! Both of these are in [L2 ~> m2]
@@ -2581,12 +2581,12 @@ subroutine open_boundary_impose_land_mask(OBC, G, areaCu, areaCv, US)
     segment => OBC%segment(n)
     if (.not. segment%on_pe) cycle
     if (segment%is_E_or_W) then
-      I=segment%HI%IsdB
+      I = segment%HI%IsdB
       do j=segment%HI%jsd,segment%HI%jed
         if (OBC%segnum_u(I,j) /= 0) any_U = .true.
       enddo
     else
-      J=segment%HI%JsdB
+      J = segment%HI%JsdB
       do i=segment%HI%isd,segment%HI%ied
         if (OBC%segnum_v(i,J) /= 0) any_V = .true.
       enddo
@@ -2948,7 +2948,7 @@ subroutine radiation_open_bdry_conds(OBC, u_new, u_old, v_new, v_old, G, GV, US,
     if (.not. segment%on_pe) cycle
     if (segment%oblique) call gradient_at_q_points(G, GV, segment, u_new(:,:,:), v_new(:,:,:))
     if (segment%direction == OBC_DIRECTION_E) then
-      I=segment%HI%IsdB
+      I = segment%HI%IsdB
       if (I<G%HI%IscB) cycle
       do k=1,nz ;  do j=segment%HI%jsd,segment%HI%jed
         if (segment%radiation) then
@@ -3024,7 +3024,7 @@ subroutine radiation_open_bdry_conds(OBC, u_new, u_old, v_new, v_old, G, GV, US,
         endif
       enddo ; enddo
       if (segment%radiation_tan .or. segment%radiation_grad) then
-        I=segment%HI%IsdB
+        I = segment%HI%IsdB
         allocate(rx_tang_rad(segment%HI%IsdB:segment%HI%IedB,segment%HI%JsdB:segment%HI%JedB,nz))
         do k=1,nz
           if (gamma_u < 1.0) then
@@ -3095,7 +3095,7 @@ subroutine radiation_open_bdry_conds(OBC, u_new, u_old, v_new, v_old, G, GV, US,
         deallocate(rx_tang_rad)
       endif
       if (segment%oblique_tan .or. segment%oblique_grad) then
-        I=segment%HI%IsdB
+        I = segment%HI%IsdB
         allocate(rx_tang_obl(segment%HI%IsdB:segment%HI%IedB,segment%HI%JsdB:segment%HI%JedB,nz))
         allocate(ry_tang_obl(segment%HI%IsdB:segment%HI%IedB,segment%HI%JsdB:segment%HI%JedB,nz))
         allocate(cff_tangential(segment%HI%IsdB:segment%HI%IedB,segment%HI%JsdB:segment%HI%JedB,nz))
@@ -3192,7 +3192,7 @@ subroutine radiation_open_bdry_conds(OBC, u_new, u_old, v_new, v_old, G, GV, US,
     endif
 
     if (segment%direction == OBC_DIRECTION_W) then
-      I=segment%HI%IsdB
+      I = segment%HI%IsdB
       if (I>G%HI%IecB) cycle
       do k=1,nz ; do j=segment%HI%jsd,segment%HI%jed
         if (segment%radiation) then
@@ -3269,7 +3269,7 @@ subroutine radiation_open_bdry_conds(OBC, u_new, u_old, v_new, v_old, G, GV, US,
         endif
       enddo ; enddo
       if (segment%radiation_tan .or. segment%radiation_grad) then
-        I=segment%HI%IsdB
+        I = segment%HI%IsdB
         allocate(rx_tang_rad(segment%HI%IsdB:segment%HI%IedB,segment%HI%JsdB:segment%HI%JedB,nz))
         do k=1,nz
           if (gamma_u < 1.0) then
@@ -3340,7 +3340,7 @@ subroutine radiation_open_bdry_conds(OBC, u_new, u_old, v_new, v_old, G, GV, US,
         deallocate(rx_tang_rad)
       endif
       if (segment%oblique_tan .or. segment%oblique_grad) then
-        I=segment%HI%IsdB
+        I = segment%HI%IsdB
         allocate(rx_tang_obl(segment%HI%IsdB:segment%HI%IedB,segment%HI%JsdB:segment%HI%JedB,nz))
         allocate(ry_tang_obl(segment%HI%IsdB:segment%HI%IedB,segment%HI%JsdB:segment%HI%JedB,nz))
         allocate(cff_tangential(segment%HI%IsdB:segment%HI%IedB,segment%HI%JsdB:segment%HI%JedB,nz))
@@ -3437,7 +3437,7 @@ subroutine radiation_open_bdry_conds(OBC, u_new, u_old, v_new, v_old, G, GV, US,
     endif
 
     if (segment%direction == OBC_DIRECTION_N) then
-      J=segment%HI%JsdB
+      J = segment%HI%JsdB
       if (J<G%HI%JscB) cycle
       do k=1,nz ;  do i=segment%HI%isd,segment%HI%ied
         if (segment%radiation) then
@@ -3513,7 +3513,7 @@ subroutine radiation_open_bdry_conds(OBC, u_new, u_old, v_new, v_old, G, GV, US,
         endif
       enddo ; enddo
       if (segment%radiation_tan .or. segment%radiation_grad) then
-        J=segment%HI%JsdB
+        J = segment%HI%JsdB
         allocate(ry_tang_rad(segment%HI%IsdB:segment%HI%IedB,segment%HI%JsdB:segment%HI%JedB,nz))
         do k=1,nz
           if (gamma_u < 1.0) then
@@ -3584,7 +3584,7 @@ subroutine radiation_open_bdry_conds(OBC, u_new, u_old, v_new, v_old, G, GV, US,
         deallocate(ry_tang_rad)
       endif
       if (segment%oblique_tan .or. segment%oblique_grad) then
-        J=segment%HI%JsdB
+        J = segment%HI%JsdB
         allocate(rx_tang_obl(segment%HI%IsdB:segment%HI%IedB,segment%HI%JsdB:segment%HI%JedB,nz))
         allocate(ry_tang_obl(segment%HI%IsdB:segment%HI%IedB,segment%HI%JsdB:segment%HI%JedB,nz))
         allocate(cff_tangential(segment%HI%IsdB:segment%HI%IedB,segment%HI%JsdB:segment%HI%JedB,nz))
@@ -3681,7 +3681,7 @@ subroutine radiation_open_bdry_conds(OBC, u_new, u_old, v_new, v_old, G, GV, US,
     endif
 
     if (segment%direction == OBC_DIRECTION_S) then
-      J=segment%HI%JsdB
+      J = segment%HI%JsdB
       if (J>G%HI%JecB) cycle
       do k=1,nz ;  do i=segment%HI%isd,segment%HI%ied
         if (segment%radiation) then
@@ -3758,7 +3758,7 @@ subroutine radiation_open_bdry_conds(OBC, u_new, u_old, v_new, v_old, G, GV, US,
         endif
       enddo ; enddo
       if (segment%radiation_tan .or. segment%radiation_grad) then
-        J=segment%HI%JsdB
+        J = segment%HI%JsdB
         allocate(ry_tang_rad(segment%HI%IsdB:segment%HI%IedB,segment%HI%JsdB:segment%HI%JedB,nz))
         do k=1,nz
           if (gamma_u < 1.0) then
@@ -3829,7 +3829,7 @@ subroutine radiation_open_bdry_conds(OBC, u_new, u_old, v_new, v_old, G, GV, US,
         deallocate(ry_tang_rad)
       endif
       if (segment%oblique_tan .or. segment%oblique_grad) then
-        J=segment%HI%JsdB
+        J = segment%HI%JsdB
         allocate(rx_tang_obl(segment%HI%IsdB:segment%HI%IedB,segment%HI%JsdB:segment%HI%JedB,nz))
         allocate(ry_tang_obl(segment%HI%IsdB:segment%HI%IedB,segment%HI%JsdB:segment%HI%JedB,nz))
         allocate(cff_tangential(segment%HI%IsdB:segment%HI%IedB,segment%HI%JsdB:segment%HI%JedB,nz))
@@ -3978,12 +3978,12 @@ subroutine open_boundary_apply_normal_flow(OBC, G, GV, u, v)
       cycle
     elseif (segment%radiation .or. segment%oblique .or. segment%gradient) then
       if (segment%is_E_or_W) then
-        I=segment%HI%IsdB
+        I = segment%HI%IsdB
         do k=1,GV%ke ;  do j=segment%HI%jsd,segment%HI%jed
           u(I,j,k) = segment%normal_vel(I,j,k)
         enddo ; enddo
       elseif (segment%is_N_or_S) then
-        J=segment%HI%JsdB
+        J = segment%HI%JsdB
         do k=1,GV%ke ;  do i=segment%HI%isd,segment%HI%ied
           v(i,J,k) = segment%normal_vel(i,J,k)
         enddo ; enddo
@@ -4012,12 +4012,12 @@ subroutine open_boundary_zero_normal_flow(OBC, G, GV, u, v)
     if (.not. segment%on_pe) then
       cycle
     elseif (segment%is_E_or_W) then
-      I=segment%HI%IsdB
+      I = segment%HI%IsdB
       do k=1,GV%ke ;  do j=segment%HI%jsd,segment%HI%jed
         u(I,j,k) = 0.
       enddo ; enddo
     elseif (segment%is_N_or_S) then
-      J=segment%HI%JsdB
+      J = segment%HI%JsdB
       do k=1,GV%ke ;  do i=segment%HI%isd,segment%HI%ied
         v(i,J,k) = 0.
       enddo ; enddo
@@ -4039,7 +4039,7 @@ subroutine gradient_at_q_points(G, GV, segment, uvel, vvel)
 
   if (segment%is_E_or_W) then
     if (segment%direction == OBC_DIRECTION_E) then
-      I=segment%HI%isdB
+      I = segment%HI%isdB
       do k=1,GV%ke
         do J=max(segment%HI%JsdB, G%HI%JsdB+1),min(segment%HI%JedB, G%HI%JedB-1)
           segment%grad_normal(J,1,k) = (uvel(I-1,j+1,k)-uvel(I-1,j,k)) * G%mask2dBu(I-1,J)
@@ -4065,7 +4065,7 @@ subroutine gradient_at_q_points(G, GV, segment, uvel, vvel)
         enddo
       endif
     else ! western segment
-      I=segment%HI%isdB
+      I = segment%HI%isdB
       do k=1,GV%ke
         do J=max(segment%HI%JsdB, G%HI%JsdB+1),min(segment%HI%JedB, G%HI%JedB-1)
           segment%grad_normal(J,1,k) = (uvel(I+1,j+1,k)-uvel(I+1,j,k)) * G%mask2dBu(I+1,J)
@@ -4093,7 +4093,7 @@ subroutine gradient_at_q_points(G, GV, segment, uvel, vvel)
     endif
   elseif (segment%is_N_or_S) then
     if (segment%direction == OBC_DIRECTION_N) then
-      J=segment%HI%jsdB
+      J = segment%HI%jsdB
       do k=1,GV%ke
         do I=max(segment%HI%IsdB, G%HI%IsdB+1),min(segment%HI%IedB, G%HI%IedB-1)
           segment%grad_normal(I,1,k) = (vvel(i+1,J-1,k)-vvel(i,J-1,k)) * G%mask2dBu(I,J-1)
@@ -4119,7 +4119,7 @@ subroutine gradient_at_q_points(G, GV, segment, uvel, vvel)
         enddo
       endif
     else ! south segment
-      J=segment%HI%jsdB
+      J = segment%HI%jsdB
       do k=1,GV%ke
         do I=max(segment%HI%IsdB, G%HI%IsdB+1),min(segment%HI%IedB, G%HI%IedB-1)
           segment%grad_normal(I,1,k) = (vvel(i+1,J+1,k)-vvel(i,J+1,k)) * G%mask2dBu(I,J+1)
@@ -5674,7 +5674,7 @@ subroutine fill_temp_salt_segments(G, GV, US, OBC, tv)
 
     ! Fill with T and S values
     if (segment%is_E_or_W) then
-      I=segment%HI%IsdB
+      I = segment%HI%IsdB
       do k=1,nz ; do j=segment%HI%jsd,segment%HI%jed
         if (segment%direction == OBC_DIRECTION_W) then
           segment%tr_Reg%Tr(1)%t(I,j,k) = tv%T(i+1,j,k)
@@ -5685,7 +5685,7 @@ subroutine fill_temp_salt_segments(G, GV, US, OBC, tv)
         endif
       enddo ; enddo
     else
-      J=segment%HI%JsdB
+      J = segment%HI%JsdB
       do k=1,nz ; do i=segment%HI%isd,segment%HI%ied
         if (segment%direction == OBC_DIRECTION_S) then
           segment%tr_Reg%Tr(1)%t(i,J,k) = tv%T(i,j+1,k)
@@ -5732,7 +5732,7 @@ subroutine fill_thickness_segments(G, GV, US, OBC, h)
 
     ! Fill with thickness
     if (segment%is_E_or_W) then
-      I=segment%HI%IsdB
+      I = segment%HI%IsdB
       do k=1,nz ; do j=segment%HI%jsd,segment%HI%jed
         if (segment%direction == OBC_DIRECTION_W) then
           segment%h_Reg%h(I,j,k) = h(i+1,j,k)
@@ -5741,7 +5741,7 @@ subroutine fill_thickness_segments(G, GV, US, OBC, h)
         endif
       enddo ; enddo
     else
-      J=segment%HI%JsdB
+      J = segment%HI%JsdB
       do k=1,nz ; do i=segment%HI%isd,segment%HI%ied
         if (segment%direction == OBC_DIRECTION_S) then
           segment%h_Reg%h(i,J,k) = h(i,j+1,k)

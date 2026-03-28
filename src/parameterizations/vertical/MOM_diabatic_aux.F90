@@ -1327,7 +1327,7 @@ subroutine applyBoundaryFluxesInOut(CS, G, GV, US, dt, fluxes, optics, nsw, h, t
         CS%penSW_diag(i,j,k)     = T2d(i,k)
         CS%penSWflux_diag(i,j,k) = 0.0
       enddo ; enddo
-      k=nz+1 ; do i=is,ie
+      k = nz+1 ; do i=is,ie
         CS%penSWflux_diag(i,j,k) = 0.0
       enddo
     endif

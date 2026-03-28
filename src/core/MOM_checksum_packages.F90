@@ -72,8 +72,8 @@ subroutine MOM_state_chksum_5arg(mesg, u, v, h, uh, vh, G, GV, US, haloshift, sy
   ! Note that for the chksum calls to be useful for reproducing across PE
   ! counts, there must be no redundant points, so all variables use is..ie
   ! and js...je as their extent.
-  hs = 1 ; if (present(haloshift)) hs=haloshift
-  sym = .false. ; if (present(symmetric)) sym=symmetric
+  hs = 1 ; if (present(haloshift)) hs = haloshift
+  sym = .false. ; if (present(symmetric)) sym = symmetric
   scale_vel = US%L_T_to_m_s ; if (present(vel_scale)) scale_vel = vel_scale
 
   call uvchksum(mesg//" [uv]", u, v, G%HI, haloshift=hs, symmetric=sym, &
@@ -129,7 +129,7 @@ subroutine MOM_thermo_chksum(mesg, tv, G, US, haloshift, omit_corners)
   logical,        optional, intent(in) :: omit_corners !< If true, avoid checking diagonal shifts
 
   integer :: hs
-  hs=1 ; if (present(haloshift)) hs=haloshift
+  hs = 1 ; if (present(haloshift)) hs = haloshift
 
   if (associated(tv%T)) &
     call hchksum(tv%T, mesg//" T", G%HI, haloshift=hs, omit_corners=omit_corners, unscale=US%C_to_degC)

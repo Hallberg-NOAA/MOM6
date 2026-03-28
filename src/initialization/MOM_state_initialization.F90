@@ -2661,7 +2661,7 @@ subroutine MOM_temp_salt_initialize_from_Z(h, tv, depth_tot, G, GV, US, PF, just
   isd = G%isd ; ied = G%ied ; jsd = G%jsd ; jed = G%jed
   isg = G%isg ; ieg = G%ieg ; jsg = G%jsg ; jeg = G%jeg
 
-  PI_180=atan(1.0)/45.
+  PI_180 = atan(1.0)/45.
 
   if (.not.just_read) call callTree_enter(trim(mdl)//"(), MOM_state_initialization.F90")
   if (.not.just_read) call log_version(PF, mdl, version, "")

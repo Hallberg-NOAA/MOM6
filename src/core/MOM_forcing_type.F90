@@ -1582,7 +1582,7 @@ subroutine register_forcing_type_diags(Time, diag, US, use_temperature, &
     use_cfcs_or_MARBL_tracers = use_cfcs_or_MARBL_tracers .or. use_MARBL_tracers
 
   ! Clock for forcing diagnostics
-  handles%id_clock_forcing=cpu_clock_id('(Ocean forcing diagnostics)', grain=CLOCK_ROUTINE)
+  handles%id_clock_forcing = cpu_clock_id('(Ocean forcing diagnostics)', grain=CLOCK_ROUTINE)
 
 
   handles%id_taux = register_diag_field('ocean_model', 'taux', diag%axesCu1, Time,  &
