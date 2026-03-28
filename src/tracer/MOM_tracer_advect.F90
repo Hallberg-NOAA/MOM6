@@ -199,7 +199,7 @@ subroutine advect_tracer(h_end, uhtr, vhtr, OBC, dt, G, GV, US, CS, Reg, x_first
     do j=jsd,jed ; do I=IsdB,IedB ; uhr(I,j,k) = 0.0 ; enddo ; enddo
     do J=jsdB,jedB ; do i=Isd,Ied ; vhr(i,J,k) = 0.0 ; enddo ; enddo
     do j=jsd,jed ; do i=Isd,Ied ; hprev(i,j,k) = 0.0 ; enddo ; enddo
-    domore_k(k)=1
+    domore_k(k) = 1
     !  Put the remaining (total) thickness fluxes into uhr and vhr.
     do j=js,je ; do I=is-1,ie ; uhr(I,j,k) = uhtr(I,j,k) ; enddo ; enddo
     do J=js-1,je ; do i=is,ie ; vhr(i,J,k) = vhtr(i,J,k) ; enddo ; enddo
@@ -513,7 +513,7 @@ subroutine advect_x(Tr, hprev, uhr, uh_neglect, OBC, domore_u, ntr, Idt, &
            !endif
             Tp = Tr(m)%t(i+1,j,k) ; Tc = Tr(m)%t(i,j,k) ; Tm = Tr(m)%t(i-1,j,k)
             dMx = max( Tp, Tc, Tm ) - Tc
-            dMn= Tc - min( Tp, Tc, Tm )
+            dMn = Tc - min( Tp, Tc, Tm )
             slope_x(i,m) = G%mask2dCu(I,j)*G%mask2dCu(I-1,j) * &
                 sign( min(0.5*abs(Tp-Tm), 2.0*dMx, 2.0*dMn), Tp-Tm )
           enddo
@@ -552,7 +552,7 @@ subroutine advect_x(Tr, hprev, uhr, uh_neglect, OBC, domore_u, ntr, Idt, &
                 do i=segment%HI%IsdB-1,segment%HI%IsdB+1
                   Tp = T_tmp(i+1,m) ; Tc = T_tmp(i,m) ; Tm = T_tmp(i-1,m)
                   dMx = max( Tp, Tc, Tm ) - Tc
-                  dMn= Tc - min( Tp, Tc, Tm )
+                  dMn = Tc - min( Tp, Tc, Tm )
                   slope_x(i,m) = G%mask2dCu(I,j)*G%mask2dCu(I-1,j) * &
                        sign( min(0.5*abs(Tp-Tm), 2.0*dMx, 2.0*dMn), Tp-Tm )
                 enddo
@@ -980,7 +980,7 @@ subroutine advect_y(Tr, hprev, vhr, vh_neglect, OBC, domore_v, ntr, Idt, &
                 do j=segment%HI%JsdB-1,segment%HI%JsdB+1
                   Tp = T_tmp(i,m,j+1) ; Tc = T_tmp(i,m,j) ; Tm = T_tmp(i,m,j-1)
                   dMx = max( Tp, Tc, Tm ) - Tc
-                  dMn= Tc - min( Tp, Tc, Tm )
+                  dMn = Tc - min( Tp, Tc, Tm )
                   slope_y(i,m,j) = G%mask2dCv(i,J)*G%mask2dCv(i,J-1) * &
                        sign( min(0.5*abs(Tp-Tm), 2.0*dMx, 2.0*dMn), Tp-Tm )
                 enddo

@@ -283,7 +283,7 @@ subroutine InitializeP0(gcomp, importState, exportState, clock, rc)
   call NUOPC_CompAttributeGet(gcomp, name="DumpFields", value=value, &
        isPresent=isPresent, isSet=isSet, rc=rc)
   if (ChkErr(rc, __LINE__, u_FILE_u)) return
-  if (isPresent .and. isSet) write_diagnostics=(trim(value)=="true")
+  if (isPresent .and. isSet) write_diagnostics = (trim(value) == "true")
 
   write(logmsg,*) write_diagnostics
   call ESMF_LogWrite('MOM_cap:DumpFields = '//trim(logmsg), ESMF_LOGMSG_INFO)
@@ -292,7 +292,7 @@ subroutine InitializeP0(gcomp, importState, exportState, clock, rc)
   call NUOPC_CompAttributeGet(gcomp, name="RunTimeLog", value=value, &
        isPresent=isPresent, isSet=isSet, rc=rc)
   if (ChkErr(rc, __LINE__, u_FILE_u)) return
-  if (isPresent .and. isSet) write_runtimelog=(trim(value)=="true")
+  if (isPresent .and. isSet) write_runtimelog = (trim(value) == "true")
   write(logmsg,*) write_runtimelog
   call ESMF_LogWrite('MOM_cap:RunTimeLog = '//trim(logmsg), ESMF_LOGMSG_INFO)
 
@@ -300,7 +300,7 @@ subroutine InitializeP0(gcomp, importState, exportState, clock, rc)
   call NUOPC_CompAttributeGet(gcomp, name="OverwriteSlice", value=value, &
        isPresent=isPresent, isSet=isSet, rc=rc)
   if (ChkErr(rc, __LINE__, u_FILE_u)) return
-  if (isPresent .and. isSet) overwrite_timeslice=(trim(value)=="true")
+  if (isPresent .and. isSet) overwrite_timeslice = (trim(value) == "true")
   write(logmsg,*) overwrite_timeslice
   call ESMF_LogWrite('MOM_cap:OverwriteSlice = '//trim(logmsg), ESMF_LOGMSG_INFO)
 
@@ -308,7 +308,7 @@ subroutine InitializeP0(gcomp, importState, exportState, clock, rc)
   call NUOPC_CompAttributeGet(gcomp, name="ProfileMemory", value=value, &
        isPresent=isPresent, isSet=isSet, rc=rc)
   if (ChkErr(rc, __LINE__, u_FILE_u)) return
-  if (isPresent .and. isSet) profile_memory=(trim(value)=="true")
+  if (isPresent .and. isSet) profile_memory = (trim(value) == "true")
   write(logmsg,*) profile_memory
   call ESMF_LogWrite('MOM_cap:ProfileMemory = '//trim(logmsg), ESMF_LOGMSG_INFO)
 
@@ -316,7 +316,7 @@ subroutine InitializeP0(gcomp, importState, exportState, clock, rc)
   call NUOPC_CompAttributeGet(gcomp, name="GridAttachArea", value=value, &
        isPresent=isPresent, isSet=isSet, rc=rc)
   if (ChkErr(rc, __LINE__, u_FILE_u)) return
-  if (isPresent .and. isSet) grid_attach_area=(trim(value)=="true")
+  if (isPresent .and. isSet) grid_attach_area = (trim(value) == "true")
   write(logmsg,*) grid_attach_area
   call ESMF_LogWrite('MOM_cap:GridAttachArea = '//trim(logmsg), ESMF_LOGMSG_INFO)
 
@@ -389,7 +389,7 @@ subroutine InitializeP0(gcomp, importState, exportState, clock, rc)
   call NUOPC_CompAttributeGet(gcomp, name="use_coldstart", value=value, &
        isPresent=isPresent, isSet=isSet, rc=rc)
   if (ChkErr(rc, __LINE__, u_FILE_u)) return
-  if (isPresent .and. isSet) use_coldstart=(trim(value)=="true")
+  if (isPresent .and. isSet) use_coldstart = (trim(value) == "true")
   write(logmsg,*) use_coldstart
   call ESMF_LogWrite('MOM_cap:use_coldstart = '//trim(logmsg), ESMF_LOGMSG_INFO)
 
@@ -397,7 +397,7 @@ subroutine InitializeP0(gcomp, importState, exportState, clock, rc)
   call NUOPC_CompAttributeGet(gcomp, name="set_missing_stks_to_zero", value=value, &
        isPresent=isPresent, isSet=isSet, rc=rc)
   if (ChkErr(rc, __LINE__, u_FILE_u)) return
-  if (isPresent .and. isSet) set_missing_stks_to_zero=(trim(value)=="true")
+  if (isPresent .and. isSet) set_missing_stks_to_zero = (trim(value) == "true")
   write(logmsg,*) set_missing_stks_to_zero
   call ESMF_LogWrite('MOM_cap:set_missing_stks_to_zero = '//trim(logmsg), ESMF_LOGMSG_INFO)
 
@@ -405,7 +405,7 @@ subroutine InitializeP0(gcomp, importState, exportState, clock, rc)
   call NUOPC_CompAttributeGet(gcomp, name="use_mommesh", value=value, &
        isPresent=isPresent, isSet=isSet, rc=rc)
   if (ChkErr(rc, __LINE__, u_FILE_u)) return
-  if (isPresent .and. isSet) use_mommesh=(trim(value)=="true")
+  if (isPresent .and. isSet) use_mommesh = (trim(value) == "true")
   write(logmsg,*) use_mommesh
   call ESMF_LogWrite('MOM_cap:use_mommesh = '//trim(logmsg), ESMF_LOGMSG_INFO)
 
@@ -423,7 +423,7 @@ subroutine InitializeP0(gcomp, importState, exportState, clock, rc)
   call NUOPC_CompAttributeGet(gcomp, name="use_cdeps_inline", value=value, &
        isPresent=isPresent, isSet=isSet, rc=rc)
   if (ChkErr(rc, __LINE__, u_FILE_u)) return
-  if (isPresent .and. isSet) use_cdeps_inline=(trim(value)=="true")
+  if (isPresent .and. isSet) use_cdeps_inline = (trim(value) == "true")
   write(logmsg,*) use_cdeps_inline
   call ESMF_LogWrite('MOM_cap:use_cdeps_inline = '//trim(logmsg), ESMF_LOGMSG_INFO)
 
@@ -1083,7 +1083,7 @@ subroutine InitializeRealize(gcomp, importState, exportState, clock, rc)
   ! number of tiles per PET, assumed to be 1, and number of pes (tiles) total
   !---------------------------------
 
-  ntiles=mpp_get_ntile_count(ocean_public%domain) ! this is tiles on this pe
+  ntiles = mpp_get_ntile_count(ocean_public%domain) ! this is tiles on this pe
   if (ntiles /= 1) then
     rc = ESMF_FAILURE
     call ESMF_LogWrite(subname//' ntiles must be 1', ESMF_LOGMSG_ERROR)

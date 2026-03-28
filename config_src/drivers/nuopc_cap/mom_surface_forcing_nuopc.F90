@@ -399,8 +399,8 @@ subroutine convert_IOB_to_fluxes(IOB, fluxes, index_bounds, Time, valid_time, G,
   fluxes%dt_buoy_accum = valid_time
 
   if (CS%allow_flux_adjustments) then
-    fluxes%heat_added(:,:)=0.0
-    fluxes%salt_flux_added(:,:)=0.0
+    fluxes%heat_added(:,:) = 0.0
+    fluxes%salt_flux_added(:,:) = 0.0
   endif
 
   do j=js,je ; do i=is,ie
@@ -415,7 +415,7 @@ subroutine convert_IOB_to_fluxes(IOB, fluxes, index_bounds, Time, valid_time, G,
     open_ocn_mask(:,:) = 1.0
     if (CS%mask_srestore_under_ice) then ! Do not restore under sea-ice
       do j=js,je ; do i=is,ie
-        if (sfc_state%SST(i,j) <= -0.0539*US%degC_to_C*US%S_to_ppt*sfc_state%SSS(i,j)) open_ocn_mask(i,j)=0.0
+        if (sfc_state%SST(i,j) <= -0.0539*US%degC_to_C*US%S_to_ppt*sfc_state%SSS(i,j)) open_ocn_mask(i,j) = 0.0
       enddo ; enddo
     endif
     if (CS%salt_restore_as_sflux) then
@@ -1220,7 +1220,7 @@ subroutine surface_forcing_init(Time, G, US, param_file, diag, CS, restore_salt,
   endif
   allocate(CS)
 
-  id_clock_forcing=cpu_clock_id('Ocean surface forcing', grain=CLOCK_SUBCOMPONENT)
+  id_clock_forcing = cpu_clock_id('Ocean surface forcing', grain=CLOCK_SUBCOMPONENT)
   call cpu_clock_begin(id_clock_forcing)
 
   CS%diag => diag
@@ -1415,7 +1415,7 @@ subroutine surface_forcing_init(Time, G, US, param_file, diag, CS, restore_salt,
                  "The path to the file containing the spatially varying "//&
                  "tidal amplitudes with INT_TIDE_DISSIPATION.", &
                  default="tideamp.nc")
-    CS%utide=0.0
+    CS%utide = 0.0
   else
     call get_param(param_file, mdl, "UTIDE", CS%utide, &
                  "The constant tidal amplitude used with INT_TIDE_DISSIPATION.", &

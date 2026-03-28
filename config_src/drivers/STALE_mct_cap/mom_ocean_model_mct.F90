@@ -357,9 +357,9 @@ subroutine ocean_model_init(Ocean_sfc, OS, Time_init, Time_in, gas_fields_ocn, i
                  "melt potential will not be computed.", units="m", default=-1.0, do_not_log=.true.)
 
   if (HFrz .gt. 0.0) then
-    use_melt_pot=.true.
+    use_melt_pot = .true.
   else
-    use_melt_pot=.false.
+    use_melt_pot = .false.
   endif
 
   !   Consider using a run-time flag to determine whether to do the diagnostic

@@ -195,7 +195,7 @@ subroutine outputlog_init(gcomp, mclock, rc)
   call NUOPC_CompAttributeGet(gcomp, name="debug_outputlog", value=value, &
        isPresent=isPresent, isSet=isSet, rc=rc)
   if (ChkErr(rc, __LINE__, u_FILE_u)) return
-  if (isPresent .and. isSet) debug=(trim(value)=="true")
+  if (isPresent .and. isSet) debug = (trim(value) == "true")
   if (debug) call ESMF_LogWrite('MOM_cap:MOM6 output debug ON', ESMF_LOGMSG_INFO)
 
   call ESMF_ClockGet(mclock, currTime=mcurrTime, rc=rc)

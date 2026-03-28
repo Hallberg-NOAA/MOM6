@@ -1713,7 +1713,7 @@ subroutine surface_forcing_init(Time, G, US, param_file, diag, CS, tracer_flow_C
   endif
   allocate(CS)
 
-  id_clock_forcing=cpu_clock_id('(Ocean surface forcing)', grain=CLOCK_MODULE)
+  id_clock_forcing = cpu_clock_id('(Ocean surface forcing)', grain=CLOCK_MODULE)
   call cpu_clock_begin(id_clock_forcing)
 
   CS%diag => diag

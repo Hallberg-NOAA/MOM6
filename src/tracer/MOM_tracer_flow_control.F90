@@ -810,7 +810,7 @@ subroutine call_tracer_stocks(h, stock_values, G, GV, US, CS, stock_names, stock
                                    names, units, stock_index)
     call store_stocks("MOM_generic_tracer", ns, names, units, values_EFP, index, stock_val_EFP, &
                       set_pkg_name, max_ns, ns_tot, stock_names, stock_units)
-    nn=ns_tot-ns+1
+    nn = ns_tot - ns + 1
     if (present(got_min_max) .and. present(global_min) .and. present(global_max)) &
       nn = MOM_generic_tracer_min_max(nn, got_min_max, global_min, global_max, &
                                       G, CS%MOM_generic_tracer_CSp, names, units, &

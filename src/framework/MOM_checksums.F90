@@ -243,7 +243,7 @@ subroutine zchksum(array, mesg, scale, logunit, unscale)
       bc = bitcount(abs(unscale * array(k)))
       subchk = subchk + bc
     enddo
-    subchk=mod(subchk, bc_modulus)
+    subchk = mod(subchk, bc_modulus)
   end function subchk
 
   subroutine subStats(array, aMean, aMin, aMax)
@@ -527,7 +527,7 @@ subroutine chksum_h_2d(array_m, mesg, HI_m, haloshift, omit_corners, scale, logu
       subchk = subchk + bc
     enddo ; enddo
     call sum_across_PEs(subchk)
-    subchk=mod(subchk, bc_modulus)
+    subchk = mod(subchk, bc_modulus)
   end function subchk
 
   subroutine subStats(HI, array, aMean, aMin, aMax)
@@ -844,7 +844,7 @@ subroutine chksum_B_2d(array_m, mesg, HI_m, haloshift, symmetric, omit_corners, 
       subchk = subchk + bc
     enddo ; enddo
     call sum_across_PEs(subchk)
-    subchk=mod(subchk, bc_modulus)
+    subchk = mod(subchk, bc_modulus)
   end function subchk
 
   subroutine subStats(HI, array, sym_stats, aMean, aMin, aMax)
@@ -1175,7 +1175,7 @@ subroutine chksum_u_2d(array_m, mesg, HI_m, haloshift, symmetric, omit_corners, 
       subchk = subchk + bc
     enddo ; enddo
     call sum_across_PEs(subchk)
-    subchk=mod(subchk, bc_modulus)
+    subchk = mod(subchk, bc_modulus)
   end function subchk
 
   subroutine subStats(HI, array, sym_stats, aMean, aMin, aMax)
@@ -1379,7 +1379,7 @@ subroutine chksum_v_2d(array_m, mesg, HI_m, haloshift, symmetric, omit_corners, 
       subchk = subchk + bc
     enddo ; enddo
     call sum_across_PEs(subchk)
-    subchk=mod(subchk, bc_modulus)
+    subchk = mod(subchk, bc_modulus)
   end function subchk
 
   subroutine subStats(HI, array, sym_stats, aMean, aMin, aMax)
@@ -1555,7 +1555,7 @@ subroutine chksum_h_3d(array_m, mesg, HI_m, haloshift, omit_corners, scale, logu
       subchk = subchk + bc
     enddo ; enddo ; enddo
     call sum_across_PEs(subchk)
-    subchk=mod(subchk, bc_modulus)
+    subchk = mod(subchk, bc_modulus)
   end function subchk
 
   subroutine subStats(HI, array, aMean, aMin, aMax)
@@ -1748,7 +1748,7 @@ subroutine chksum_B_3d(array_m, mesg, HI_m, haloshift, symmetric, omit_corners, 
       subchk = subchk + bc
     enddo ; enddo ; enddo
     call sum_across_PEs(subchk)
-    subchk=mod(subchk, bc_modulus)
+    subchk = mod(subchk, bc_modulus)
   end function subchk
 
   subroutine subStats(HI, array, sym_stats, aMean, aMin, aMax)
@@ -1952,7 +1952,7 @@ subroutine chksum_u_3d(array_m, mesg, HI_m, haloshift, symmetric, omit_corners, 
       subchk = subchk + bc
     enddo ; enddo ; enddo
     call sum_across_PEs(subchk)
-    subchk=mod(subchk, bc_modulus)
+    subchk = mod(subchk, bc_modulus)
   end function subchk
 
   subroutine subStats(HI, array, sym_stats, aMean, aMin, aMax)
@@ -2156,7 +2156,7 @@ subroutine chksum_v_3d(array_m, mesg, HI_m, haloshift, symmetric, omit_corners, 
       subchk = subchk + bc
     enddo ; enddo ; enddo
     call sum_across_PEs(subchk)
-    subchk=mod(subchk, bc_modulus)
+    subchk = mod(subchk, bc_modulus)
   end function subchk
 
   !subroutine subStats(HI, array, mesg, sym_stats)

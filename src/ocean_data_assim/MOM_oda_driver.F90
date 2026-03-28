@@ -197,7 +197,7 @@ subroutine init_oda(Time, G, GV, US, diag_CS, CS)
   if (associated(CS)) call MOM_error(FATAL, 'Calling oda_init with associated control structure')
   allocate(CS)
 
-  id_clock_oda_init=cpu_clock_id('(ODA initialization)')
+  id_clock_oda_init = cpu_clock_id('(ODA initialization)')
   call cpu_clock_begin(id_clock_oda_init)
 
 ! Use ens1 parameters , this could be changed at a later time
@@ -286,7 +286,7 @@ subroutine init_oda(Time, G, GV, US, diag_CS, CS)
 
   ens_info = get_ensemble_size()
   CS%ensemble_size = ens_info(1)
-  npes_pm=ens_info(3)
+  npes_pm = ens_info(3)
   CS%ensemble_id = get_ensemble_id()
   !! Switch to global pelist
   allocate(CS%ensemble_pelist(CS%ensemble_size,npes_pm))
@@ -489,7 +489,7 @@ subroutine get_posterior_tracer(Time, CS, increment)
   type(ODA_CS), pointer :: CS !< ocean DA control structure
   logical, optional, intent(in) :: increment !< True if returning increment only
 
-  type(ocean_control_struct), pointer :: Ocean_increment=>NULL()
+  type(ocean_control_struct), pointer :: Ocean_increment => NULL()
   integer :: m
   logical :: get_inc
 
@@ -591,7 +591,7 @@ subroutine get_bias_correction_tracer(Time, US, CS)
 
   ! This should be replaced to use mask_z instead of the following lines
   ! which are intended to zero land values using an arbitrary limit.
-  fld_sz=shape(T_bias)
+  fld_sz = shape(T_bias)
   if (CS%reproduce_2018_nmme) then
     do i=1,fld_sz(1)
       do j=1,fld_sz(2)
@@ -608,8 +608,8 @@ subroutine get_bias_correction_tracer(Time, US, CS)
       do j=1,fld_sz(2)
         do k=1,fld_sz(3)
           if (valid_flag(i,j,k)==0.) then
-            T_bias(i,j,k)=0.0
-            S_bias(i,j,k)=0.0
+            T_bias(i,j,k) = 0.0
+            S_bias(i,j,k) = 0.0
           endif
         enddo
       enddo
@@ -726,7 +726,7 @@ subroutine apply_oda_tracer_increments(dt, Time_end, G, GV, tv, h, CS)
     S_tend = S_tend + CS%S_bc_tend
   endif
 
-  isc=G%isc ; iec=G%iec ; jsc=G%jsc ; jec=G%jec
+  isc = G%isc ; iec = G%iec ; jsc = G%jsc ; jec = G%jec
   do j=jsc,jec ; do i=isc,iec
     call remapping_core_h(CS%remapCS, CS%nk, CS%h(i,j,:), T_tend(i,j,:), &
                           G%ke, h(i,j,:), T_tend_inc(i,j,:))
