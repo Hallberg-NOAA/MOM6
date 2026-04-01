@@ -132,7 +132,7 @@ type fld_list_type
   integer :: ungridded_ubound = 0
 end type fld_list_type
 
-integer,parameter    :: fldsMax = 100
+integer, parameter   :: fldsMax = 100
 integer              :: fldsToOcn_num = 0
 type (fld_list_type) :: fldsToOcn(fldsMax)
 integer              :: fldsFrOcn_num = 0
@@ -157,7 +157,7 @@ character(len=128)   :: scalar_field_name = ''
 integer              :: scalar_field_count = 0
 integer              :: scalar_field_idx_grid_nx = 0
 integer              :: scalar_field_idx_grid_ny = 0
-character(len=*),parameter :: u_FILE_u = &
+character(len=*), parameter :: u_FILE_u = &
      __FILE__
 
 #ifdef CESMCOUPLED
@@ -188,7 +188,7 @@ subroutine SetServices(gcomp, rc)
   integer, intent(out) :: rc    !< return code
 
   ! local variables
-  character(len=*),parameter  :: subname='(MOM_cap:SetServices)'
+  character(len=*), parameter :: subname = '(MOM_cap:SetServices)'
 
   type(ESMF_VM)               :: vm
 
@@ -267,7 +267,7 @@ subroutine InitializeP0(gcomp, importState, exportState, clock, rc)
   logical                     :: isPresent, isSet
   integer                     :: iostat
   character(len=64)           :: value, logmsg
-  character(len=*),parameter  :: subname='(MOM_cap:InitializeP0)'
+  character(len=*), parameter :: subname = '(MOM_cap:InitializeP0)'
   type(ESMF_VM)               :: vm
 
   rc = ESMF_SUCCESS
@@ -472,10 +472,10 @@ subroutine InitializeAdvertise(gcomp, importState, exportState, clock, rc)
   type(time_type)                        :: Time_restart
   type(time_type)                        :: DT
   integer                                :: DT_OCEAN
-  integer                                :: isc,iec,jsc,jec
+  integer                                :: isc, iec, jsc, jec
   integer                                :: year=0, month=0, day=0, hour=0, minute=0, second=0
   integer                                :: mpi_comm_mom
-  integer                                :: i,n
+  integer                                :: i, n
   character(len=256)                     :: stdname, shortname
   character(len=32)                      :: starttype            ! model start type
   character(len=512)                     :: diro
@@ -985,16 +985,16 @@ subroutine InitializeRealize(gcomp, importState, exportState, clock, rc)
   integer                                    :: npet, ntiles
   integer                                    :: npes ! number of PEs (from FMS).
   integer                                    :: nxg, nyg, cnt
-  integer                                    :: isc,iec,jsc,jec
-  integer, allocatable                       :: xb(:),xe(:),yb(:),ye(:),pe(:)
+  integer                                    :: isc, iec, jsc, jec
+  integer, allocatable                       :: xb(:), xe(:), yb(:), ye(:), pe(:)
   integer, allocatable                       :: deBlockList(:,:,:)
   integer, allocatable                       :: petMap(:)
   integer, allocatable                       :: deLabelList(:)
   integer, allocatable                       :: indexList(:)
   integer                                    :: ioff, joff
   integer                                    :: i, j, n, i1, j1, n1, jlast
-  integer                                    :: lbnd1,ubnd1,lbnd2,ubnd2
-  integer                                    :: lbnd3,ubnd3,lbnd4,ubnd4
+  integer                                    :: lbnd1, ubnd1, lbnd2, ubnd2
+  integer                                    :: lbnd3, ubnd3, lbnd4, ubnd4
   integer                                    :: nblocks_tot
   logical                                    :: found
   logical                                    :: isPresent, isSet
@@ -1007,7 +1007,7 @@ subroutine InitializeRealize(gcomp, importState, exportState, clock, rc)
   integer                                    :: mpicom
   integer                                    :: localPeCount
   integer                                    :: lsize
-  integer                                    :: ig,jg, ni,nj,k
+  integer                                    :: ig, jg, ni, nj, k
   integer, allocatable                       :: gindex(:) ! global index space
   integer, allocatable                       :: gindex_ocn(:) ! global index space for ocean cells (excl. masked cells)
   integer, allocatable                       :: gindex_elim(:) ! global index space for eliminated cells
@@ -1664,8 +1664,8 @@ subroutine DataInitialize(gcomp, rc)
   character(240)                         :: timestr
   integer                                :: fieldCount, n
   type(ESMF_Field)                       :: field
-  character(len=64),allocatable          :: fieldNameList(:)
-  character(len=*),parameter  :: subname='(MOM_cap:DataInitialize)'
+  character(len=64), allocatable         :: fieldNameList(:)
+  character(len=*), parameter            :: subname = '(MOM_cap:DataInitialize)'
   real(8)                                :: MPI_Wtime, timedis
   !--------------------------------
 
@@ -1782,7 +1782,7 @@ subroutine ModelAdvance(gcomp, rc)
   integer                                :: n, i
   character(240)                         :: import_timestr, export_timestr
   character(len=128)                     :: fldname
-  character(len=*),parameter             :: subname='(MOM_cap:ModelAdvance)'
+  character(len=*), parameter            :: subname = '(MOM_cap:ModelAdvance)'
   character(len=8)                       :: suffix
   character(len=:), allocatable          :: rpointer_filename
   character(len=17)                      :: timestamp
@@ -2112,7 +2112,7 @@ subroutine ModelSetRunClock(gcomp, rc)
   type(ESMF_Alarm)         :: stop_alarm
   logical                  :: isPresent, isSet
   logical                  :: first_time = .true.
-  character(len=*),parameter :: subname='MOM_cap:(ModelSetRunClock) '
+  character(len=*), parameter :: subname = 'MOM_cap:(ModelSetRunClock) '
   character(len=256)       :: timestr
   !--------------------------------
 
@@ -2310,7 +2310,7 @@ subroutine ocean_model_finalize(gcomp, rc)
   type(ESMF_Alarm), allocatable          :: alarmList(:)
   integer                                :: alarmCount
   logical                                :: write_restart
-  character(len=*),parameter  :: subname='(MOM_cap:ocean_model_finalize)'
+  character(len=*), parameter            :: subname = '(MOM_cap:ocean_model_finalize)'
   real(8)                                :: MPI_Wtime, timefs
 
   if (localPet == 0) call cap_profiling("mom", "ocean_model_finalize", "B")
@@ -2363,7 +2363,7 @@ end subroutine ocean_model_finalize
 
 !> Set scalar data from state for a particula name
 subroutine State_SetScalar(value, scalar_id, State, mytask, scalar_name, scalar_count,  rc)
-  real(ESMF_KIND_R8),intent(in)     :: value
+  real(ESMF_KIND_R8), intent(in)    :: value
   integer,           intent(in)     :: scalar_id
   type(ESMF_State),  intent(inout)  :: State
   integer,           intent(in)     :: mytask
@@ -2415,7 +2415,7 @@ subroutine MOM_RealizeFields(state, nfields, field_defs, tag, ice_ocean_boundary
   type(ESMF_Field)            :: field
   real(ESMF_KIND_R8), pointer :: fldptr1d(:)   ! for mesh
   real(ESMF_KIND_R8), pointer :: fldptr2d(:,:) ! for grid
-  character(len=*),parameter  :: subname='(MOM_cap:MOM_RealizeFields)'
+  character(len=*), parameter :: subname = '(MOM_cap:MOM_RealizeFields)'
   !--------------------------------------------------------
 
   rc = ESMF_SUCCESS

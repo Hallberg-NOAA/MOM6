@@ -221,7 +221,7 @@ subroutine convert_IOB_to_fluxes(IOB, fluxes, index_bounds, Time, valid_time, G,
                                                    !! should be applied [T ~> s].
   type(ocean_grid_type),   intent(inout) :: G      !< The ocean's grid structure
   type(unit_scale_type),   intent(in)    :: US     !< A dimensional unit scaling type
-  type(surface_forcing_CS),pointer       :: CS     !< A pointer to the control structure returned by a
+  type(surface_forcing_CS), pointer      :: CS     !< A pointer to the control structure returned by a
                                                    !! previous call to surface_forcing_init.
   type(surface),           intent(in)    :: sfc_state !< A structure containing fields that describe the
                                                       !! surface state of the ocean.
@@ -633,7 +633,7 @@ subroutine convert_IOB_to_forces(IOB, forces, index_bounds, Time, G, US, CS)
                                                    !! salinity to the right time, when it is being restored.
   type(ocean_grid_type),   intent(inout) :: G      !< The ocean's grid structure
   type(unit_scale_type),   intent(in)    :: US     !< A dimensional unit scaling type
-  type(surface_forcing_CS),pointer       :: CS     !< A pointer to the control structure returned by a
+  type(surface_forcing_CS), pointer      :: CS     !< A pointer to the control structure returned by a
                                                    !! previous call to surface_forcing_init.
 
   ! local variables

@@ -85,8 +85,8 @@ subroutine AlarmInit( clock, alarm, option, &
   type(ESMF_Calendar)     :: cal              ! calendar
   integer                 :: lymd             ! local ymd
   integer                 :: ltod             ! local tod
-  integer                 :: cyy,cmm,cdd,csec ! time info
-  integer                 :: nyy,nmm,ndd,nsec ! time info
+  integer                 :: cyy, cmm, cdd, csec ! time info
+  integer                 :: nyy, nmm, ndd, nsec ! time info
   character(len=64)       :: lalarmname       ! local alarm name
   logical                 :: update_nextalarm ! update next alarm
   type(ESMF_Time)         :: CurrTime         ! Current Time
@@ -324,11 +324,11 @@ end subroutine TimeInit
 !> Converts a coded-date (yyyymmdd) into calendar year,month,day.
 subroutine date2ymd (date, year, month, day)
   integer, intent(in)  :: date             !< coded-date (yyyymmdd)
-  integer, intent(out) :: year,month,day   !< calendar year,month,day
+  integer,  intent(out) :: year, month, day !< calendar year, month, day
 
   ! local variables
   integer :: tdate   ! temporary date
-  character(*),parameter :: subName = "(date2ymd)"
+  character(*), parameter :: subName = "(date2ymd)"
   !-------------------------------------------------------------------------------
 
   tdate = abs(date)

@@ -162,7 +162,7 @@ subroutine ocn_init_mct( EClock, cdata_o, x2o_o, o2x_o, NLFilename )
 
   ! TODO: Change the following vars with the corresponding MOM6 vars
   integer :: km=1                   !< Number of vertical levels
-  !logical :: lsend_precip_fact      !< If T,send precip_fact to cpl for use in fw balance
+  !logical :: lsend_precip_fact     !< If T, send precip_fact to cpl for use in fw balance
                                     !! (partially-coupled option)
   character(len=128) :: err_msg     !< Error message
   integer :: iostat
@@ -672,7 +672,7 @@ subroutine ocn_domain_mct( lsize, gsMap_ocn, dom_ocn)
   ! Local Variables
   integer, parameter              :: SHR_REAL_R8 = selected_real_kind(12)
   integer, pointer                :: idata(:)
-  integer                         :: i,j,k
+  integer                         :: i, j, k
   real(kind=SHR_REAL_R8), pointer :: data(:)
   real(kind=SHR_REAL_R8)          :: L2_to_rad2
   type(ocean_grid_type), pointer :: grid => NULL() ! A pointer to a grid structure

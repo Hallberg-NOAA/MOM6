@@ -39,7 +39,7 @@ public esmf2fms_time
 public fms2esmf_time
 public string_to_date
 
-character(len=*),parameter :: u_FILE_u = &
+character(len=*), parameter :: u_FILE_u = &
      __FILE__
 
 contains
@@ -156,7 +156,7 @@ function string_to_date(string, rc)
   type(time_type)                         :: string_to_date!< FMS time structure
 
   ! Local variables
-  integer                                 :: yr,mon,day,hr,min,sec
+  integer                                 :: yr, mon, day, hr, min, sec
 
   if (present(rc)) rc = ESMF_SUCCESS
 

@@ -60,7 +60,7 @@ type(ESMF_GeomType_Flag) :: geomtype      !< SMF type describing type of
 
 real(ESMF_KIND_R8), public, allocatable :: mod2med_areacor(:) ! ratios of model areas to input mesh areas
 real(ESMF_KIND_R8), public, allocatable :: med2mod_areacor(:) ! ratios of input mesh areas to model areas
-character(len=*),parameter :: u_FILE_u =  __FILE__
+character(len=*), parameter :: u_FILE_u =  __FILE__
 
 contains
 
@@ -859,7 +859,7 @@ subroutine State_GetFldPtr_1d(State, fldname, fldptr, rc)
   ! local variables
   type(ESMF_Field) :: lfield
   integer :: lrc
-  character(len=*),parameter :: subname='(MOM_cap:State_GetFldPtr)'
+  character(len=*), parameter :: subname='(MOM_cap:State_GetFldPtr)'
 
   call ESMF_StateGet(State, itemName=trim(fldname), field=lfield, rc=lrc)
   if (ChkErr(rc,__LINE__,u_FILE_u)) return
@@ -880,7 +880,7 @@ subroutine State_GetFldPtr_2d(State, fldname, fldptr, rc)
   ! local variables
   type(ESMF_Field) :: lfield
   integer :: lrc
-  character(len=*),parameter :: subname='(MOM_cap:State_GetFldPtr)'
+  character(len=*), parameter :: subname='(MOM_cap:State_GetFldPtr)'
 
   call ESMF_StateGet(State, itemName=trim(fldname), field=lfield, rc=lrc)
   if (ChkErr(rc,__LINE__,u_FILE_u)) return
@@ -913,7 +913,7 @@ subroutine State_GetImport_2d(state, fldname, isc, iec, jsc, jec, output, do_sum
   ! local variables
   type(ESMF_StateItem_Flag)     :: itemFlag
   integer                       :: n, i, j, i1, j1
-  integer                       :: lbnd1,lbnd2
+  integer                       :: lbnd1, lbnd2
   logical                       :: do_sum_loc
   real(ESMF_KIND_R8), pointer   :: dataPtr1d(:)
   real(ESMF_KIND_R8), pointer   :: dataPtr2d(:,:)
@@ -1011,7 +1011,7 @@ subroutine State_GetImport_3d(state, fldname, isc, iec, jsc, jec, lbd, ubd, outp
   ! local variables
   type(ESMF_StateItem_Flag)     :: itemFlag
   integer                       :: n, i, j, i1, j1, u
-  integer                       :: lbnd1,lbnd2
+  integer                       :: lbnd1, lbnd2
   logical                       :: do_sum_loc
   real(ESMF_KIND_R8), pointer   :: dataPtr2d(:,:)
   character(len=*)  , parameter :: subname='(MOM_cap_methods:state_getimport_3d)'
@@ -1087,8 +1087,8 @@ subroutine State_SetExport(state, fldname, isc, iec, jsc, jec, input, ocean_grid
 
   ! local variables
   type(ESMF_StateItem_Flag)     :: itemFlag
-  integer                       :: n, i, j, k, i1, j1, ig,jg
-  integer                       :: lbnd1,lbnd2
+  integer                       :: n, i, j, k, i1, j1, ig, jg
+  integer                       :: lbnd1, lbnd2
   real(ESMF_KIND_R8), pointer   :: dataPtr1d(:)
   real(ESMF_KIND_R8), pointer   :: dataPtr2d(:,:)
   character(len=*)  , parameter :: subname='(MOM_cap_methods:state_setexport)'
@@ -1168,13 +1168,13 @@ subroutine state_diagnose(State, string, rc)
   integer         , intent(out)   :: rc     !< Return code
 
   ! local variables
-  integer                         :: i,j,n
+  integer                         :: i, j, n
   type(ESMf_Field)                :: lfield
   integer                         :: fieldCount, lrank
-  character(ESMF_MAXSTR) ,pointer :: lfieldnamelist(:)
+  character(ESMF_MAXSTR), pointer :: lfieldnamelist(:)
   real(ESMF_KIND_R8), pointer     :: dataPtr1d(:)
   real(ESMF_KIND_R8), pointer     :: dataPtr2d(:,:)
-  character(len=*),parameter      :: subname='(state_diagnose)'
+  character(len=*), parameter     :: subname='(state_diagnose)'
   character(len=ESMF_MAXSTR)      :: msgString
   ! ----------------------------------------------
 

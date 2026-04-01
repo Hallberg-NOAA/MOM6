@@ -151,9 +151,9 @@ type, public :: ocean_state_type ; private
 
   integer :: nstep = 0        !< The number of calls to update_ocean.
   logical :: use_ice_shelf    !< If true, the ice shelf model is enabled.
-  logical,public :: use_waves !< If true use wave coupling.
+  logical, public :: use_waves !< If true use wave coupling.
   character(len=40) :: wave_method !< Wave coupling method.
-  logical,public :: use_MARBL !< If true, use MARBL tracers.
+  logical, public :: use_MARBL !< If true, use MARBL tracers.
 
   logical :: icebergs_alter_ocean !< If true, the icebergs can change ocean the
                               !! ocean dynamics and forcing fluxes.

@@ -158,7 +158,7 @@ subroutine mom_inline_run(clock, ocean_public, ocean_grid, ice_ocean_boundary, d
   ! local variables
   type(ESMF_Time)             :: date
   integer                     :: nstreams, nflds
-  integer                     :: ns,nf,n,i,j
+  integer                     :: ns, nf, n, i, j
   integer                     :: isc, iec, jsc, jec
   integer                     :: year    ! year (0, ...) for nstep+1
   integer                     :: mon     ! month (1, ..., 12) for nstep+1
