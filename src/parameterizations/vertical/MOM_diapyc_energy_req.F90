@@ -359,7 +359,7 @@ subroutine diapyc_energy_req_calc(h_in, dz_in, T_in, S_in, Kd, energy_Kd, dt, tv
 
   Kddt_h(1) = 0.0 ; Kddt_h(nz+1) = 0.0
   do K=2,nz
-    Kddt_h(K) = min(dt * Kd(k) / (0.5*(dz_tr(k-1) + dz_tr(k))), 1e3*dztot)
+    Kddt_h(K) = min(dt * Kd(K) / (0.5*(dz_tr(k-1) + dz_tr(k))), 1e3*htot)
   enddo
 
   ! Zero out the temperature and salinity estimates in the extra (ficticious) layers.
