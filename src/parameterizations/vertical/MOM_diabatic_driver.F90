@@ -14,7 +14,7 @@ use MOM_CVMix_shear,         only : CVMix_shear_is_used
 use MOM_CVMix_ddiff,         only : CVMix_ddiff_is_used
 use MOM_diabatic_aux,        only : diabatic_aux_init, diabatic_aux_end, diabatic_aux_CS
 use MOM_diabatic_aux,        only : make_frazil, adjust_salt, differential_diffuse_T_S, triDiagTS
-use MOM_diabatic_aux,        only : triDiagTS_Eulerian, find_uv_at_h
+use MOM_diabatic_aux,        only : triDiagTS_Eulerian, find_uv_at_h, set_dSpV_dT
 use MOM_diabatic_aux,        only : applyBoundaryFluxesInOut, set_pen_shortwave
 use MOM_diag_mediator,       only : post_data, register_diag_field, safe_alloc_ptr
 use MOM_diag_mediator,       only : post_product_sum_u, post_product_sum_v
@@ -245,7 +245,7 @@ type, public :: diabatic_CS ; private
   type(tracer_flow_control_CS), pointer :: tracer_flow_CSp       => NULL() !< Control structure for a child module
   type(optics_type),            pointer :: optics                => NULL() !< Control structure for a child module
   type(KPP_CS),                 pointer :: KPP_CSp               => NULL() !< Control structure for a child module
-  type(diapyc_energy_req_CS),   pointer :: diapyc_en_rec_CSp     => NULL() !< Control structure for a child module
+  type(diapyc_energy_req_CS),   pointer :: diapyc_en_req_CSp     => NULL() !< Control structure for a child module
   type(oda_incupd_CS),          pointer :: oda_incupd_CSp        => NULL() !< Control structure for a child module
   type(int_tide_CS),            pointer :: int_tide_CSp          => NULL() !< Control structure for a child module
   type(vbf_CS),                 pointer :: VBF                   => NULL() !< Control structure for a child module
@@ -361,7 +361,7 @@ subroutine diabatic(u, v, h, tv, BLD, fluxes, visc, ADp, CDp, dt, Time_end, &
   if (CS%debugConservation) call MOM_state_stats('Start of diabatic', u, v, h, tv%T, tv%S, G, GV, US)
 
   if (CS%debug_energy_req) &
-    call diapyc_energy_req_test(h, dt, tv, G, GV, US, CS%diapyc_en_rec_CSp)
+    call diapyc_energy_req_test(h, dt, tv, G, GV, US, CS%diapyc_en_req_CSp)
 
   call cpu_clock_begin(id_clock_set_diffusivity)
   call set_BBL_TKE(u, v, h, tv, fluxes, visc, G, GV, US, CS%set_diff_CSp, OBC=OBC)
@@ -578,7 +578,7 @@ subroutine diabatic_ALE_legacy(u, v, h, tv, BLD, fluxes, visc, ADp, CDp, dt, Tim
                 ! Kd_int [H Z T-1 ~> m2 s-1 or kg m-1 s-1]
     Kd_extra_S , & !  The extra diffusivity of salinity due to double diffusion relative to
                 ! Kd_int [H Z T-1 ~> m2 s-1 or kg m-1 s-1]
-    Kd_ePBL,  & ! test array of diapycnal diffusivities at interfaces [H Z T-1 ~> m2 s-1 or kg m-1 s-1]
+    Kd_ePBL,  & ! boundary layer or convective diapycnal diffusivities at interfaces [H Z T-1 ~> m2 s-1 or kg m-1 s-1]
     KPP_NLTheat, &   ! KPP non-local transport for heat [nondim]
     KPP_NLTscalar, & ! KPP non-local transport for scalars [nondim]
     KPP_buoy_flux, & ! KPP forcing buoyancy flux [L2 T-3 ~> m2 s-3]
@@ -885,6 +885,9 @@ subroutine diabatic_ALE_legacy(u, v, h, tv, BLD, fluxes, visc, ADp, CDp, dt, Tim
   if (CS%use_energetic_PBL) then
 
     skinbuoyflux(:,:) = 0.0
+    ! The partial derivatives of specific volume with temperature and salinity need to be
+    ! precalculated to avoid having heating of tiny layers give nonsensical values.
+    call set_dSpV_dT(G, GV, h, tv, dSV_dT, dSV_dS)
     call applyBoundaryFluxesInOut(CS%diabatic_aux_CSp, G, GV, US, dt, fluxes, CS%optics, &
             optics_nbands(CS%optics), h, tv, CS%aggregate_FW_forcing, CS%evap_CFL_limit, &
             CS%minimum_forcing_depth, cTKE, dSV_dT, dSV_dS, SkinBuoyFlux=SkinBuoyFlux, MLD_h=visc%h_ML)
@@ -1101,7 +1104,7 @@ subroutine diabatic_ALE_legacy(u, v, h, tv, BLD, fluxes, visc, ADp, CDp, dt, Tim
           call calculate_specific_vol_derivs(T_i, S_i, p_i, dSpV_dT, dSpV_dS, tv%eqn_of_state, EOSdom)
           do i=is,ie
             I_dzval = 1.0 / (dz_neglect + 0.5*(dz(i,j,k-1) + dz(i,j,k)))
-            N2_salt(i,j,K) = (tv%S(i,j,k-1) - tv%S(i,j,k)) * (dSpv_dS(i) * (alt_H_to_pres * I_dzval))
+            N2_salt(i,j,K) = (tv%S(i,j,k-1) - tv%S(i,j,k)) * (dSpV_dS(i) * (alt_H_to_pres * I_dzval))
             N2_temp(i,j,K) = (tv%T(i,j,k-1) - tv%T(i,j,k)) * (dSpV_dT(i) * (alt_H_to_pres * I_dzval))
           enddo
         enddo
@@ -1541,6 +1544,9 @@ subroutine diabatic_ALE(u, v, h, tv, BLD, fluxes, visc, ADp, CDp, dt, Time_end, 
   if (CS%use_energetic_PBL) then
 
     skinbuoyflux(:,:) = 0.0
+    ! The partial derivatives of specific volume with temperature and salinity need to be
+    ! precalculated to avoid having heating of tiny layers give nonsensical values.
+    call set_dSpV_dT(G, GV, h, tv, dSV_dT, dSV_dS)
     call applyBoundaryFluxesInOut(CS%diabatic_aux_CSp, G, GV, US, dt, fluxes, CS%optics, &
             optics_nbands(CS%optics), h, tv, CS%aggregate_FW_forcing, CS%evap_CFL_limit, &
             CS%minimum_forcing_depth, cTKE, dSV_dT, dSV_dS, SkinBuoyFlux=SkinBuoyFlux, MLD_h=visc%h_ML)
@@ -3812,7 +3818,7 @@ subroutine diabatic_driver_init(Time, G, GV, US, param_file, useALEalgorithm, di
   call regularize_layers_init(Time, G, GV, param_file, diag, CS%regularize_layers)
 
   if (CS%debug_energy_req) &
-    call diapyc_energy_req_init(Time, G, GV, US, param_file, diag, CS%diapyc_en_rec_CSp)
+    call diapyc_energy_req_init(Time, G, GV, US, param_file, diag, CS%diapyc_en_req_CSp)
 
   ! obtain information about the number of bands for penetrative shortwave
   if (use_temperature) then
@@ -3874,7 +3880,7 @@ subroutine diabatic_driver_end(CS)
   endif
 
   if (CS%debug_energy_req) &
-    call diapyc_energy_req_end(CS%diapyc_en_rec_CSp)
+    call diapyc_energy_req_end(CS%diapyc_en_req_CSp)
 
   if (CS%use_energetic_PBL) &
     call energetic_PBL_end(CS%ePBL)

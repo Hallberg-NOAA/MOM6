@@ -34,7 +34,7 @@ implicit none ; private
 
 public diabatic_aux_init, diabatic_aux_end
 public make_frazil, adjust_salt, differential_diffuse_T_S, triDiagTS, triDiagTS_Eulerian
-public find_uv_at_h, applyBoundaryFluxesInOut, set_pen_shortwave
+public find_uv_at_h, applyBoundaryFluxesInOut, set_pen_shortwave, set_dSpV_dT
 
 ! A note on unit descriptions in comments: MOM6 uses units that can be rescaled for dimensional
 ! consistency testing. These are noted in comments with units like Z, H, L, and T, along with
@@ -334,6 +334,47 @@ subroutine differential_diffuse_T_S(h, T, S, Kd_T, Kd_S, tv, dt, G, GV)
     enddo ; enddo
   enddo
 end subroutine differential_diffuse_T_S
+
+!> Set up 3-d arrays of the partial derivatives of layer specific volume with temperature and salinity.
+subroutine set_dSpV_dT(G, GV, h, tv, dSV_dT, dSV_dS)
+  type(ocean_grid_type),   intent(in)  :: G  !< Grid structure
+  type(verticalGrid_type), intent(in)  :: GV !< ocean vertical grid structure
+  real, dimension(SZI_(G),SZJ_(G),SZK_(GV)), &
+                           intent(in)  :: h  !< Layer thickness [H ~> m or kg m-2]
+  type(thermo_var_ptrs),   intent(in)  :: tv !< Structure containing pointers to any
+                                               !! available thermodynamic fields.
+  real, dimension(SZI_(G),SZJ_(G),SZK_(GV)), &
+                           intent(out) :: dSV_dT !< Partial derivative of specific volume with
+                                               !! potential temperature [R-1 C-1 ~> m3 kg-1 degC-1].
+  real, dimension(SZI_(G),SZJ_(G),SZK_(GV)), &
+                           intent(out) :: dSV_dS !< Partial derivative of specific volume with
+                                               !! salinity [R-1 S-1 ~> m3 kg-1 ppt-1].
+  ! Local variables
+  real :: d_pres                ! pressure change across a layer [R L2 T-2 ~> Pa]
+  real :: p_lay(SZI_(G))        ! average pressure in a layer [R L2 T-2 ~> Pa]
+  real :: pres(SZI_(G),SZJ_(G)) ! pressure at an interface [R L2 T-2 ~> Pa]
+  integer, dimension(2) :: EOSdom ! The i-computational domain for the equation of state
+  integer :: i, j, k, is, ie, js, je, nz
+
+  is = G%isc ; ie = G%iec ; js = G%jsc ; je = G%jec ; nz = GV%ke
+  EOSdom(:) = EOS_domain(G%HI)
+
+  if (associated(tv%p_surf)) then
+    do j=js,je ; do i=is,ie ; pres(i,j) = tv%p_surf(i,j) ; enddo ; enddo
+  else
+    do j=js,je ; do i=is,ie ; pres(i,j) = 0.0 ; enddo ; enddo
+  endif
+  do k=1,nz ; do j=js,je
+    do i=is,ie
+      d_pres = (GV%g_Earth * GV%H_to_RZ) * h(i,j,k)
+      p_lay(i) = pres(i,j) + 0.5*d_pres
+      pres(i,j) = pres(i,j) + d_pres
+    enddo
+    call calculate_specific_vol_derivs(tv%T(:,j,k), tv%S(:,j,k), p_lay(:), &
+             dSV_dT(:,j,k), dSV_dS(:,j,k), tv%eqn_of_state, EOSdom)
+  enddo ; enddo
+
+end subroutine set_dSpV_dT
 
 !> This subroutine keeps salinity from falling below a small but positive threshold.
 !! This usually occurs when the ice model attempts to extract more salt then
@@ -707,10 +748,10 @@ subroutine applyBoundaryFluxesInOut(CS, G, GV, US, dt, fluxes, optics, nsw, h, t
                  optional, intent(out)   :: cTKE !< Turbulent kinetic energy requirement to mix
                                                !! forcing through each layer [R Z3 T-2 ~> J m-2]
   real, dimension(SZI_(G),SZJ_(G),SZK_(GV)), &
-                 optional, intent(out)   :: dSV_dT !< Partial derivative of specific volume with
+                 optional, intent(in)    :: dSV_dT !< Partial derivative of specific volume with
                                                !! potential temperature [R-1 C-1 ~> m3 kg-1 degC-1].
   real, dimension(SZI_(G),SZJ_(G),SZK_(GV)), &
-                 optional, intent(out)   :: dSV_dS !< Partial derivative of specific volume with
+                 optional, intent(in)    :: dSV_dS !< Partial derivative of specific volume with
                                                !! salinity [R-1 S-1 ~> m3 kg-1 ppt-1].
   real, dimension(SZI_(G),SZJ_(G)), &
                  optional, intent(out)   :: SkinBuoyFlux !< Buoyancy flux at surface [Z2 T-3 ~> m2 s-3].
@@ -736,9 +777,6 @@ subroutine applyBoundaryFluxesInOut(CS, G, GV, US, dt, fluxes, optics, nsw, h, t
                          ! By default EnthalpyConst = 1.0. If fluxes%heat_content_evap
                          ! is associated enthalpy is provided via coupler and EnthalpyConst = 0.0.
   real, dimension(SZI_(G)) :: &
-    d_pres,       &  ! pressure change across a layer [R L2 T-2 ~> Pa]
-    p_lay,        &  ! average pressure in a layer [R L2 T-2 ~> Pa]
-    pres,         &  ! pressure at an interface [R L2 T-2 ~> Pa]
     netMassInOut, &  ! surface water fluxes [H ~> m or kg m-2] over time step
     netMassIn,    &  ! mass entering ocean surface [H ~> m or kg m-2] over a time step
     netMassOut,   &  ! mass leaving ocean surface [H ~> m or kg m-2] over a time step
@@ -860,7 +898,7 @@ subroutine applyBoundaryFluxesInOut(CS, G, GV, US, dt, fluxes, optics, nsw, h, t
   !$OMP                                  netHeat,netSalt,Pen_SW_bnd,fractionOfForcing,     &
   !$OMP                                  IforcingDepthScale,g_conv,dSpV_dT,dSpV_dS,        &
   !$OMP                                  dThickness,dTemp,dSalt,hOld,Ithickness,           &
-  !$OMP                                  netMassIn,pres,d_pres,p_lay,dSV_dT_2d,            &
+  !$OMP                                  netMassIn,dSV_dT_2d,                              &
   !$OMP                                  netmassinout_rate,netheat_rate,netsalt_rate,      &
   !$OMP                                  drhodt,drhods,pen_sw_bnd_rate,                    &
   !$OMP                                  pen_TKE_2d,Temp_in,Salin_in,RivermixConst,        &
@@ -877,24 +915,9 @@ subroutine applyBoundaryFluxesInOut(CS, G, GV, US, dt, fluxes, optics, nsw, h, t
     enddo ; enddo
 
     if (calculate_energetics) then
-      ! The partial derivatives of specific volume with temperature and
-      ! salinity need to be precalculated to avoid having heating of
-      ! tiny layers give nonsensical values.
-      if (associated(tv%p_surf)) then
-        do i=is,ie ; pres(i) = tv%p_surf(i,j) ; enddo
-      else
-        do i=is,ie ; pres(i) = 0.0 ; enddo
-      endif
-      do k=1,nz
-        do i=is,ie
-          d_pres(i) = (GV%g_Earth * GV%H_to_RZ) * h2d(i,k)
-          p_lay(i) = pres(i) + 0.5*d_pres(i)
-          pres(i) = pres(i) + d_pres(i)
-        enddo
-        call calculate_specific_vol_derivs(T2d(:,k), tv%S(:,j,k), p_lay(:), &
-                 dSV_dT(:,j,k), dSV_dS(:,j,k), tv%eqn_of_state, EOSdom)
-        do i=is,ie ; dSV_dT_2d(i,k) = dSV_dT(i,j,k) ; enddo
-      enddo
+      do k=1,nz ; do i=is,ie
+        dSV_dT_2d(i,k) = dSV_dT(i,j,k)
+      enddo ; enddo
       pen_TKE_2d(:,:) = 0.0
     endif
 
