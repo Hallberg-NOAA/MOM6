@@ -1,5 +1,5 @@
 !> Energetically consistent planetary boundary layer parameterization
-module MOM_energetic_mixing
+module MOM_mixing_energetics
 
 ! This file is part of MOM6. See LICENSE.md for the license.
 
@@ -47,6 +47,8 @@ type, public :: energetic_mixing_CS ; private
                              !! in the turbulent kinetic energy equation [Z T-1 ~> m s-1]
   real    :: decay_rate      !< A background rate of energy decay in the turbulent kinetic energy
                              !! equation [T-1 ~> s-1]
+  real    :: decay_w_L_scale !< A coefficient relating the turbulent velocity divided by the local
+                             !! mixing distance to a turbulent kinetic energy decay rate [nondim]
 
   !/ Constants
   real    :: VonKar          !< The von Karman coefficient as used in the eMix module [nondim]
@@ -76,6 +78,7 @@ type, public :: energetic_mixing_CS ; private
   !>@{ Diagnostic IDs
   integer :: id_TKE_mixing = -1
   integer :: id_TKE_forcing = -1
+  integer :: id_frac_en_diff = -1
   integer :: id_Mixing_Length = -1, id_Velocity_Scale = -1
 
   ! The next options are used when passively diagnosing sensitivities from parameter choices
@@ -95,17 +98,19 @@ end type eMix_column_diags
 
 contains
 
-!>   This subroutine determines interior ocean diffusivities from implicit energetics,
-!! using a simple fixed turbulent length scale and a supplied source of turbulent kinetic energy
-!! from another parameterization.  All calculations are done implicitly, and there
-!!  is no stability limit on the time step.
-subroutine energetic_mixing(h_3d, tv, visc, dt, Kd_int, G, GV, US, CS, &
-                         dSV_dT, dSV_dS, TKE_forcing )
-  type(ocean_grid_type),   intent(inout) :: G      !< The ocean's grid structure.
+!>   This subroutine determines interior ocean diffusivities from implicit energetics, using a
+!! simple fixed turbulent length scale and a supplied source of turbulent kinetic energy from
+!! another parameterization.  All calculations are done implicitly, and there is no stability
+!! limit on the time step.
+subroutine energetic_mixing(h_3d, tv, dSV_dT, dSV_dS, TKE_forcing, dt, Kd_int, G, GV, US, CS)
+  type(ocean_grid_type),   intent(in)    :: G      !< The ocean's grid structure.
   type(verticalGrid_type), intent(in)    :: GV     !< The ocean's vertical grid structure.
   type(unit_scale_type),   intent(in)    :: US     !< A dimensional unit scaling type
   real, dimension(SZI_(G),SZJ_(G),SZK_(GV)), &
-                           intent(inout) :: h_3d   !< Layer thicknesses [H ~> m or kg m-2].
+                           intent(in)    :: h_3d   !< Layer thicknesses [H ~> m or kg m-2].
+  type(thermo_var_ptrs),   intent(in)    :: tv     !< A structure containing pointers to any
+                                                   !! available thermodynamic fields. Absent fields
+                                                   !! have NULL ptrs.
   real, dimension(SZI_(G),SZJ_(G),SZK_(GV)), &
                            intent(in)    :: dSV_dT !< The partial derivative of in-situ specific
                                                    !! volume with potential temperature
@@ -118,27 +123,22 @@ subroutine energetic_mixing(h_3d, tv, visc, dt, Kd_int, G, GV, US, CS, &
                                                    !! applied to the water surrounding each interface
                                                    !! using a finite-volume integral
                                                    !! [R Z3 T-3 ~> W m-2].
-  type(thermo_var_ptrs),   intent(inout) :: tv     !< A structure containing pointers to any
-                                                   !! available thermodynamic fields. Absent fields
-                                                   !! have NULL ptrs.
-  type(vertvisc_type),     intent(in)    :: visc   !< Structure with vertical viscosities,
-                                                   !! BBL properties and related fields
   real,                    intent(in)    :: dt     !< Time increment [T ~> s].
   real, dimension(SZI_(G),SZJ_(G),SZK_(GV)+1), &
                            intent(inout) :: Kd_int !< The total diffusivities at interfaces
                                                    !! [H Z T-1 ~> m2 s-1 or kg m-1 s-1].
-  type(energetic_mixing_CS), intent(inout) :: CS  !< Energetic mixing control structure
+  type(energetic_mixing_CS), pointer     :: CS     !< Energetic mixing control structure
 
-!   This subroutine determines interior ocean diffusivities from implicit energetics,
-! using a simple fixed turbulent length scale and a supplied source of turbulent kinetic energy
-! from another parameterization.  This source could be considered \Gamma \epsilon from other
-! simple closures.  All calculations are done implicitly, and there
-! is no stability limit on the time step.  In the limit where the boudaries are far away and
-! the water is well stratified and the energy source is slowly varying, the returned diffusivities
-! approximate the Osborn relation results (\kappa = \Gamma \epsilon / N^2), but this version works
-! equally well when the stratification vanishes and it avoids overly large or strongly varying
-! diffusivities.  The two parameters are the peak interior length scale and a TKE decay rate, but
-! the well-stratified interior ocean diffusivities vary only weakly with these two parameters.
+  !   This subroutine determines interior ocean diffusivities from implicit energetics,
+  ! using a simple fixed turbulent length scale and a supplied source of turbulent kinetic energy
+  ! from another parameterization.  This source could be considered \Gamma \epsilon from other
+  ! simple closures.  All calculations are done implicitly, and there
+  ! is no stability limit on the time step.  In the limit where the boudaries are far away and
+  ! the water is well stratified and the energy source is slowly varying, the returned diffusivities
+  ! approximate the Osborn relation results (\kappa = \Gamma \epsilon / N^2), but this version works
+  ! equally well when the stratification vanishes and it avoids overly large or strongly varying
+  ! diffusivities.  The two parameters are the peak interior length scale and a TKE decay rate, but
+  ! the well-stratified interior ocean diffusivities vary only weakly with these two parameters.
 
   ! Local variables
   real, dimension(SZI_(G),SZK_(GV)) :: &
@@ -184,7 +184,24 @@ subroutine energetic_mixing(h_3d, tv, visc, dt, Kd_int, G, GV, US, CS, &
   real, dimension(SZI_(G),SZJ_(G)) :: &
     ! The next 7 diagnostics are terms in the mixed layer TKE budget, all in [R Z3 T-3 ~> W m-2].
     diag_TKE_forcing, & ! The TKE sink required to mix surface penetrating shortwave heating [R Z3 T-3 ~> W m-2]
-    diag_TKE_mixing    ! The work done by TKE to deepen the mixed layer [R Z3 T-3 ~> W m-2]
+    diag_TKE_mixing, &  ! The work done by TKE to deepen the mixed layer [R Z3 T-3 ~> W m-2]
+    frac_en_diff        ! The fractional difference between the energy used and the energy input [nondim]
+
+  ! The following variables are used for debugging.
+  real :: pres(SZK_(GV)+1)    ! Interface pressures [R L2 T-2 ~> Pa].
+  real :: Kddt_h(SZK_(GV)+1)  ! The diapycnal diffusivity times a timestep divided by the
+                              ! average thicknesses around a layer [H ~> m or kg m-2].
+  real :: Tf(SZK_(GV))        ! Updated values of the temperatures after mixing [C ~> degC]
+  real :: Sf(SZK_(GV))        ! Updated values of the salinities after mixing [S ~> ppt].
+  real :: dMass               ! The mass per unit area within a layer [R Z ~> kg m-2].
+  real :: dPres               ! The hydrostatic pressure change across a layer [R L2 T-2 ~> Pa].
+  real :: dT_to_dPE(SZK_(GV)) ! Partial derivative of column potential energy with the temperature
+                              ! changes within a layer [R Z L2 T-2 C-1 ~> J m-2 degC-1]
+  real :: dS_to_dPE(SZK_(GV)) ! Partial derivative of column potential energy with the salinity
+                              ! changes within a layer [R Z L2 T-2 S-1 ~> J m-2 ppt-1]
+  real :: PE_chg_tot1D        ! Changes in column potential energy [R Z L2 T-2 ~> J m-2]
+  real :: TKE_force_tot1D     ! The time-integrated column-integrated energy driving mixing
+                              ! within a timestep [R Z L2 T-2 ~> J m-2]
 
   ! The following variables are only used for diagnosing sensitivities to eMix settings
   real, dimension(SZK_(GV)+1) :: &
@@ -200,6 +217,8 @@ subroutine energetic_mixing(h_3d, tv, visc, dt, Kd_int, G, GV, US, CS, &
 
   is = G%isc ; ie = G%iec ; js = G%jsc ; je = G%jec ; nz = GV%ke
 
+  if (.not. associated(CS)) call MOM_error(FATAL, "energetic_mixing: "// &
+         "Module must be initialized before it is used.")
   if (.not. CS%initialized) call MOM_error(FATAL, "energetic_mixing: "//&
          "Module must be initialized before it is used.")
   if (.not. associated(tv%eqn_of_state)) call MOM_error(FATAL, &
@@ -309,6 +328,38 @@ subroutine energetic_mixing(h_3d, tv, visc, dt, Kd_int, G, GV, US, CS, &
         endif
       endif
 
+      if (CS%id_frac_en_diff > 0) then
+        ! Recalculate the change in column integrated potential energy to verify
+        ! the plausibility of the calculations.
+
+        Kddt_h(1) = 0.0 ; Kddt_h(nz+1) = 0.0
+        do K=2,nz
+          Kddt_h(K) = dt * Kd(K) / max(0.5*(dz(k-1) + dz(k)), GV%dZ_subroundoff)
+        enddo
+
+        call tridiag_T_down(T0, Kddt_h, h, GV, Tf)
+        call tridiag_T_down(S0, Kddt_h, h, GV, Sf)
+
+        pres(1) = 0.0
+        PE_chg_tot1D = 0.0
+        do k=1,nz
+          dMass = GV%H_to_RZ * h(k)
+          dPres = (GV%g_Earth * GV%H_to_RZ) * h(k)
+          dT_to_dPE(k) = (dMass * (pres(K) + 0.5*dPres)) * dSV_dT_1d(k)
+          dS_to_dPE(k) = (dMass * (pres(K) + 0.5*dPres)) * dSV_dS_1d(k)
+          ! dT_to_dColHt(k) = dMass * dSV_dT(k) * CS%ColHt_scaling
+          ! dS_to_dColHt(k) = dMass * dSV_dS(k) * CS%ColHt_scaling
+          pres(K+1) = pres(K) + (GV%g_Earth * GV%H_to_RZ) * h(k)
+
+          PE_chg_tot1D = PE_chg_tot1D + (dT_to_dPE(k) * (Tf(k) - T0(k)) + &
+                                         dS_to_dPE(k) * (Sf(k) - S0(k)))
+        enddo
+        do K=1,nz+1
+          TKE_force_tot1D = TKE_force_tot1D + TKE_forcing_2d(i,K)*dt
+        enddo
+        frac_en_diff(i,j) = (PE_chg_tot1D - TKE_force_tot1D) / (0.5*(TKE_force_tot1D + PE_chg_tot1D))
+      endif
+
     else ! End of the ocean-point part of the i-loop
       ! For masked points, Kd_int must still be set (to 0) because it has intent out.
       do K=1,nz+1 ; Kd_2d(i,K) = 0. ; enddo
@@ -322,6 +373,7 @@ subroutine energetic_mixing(h_3d, tv, visc, dt, Kd_int, G, GV, US, CS, &
   if (CS%id_TKE_mixing > 0) call post_data(CS%id_TKE_mixing, diag_TKE_mixing, CS%diag)
   if (CS%id_Mixing_Length > 0) call post_data(CS%id_Mixing_Length, diag_Mixing_Length, CS%diag)
   if (CS%id_Velocity_Scale >0) call post_data(CS%id_Velocity_Scale, diag_Velocity_Scale, CS%diag)
+  if (CS%id_frac_en_diff >0) call post_data(CS%id_frac_en_diff, frac_en_diff, CS%diag)
 
   if (CS%options_diff > 0) then
     ! These diagnostics are only for determining sensitivities to different eMix settings.
@@ -330,7 +382,6 @@ subroutine energetic_mixing(h_3d, tv, visc, dt, Kd_int, G, GV, US, CS, &
   endif
 
 end subroutine energetic_mixing
-
 
 
 !> This subroutine determines the diffusivities from the implicit energetics with a simple mixing
@@ -388,6 +439,10 @@ subroutine eMix_column(h, dz, T0, S0, dSV_dT, dSV_dS, TKE_source, &
     w, &            ! The turblent velocity magnitude at interfaces [Z T-1 ~> m s-1]
     w_in, &         ! The turblent velocity magnitude at interfaces at the end of the
                     ! previous timestep [Z T-1 ~> m s-1]
+    w2_term, &      ! A term related to the interface mass and TKE decay that scales with the
+                    ! turbulent velocity squared [H ~> m or kg m-2]
+    w3_term, &      ! A term related to the TKE decay that scales with the turbulent velocity
+                    ! cubed [H T Z-1 ~> s or s kg m-3]
     H_int_eff, &    ! The effective thickness associated with the interface in the w2 equation,
                     ! including terms from the partial derivative of energy sinks with changes
                     ! in w**2 [H ~> m or kg m-2]
@@ -557,7 +612,6 @@ subroutine eMix_column(h, dz, T0, S0, dSV_dT, dSV_dS, TKE_source, &
   !### Need to add code to store and set w_in
   do K=1,nz+1 ; w_in(K) = 0.0 ; enddo
 
-
   !### Optionally merge sufficiently massless layers?
 
   ! Zero out the temperature and salinity estimates in the extra (ficticious) layers.
@@ -589,10 +643,10 @@ subroutine eMix_column(h, dz, T0, S0, dSV_dT, dSV_dS, TKE_source, &
     h_from_bot(K) = h_from_bot(K+1) + h(k)
   enddo
 
-
   H4_tot_int = CS%Bdry_fac*(h_tot**2*CS%L_interior**2)
   H_int(1) = max(0.5*h(1), GV%H_subroundoff)
   L_mix(1) = 0.0 ; dt_dz_int(1) = 0.0 ; Ldt_h(1) = 0.0
+  w3_term(1) = 0.0
   Kddt_dz_other(1) = 0.0
   do K=2,nz
     H_int(K) = max(0.5*(h(k-1)+h(k)), GV%H_subroundoff)
@@ -607,10 +661,13 @@ subroutine eMix_column(h, dz, T0, S0, dSV_dT, dSV_dS, TKE_source, &
     Kddt_dz_other(K) = Kd_other(K)*dt_dz_int(K)
 
     Ldt_h(K) = L_mix(K)*dt_dz_int(K)
+    w2_term(K) = H_int(K) * (1.0 + lam_dt)
+    w3_term(K) = dt*CS%decay_w_L_scale * H_int(K) / L_mix(K)
   enddo
   Kddt_dz_other(nz+1) = 0.0
   H_int(nz+1) = max(0.5*h(nz), GV%H_subroundoff)
   L_mix(nz+1) = 0.0 ; dt_dz_int(nz+1) = 0.0 ; Ldt_h(nz+1) = 0.0
+  w3_term(nz+1) = 0.0
 
   ! Setting the thicknesses associated with the top and bottom boundary conditions is one way to
   ! enforce the Direchlet boundary conditions that w2 = 0.
@@ -735,19 +792,19 @@ subroutine eMix_column(h, dz, T0, S0, dSV_dT, dSV_dS, TKE_source, &
 
       if ((eMix_it > 1) .and. (CS%tridiagonal_w2)) then
         ! This turns the expression into the pivot for a tridiagonal solver for w2.
-        w2_dgnl = (H_int(K)*(1.0+lam_dt) + (Kddt_hlay(k)*hp_w2_b(K+1) / (hp_w2_b(K+1) + Kddt_hlay(k)) + &
-                                            Kddt_hlay(k-1)*hp_w2_a(K-1) / (hp_w2_a(K-1) + Kddt_hlay(k-1))) )
+        w2_dgnl = (w2_term(K) + (Kddt_hlay(k)*hp_w2_b(K+1) / (hp_w2_b(K+1) + Kddt_hlay(k)) + &
+                                 Kddt_hlay(k-1)*hp_w2_a(K-1) / (hp_w2_a(K-1) + Kddt_hlay(k-1))) )
         w2_RHS = TKE_source(K) + H_int(K)*(w_in(K)**2) + (Kddt_hlay(k)*w2_b(K+1) + Kddt_hlay(k-1)*w2_a(K-1))
       else
         ! This is the pivot for a simple local solution.
-        w2_dgnl = (H_int(K)*(1.0+lam_dt) + (Kddt_hlay(k) + Kddt_hlay(k-1)))
+        w2_dgnl = (w2_term(K) + (Kddt_hlay(k) + Kddt_hlay(k-1)))
         w2_RHS = TKE_source(K) + H_int(K)*(w_in(K)**2) + (Kddt_hlay(k) * w(K+1)**2 + Kddt_hlay(k-1)*w(K-1)**2)
       endif
 
       w_prev(K) = w(K)
 
       if (w(K) <= 0.0) then
-        ! For the first guess, ignore the cubic term, giving an underestimate.
+        ! For the first guess, ignore the cubic terms, giving an underestimate.
         PE_chg_w0 = PE_chg_core * Ldt_h(K) / (bdt1 * bdt1)
         !  w2_dgnl*w(K)**2 + PE_chg_w0 * w(K) - w2_RHS = 0.0
         !  For accuracy with the relevant root, avoid subtraction by solving for 1/w(K) and inverting:
@@ -758,18 +815,23 @@ subroutine eMix_column(h, dz, T0, S0, dSV_dT, dSV_dS, TKE_source, &
 
       ! Iterate with Newton's method, either in w or w2, depending on which is more nearly linear.
       do local_itt=1,max_itt
-        w2_err = w2_RHS - ( w2_dgnl*w(K)**2 + PE_chg_core * (w(K)*Ldt_h(K) / (bdt1 * (bdt1 + w(K)*Ldt_h(K) * hps))) )
+        w2_err = w2_RHS - ( (w2_dgnl + w3_term(K)*w(K))*w(K)**2 + &
+                            PE_chg_core * (w(K)*Ldt_h(K) / (bdt1 * (bdt1 + w(K)*Ldt_h(K) * hps))) )
 
         ! For positive w, dFn_dw is always positive:
-        dFn_dw = 2.0*w2_dgnl*w(K) + PE_chg_core * Ldt_h(K) / (bdt1 + w(K)*Ldt_h(K) * hps)**2
+        dFn_dw = (2.0*w2_dgnl + 3.0*w3_term(K)*w(K))*w(K) + &
+                 PE_chg_core * Ldt_h(K) / (bdt1 + w(K)*Ldt_h(K) * hps)**2
 
-        if (PE_chg_core * Ldt_h(K) / (bdt1 + w(K)*Ldt_h(K) * hps)**2 >= 2.0*w2_dgnl*w(K)) then
+        if (PE_chg_core * Ldt_h(K) / (bdt1 + w(K)*Ldt_h(K) * hps)**2 >= &
+            (2.0*w2_dgnl + 3.0*w3_term(K)*w(K))*w(K) ) then
+
           ! Use Newton's method in w, because the linear term is dominant.
           w(K) = w(K) + w2_err / dFn_dw
 
           ! The sign of the second derivative determines whether Newton's method converges from above or below.
-          ! d2Fn_dw_2 = 2.0*w2_dgnl - 2.0*PE_chg_core * Ldt_h(K)**2 * hps / (bdt1 + w(K)*Ldt_h(K) * hps)**3
-          ! if (w2_dgnl*(bdt1 + w(K)*Ldt_h(K) * hps)**3 >= PE_chg_core * Ldt_h(K)**2 * hps) then
+          ! d2Fn_dw_2 = (2.0*w2_dgnl + 6.0*w3_term(K)*w(K)) - &
+          !             2.0*PE_chg_core * Ldt_h(K)**2 * hps / (bdt1 + w(K)*Ldt_h(K) * hps)**3
+          ! if ((w2_dgnl+3.0*w3_term(K)*w(K))*(bdt1 + w(K)*Ldt_h(K) * hps)**3 >= PE_chg_core * Ldt_h(K)**2 * hps) then
           !   ! At this value of w(K), the Newton's method solution will converge monotonically from above
           ! else
           !   ! At this value of w(K), the Newton's method solution will converge monotonically from below
@@ -785,14 +847,14 @@ subroutine eMix_column(h, dz, T0, S0, dSV_dT, dSV_dS, TKE_source, &
       enddo
 
       ! verify =  -H_int(K)*(w(K)**2 - w_in(K)**2) + TKE_source(K) - PE_chg - &
-      !     lam_dt*H_int(K)*(w(K)**2) + &
+      !     (lam_dt*H_int(K)*(w(K)**2) + w3_term(K)*w(K)**3) + &
       !     ((L_dz(k)*(w(K+1) + w(K)) + Kddt_hlay(k)) * (w(K+1)**2 - w(K)**2) + &
       !      (L_dz(k-1)*(w(K-1) + w(K)) + Kddt_hlay(k-1))*(w(K-1)**2 - w(K)**2))
       ! Folding find_PE_chg into the expression above gives a quartic equation for w(K) that
       ! can be solved iteratively.
 
       !   If the layer-center diffusivities are already known from a previous iteration, solve for w(K):
-      ! (H_int(K)*(1.0+lam_dt) + (Kddt_hlay(k) + Kddt_hlay(k-1)))*w(K)**2 +
+      ! ((w2_term(K) + w3_term(K)*w(K)) + (Kddt_hlay(k) + Kddt_hlay(k-1)))*w(K)**2 + &
       !    PE_chg_core * (w(K)*Ldt_h(K) / (bdt1 * (bdt1 + w(K)*Ldt_h(K) * hps))) = &
       !       TKE_source(K) + H_int(K)*(w_in(K)**2) + (Kddt_hlay(k) * w(K+1)**2 + Kddt_hlay(k-1)*w(K-1)**2)
 
@@ -800,7 +862,7 @@ subroutine eMix_column(h, dz, T0, S0, dSV_dT, dSV_dS, TKE_source, &
         PE_chg = PE_chg_core * (w(K)*Ldt_h(K) / (bdt1 * (bdt1 + w(K)*Ldt_h(K) * hps)))
         dPE_dw2 = 0.5*PE_chg_core * Ldt_h(K) / (w(K) * (bdt1 + w(K)*Ldt_h(K) * hps)**2)
         net_TKE_input(K) = h_int(K)*w_in(K)**2 + (TKE_source(K) - (PE_chg - dPE_dw2*w(K)**2))
-        H_int_eff(K) = H_int(K)*(1.0+lam_dt) + dPE_dw2
+        H_int_eff(K) = (w2_term(K) + 1.5*w3_term(K)*w(K)) + dPE_dw2
 
         b1 = 1.0 / (hp_w2_a(K-1) + Kddt_hlay(k-1))
         hp_w2_a(K) = H_int_eff(K) + (hp_w2_a(K-1) * b1)*Kddt_hlay(k-1)
@@ -877,28 +939,31 @@ subroutine eMix_column(h, dz, T0, S0, dSV_dT, dSV_dS, TKE_source, &
       ! Store the current value of w to test for convergence.
       w_prev(K) = w(K)
 
-
       ! Solve for an updated value of w(K) such that Fn_w = w2_RHS.
-      ! Fn_w = w2_dgnl*w(K)**2 + PE_chg_core * (w(K)*Ldt_h(K) / (bdt1 * (bdt1 + w(K)*Ldt_h(K) * hps)))
+      ! Fn_w = w2_dgnl*w(K)**2 + w3_term(K)*w(K)**3 + &
+      !        PE_chg_core * (w(K)*Ldt_h(K) / (bdt1 * (bdt1 + w(K)*Ldt_h(K) * hps)))
       if ((eMix_it > 1) .and. (CS%tridiagonal_w2)) then
         ! This turns the expression into the pivot for a tridiagonal solver for w2.
-        w2_dgnl = (H_int(K)*(1.0+lam_dt) + (Kddt_hlay(k)*hp_w2_b(K+1) / (hp_w2_b(K+1) + Kddt_hlay(k)) + &
-                                            Kddt_hlay(k-1)*hp_w2_a(K-1) / (hp_w2_a(K-1) + Kddt_hlay(k-1))) )
+        w2_dgnl = w2_term(K) + (Kddt_hlay(k)*hp_w2_b(K+1) / (hp_w2_b(K+1) + Kddt_hlay(k)) + &
+                                Kddt_hlay(k-1)*hp_w2_a(K-1) / (hp_w2_a(K-1) + Kddt_hlay(k-1)))
         w2_RHS = TKE_source(K) + H_int(K)*(w_in(K)**2) + (Kddt_hlay(k) * w2_b(K+1) + Kddt_hlay(k-1)*w2_a(K-1))
       else
         ! This is the simpler local solution.
-        w2_dgnl = (H_int(K)*(1.0+lam_dt) + (Kddt_hlay(k) + Kddt_hlay(k-1)))
+        w2_dgnl = w2_term(K) + (Kddt_hlay(k) + Kddt_hlay(k-1))
         w2_RHS = TKE_source(K) + H_int(K)*(w_in(K)**2) + (Kddt_hlay(k) * w(K+1)**2 + Kddt_hlay(k-1)*w(K-1)**2)
       endif
 
       ! Iterate with Newton's method, either in w or w2, depending on which is more nearly linear.
       do local_itt=1,max_itt
-        w2_err = w2_RHS - ( w2_dgnl*w(K)**2 + PE_chg_core * (w(K)*Ldt_h(K) / (bdt1 * (bdt1 + w(K)*Ldt_h(K) * hps))) )
+        w2_err = w2_RHS - ( (w2_dgnl + w3_term(K)*w(K)) * w(K)**2 + &
+                 PE_chg_core * (w(K)*Ldt_h(K) / (bdt1 * (bdt1 + w(K)*Ldt_h(K) * hps))) )
 
         ! dFn_dw is always positive:
-        dFn_dw = 2.0*w2_dgnl*w(K) + PE_chg_core * Ldt_h(K) / (bdt1 + w(K)*Ldt_h(K) * hps)**2
+        dFn_dw = (2.0*w2_dgnl + 3.0*w3_term(K)*w(K))*w(K) + &
+                 PE_chg_core * Ldt_h(K) / (bdt1 + w(K)*Ldt_h(K) * hps)**2
 
-        if (PE_chg_core * Ldt_h(K) / (bdt1 + w(K)*Ldt_h(K) * hps)**2 >= 2.0*w2_dgnl*w(K)) then
+        if (PE_chg_core * Ldt_h(K) / (bdt1 + w(K)*Ldt_h(K) * hps)**2 >= &
+            (2.0*w2_dgnl + 3.0*w3_term(K)*w(K))*w(K) ) then
           ! Use Newton's method in w, because the linear term is dominant.
           w(K) = w(K) + w2_err / dFn_dw
         else
@@ -913,7 +978,7 @@ subroutine eMix_column(h, dz, T0, S0, dSV_dT, dSV_dS, TKE_source, &
         PE_chg = PE_chg_core * (w(K)*Ldt_h(K) / (bdt1 * (bdt1 + w(K)*Ldt_h(K) * hps)))
         dPE_dw2 = 0.5*PE_chg_core * Ldt_h(K) / (w(K) * (bdt1 + w(K)*Ldt_h(K) * hps)**2)
         net_TKE_input(K) = h_int(K)*w_in(K)**2 + (TKE_source(K) - (PE_chg - dPE_dw2*w(K)**2))
-        H_int_eff(K) = H_int(K)*(1.0+lam_dt) + dPE_dw2
+        H_int_eff(K) = (w2_term(K) + 1.5*w3_term(K)*w(K)) + dPE_dw2
 
         b1 = 1.0 / (hp_w2_b(K+1) + Kddt_hlay(k))
         hp_w2_b(K) = H_int_eff(K) + (hp_w2_b(K+1) * b1)*Kddt_hlay(k)
@@ -994,7 +1059,7 @@ subroutine eMix_column(h, dz, T0, S0, dSV_dT, dSV_dS, TKE_source, &
   ! and using the known expressions for L_mix(z).
 
   ! Store the final diffusivities, stting the no-flux boundary conditions:
-  Kd(0) = 0.0 ; mixvel(0) = 0.0 ; mixlen(0) = 0.0
+  Kd(1) = 0.0 ; mixvel(1) = 0.0 ; mixlen(1) = 0.0
   do K=2,nz
     ! The diagnosed added diffusivities at interfaces [H Z T-1 ~> m2 s-1 or kg m-1 s-1].
     Kd(K) = w(K)*L_mix(K)
@@ -1014,7 +1079,6 @@ subroutine eMix_column(h, dz, T0, S0, dSV_dT, dSV_dS, TKE_source, &
 !    enddo
 !    mixlen(nz+1) = 0.0
 !  endif
-
 
 !    if (debug) then
 !      ! Complete the tridiagonal solve for Te.
@@ -1152,7 +1216,7 @@ subroutine energetic_mixing_init(Time, G, GV, US, param_file, diag, CS)
   type(unit_scale_type),   intent(in)    :: US   !< A dimensional unit scaling type
   type(param_file_type),   intent(in)    :: param_file !< A structure to parse for run-time parameters
   type(diag_ctrl), target, intent(inout) :: diag !< A structure that is used to regulate diagnostic output
-  type(energetic_mixing_CS),  intent(inout) :: CS   !< Energetic PBL control structure
+  type(energetic_mixing_CS), pointer     :: CS   !< Energetic PBL control structure
 
   ! Local variables
   ! This include declares and sets the variable "version".
@@ -1162,13 +1226,15 @@ subroutine energetic_mixing_init(Time, G, GV, US, param_file, diag, CS)
   integer :: isd, ied, jsd, jed
   isd = G%isd ; ied = G%ied ; jsd = G%jsd ; jed = G%jed
 
+  if (.not.associated(CS)) then ; allocate(CS)
+  else ; return ; endif
+
   CS%initialized = .true.
   CS%diag => diag
   CS%Time => Time
 
 ! Set default, read and log parameters
   call log_version(param_file, mdl, version, "")
-
 
 !/1. General eMix settings
   call get_param(param_file, mdl, "DEBUG", CS%debug, &
@@ -1199,11 +1265,14 @@ subroutine energetic_mixing_init(Time, G, GV, US, param_file, diag, CS)
   call get_param(param_file, mdl, "MIXING_EN_DECAY_RATE", CS%decay_rate, &
                  "A background rate of energy decay in the turbulent kinetic energy equation", &
                  units="s-1", default=1.0e-5, scale=US%T_to_s)
+  call get_param(param_file, mdl, "MIXING_EN_W_L_DECAY", CS%decay_w_L_scale, &
+                 "A coefficient relating the turbulent velocity divided by the local mixing "//&
+                 "distance to a turbulent kinetic energy decay rate", &
+                  units="nondim")
   call get_param(param_file, mdl, "EMIX_MAX_ITS", CS%max_mixing_its, &
                  "The maximum number of iterations that can be used to find a self-consistent "//&
                  "diffusivity profile with the energetics-based interior mixing.", &
                  default=20)
-
 
   !/ Options for documenting differences from parameter choices
   call get_param(param_file, mdl, "EMIX_OPTIONS_DIFF", CS%options_diff, &
@@ -1231,6 +1300,8 @@ subroutine energetic_mixing_init(Time, G, GV, US, param_file, diag, CS)
       Time, 'Mixing Length that is used', units='m', conversion=US%Z_to_m)
   CS%id_Velocity_Scale = register_diag_field('ocean_model', 'eMix_Velocity_Scale', diag%axesTi, &
       Time, 'Velocity Scale that is used.', units='m s-1', conversion=US%Z_to_m*US%s_to_T)
+  CS%id_frac_en_diff = register_diag_field('ocean_model', 'eMix_frac_en_diff', diag%axesT1, &
+      Time, 'The fractional difference between the energy used and the energy input', units='nondim')
 
   if (CS%options_diff > 0) then
     CS%id_opt_diff_Kd_eMix = register_diag_field('ocean_model', 'eMix_opt_diff_Kd_eMix', diag%axesTi, &
@@ -1251,10 +1322,12 @@ end subroutine energetic_mixing_init
 
 !> Clean up and deallocate memory associated with the energetic_mixing module.
 subroutine energetic_mixing_end(CS)
-  type(energetic_mixing_CS), intent(inout) :: CS !< energetic_mixing control structure
+  type(energetic_mixing_CS), pointer :: CS !< energetic_mixing control structure
 
   character(len=256) :: mesg
   real :: avg_its ! The averaged number of iterations used by eMix [nondim]
+
+  if (.not.associated(CS)) return
 
   if (report_avg_its) then
     call EFP_sum_across_PEs(CS%sum_its, 2)
@@ -1262,6 +1335,7 @@ subroutine energetic_mixing_end(CS)
     write (mesg,*) "Average eMix iterations = ", avg_its
     call MOM_mesg(mesg)
   endif
+  deallocate(CS)
 end subroutine energetic_mixing_end
 
 ! The following extra code includes various working tridiagonal solvers that were useful in
@@ -1666,4 +1740,4 @@ end subroutine tridiag_w2_cent
 !! mixing calculation to convert the tubulent kinetic energy input into a diapycal
 !! diffusivity.
 
-end module MOM_energetic_mixing
+end module MOM_mixing_energetics
