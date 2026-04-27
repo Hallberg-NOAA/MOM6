@@ -698,7 +698,7 @@ end function tidal_mixing_init
 !! tidal dissipation and to add the effect of internal-tide-driven mixing to the layer or interface
 !! diffusivities.
 subroutine calculate_tidal_mixing(dz, j, N2_bot, Rho_bot, N2_lay, N2_int, TKE_to_Kd, max_TKE, &
-                                  G, GV, US, CS, Kd_max, Kv, Kd_lay, Kd_int, VBF)
+                                  G, GV, US, CS, Kd_max, Kv, Kd_lay, Kd_int, VBF, TKE_mixing)
   type(ocean_grid_type),            intent(in)    :: G      !< The ocean's grid structure
   type(verticalGrid_type),          intent(in)    :: GV     !< The ocean's vertical grid structure
   type(unit_scale_type),            intent(in)    :: US     !< A dimensional unit scaling type
@@ -733,13 +733,16 @@ subroutine calculate_tidal_mixing(dz, j, N2_bot, Rho_bot, N2_lay, N2_int, TKE_to
                           optional, intent(inout) :: Kd_int !< The diapycnal diffusivity at interfaces
                                                             !! [H Z T-1 ~> m2 s-1 or kg m-1 s-1]
   type(vbf_CS), pointer                           :: VBF    !< A diagnostic structure for vertical buoyancy fluxes
+  real, dimension(SZI_(G),SZJ_(G),SZK_(GV)), &
+                          optional, intent(inout) :: TKE_mixing !< The energy used to drive mixing
+                                                            !! at interfaces [R Z3 T-3 ~> W m-2]
 
   if (CS%Int_tide_dissipation .or. CS%Lee_wave_dissipation .or. CS%Lowmode_itidal_dissipation) then
     if (CS%use_CVMix_tidal) then
       call calculate_CVMix_tidal(dz, j, N2_int, G, GV, US, CS, Kv, Kd_lay, Kd_int)
     else
       call add_int_tide_diffusivity(dz, j, N2_bot, Rho_bot, N2_lay, TKE_to_Kd, max_TKE, &
-                                    G, GV, US, CS, Kd_max, Kd_lay, Kd_int, VBF)
+                                    G, GV, US, CS, Kd_max, Kd_lay, Kd_int, VBF, TKE_mixing)
     endif
   endif
 end subroutine calculate_tidal_mixing
@@ -996,7 +999,7 @@ end subroutine calculate_CVMix_tidal
 !! Will eventually need to add diffusivity due to other wave-breaking processes (e.g. Bottom friction,
 !! Froude-number-depending breaking, PSI, etc.).
 subroutine add_int_tide_diffusivity(dz, j, N2_bot, Rho_bot, N2_lay, TKE_to_Kd, max_TKE, &
-                                    G, GV, US, CS, Kd_max, Kd_lay, Kd_int, VBF)
+                                    G, GV, US, CS, Kd_max, Kd_lay, Kd_int, VBF, TKE_mixing)
   type(ocean_grid_type),             intent(in)    :: G      !< The ocean's grid structure
   type(verticalGrid_type),           intent(in)    :: GV     !< The ocean's vertical grid structure
   type(unit_scale_type),             intent(in)    :: US     !< A dimensional unit scaling type
@@ -1027,6 +1030,9 @@ subroutine add_int_tide_diffusivity(dz, j, N2_bot, Rho_bot, N2_lay, TKE_to_Kd, m
                            optional, intent(inout) :: Kd_int !< The diapycnal diffusivity at interfaces
                                                              !! [H Z T-1 ~> m2 s-1 or kg m-1 s-1].
   type(vbf_CS), pointer                            :: VBF    !< A diagnostics structure for vertical buoyancy fluxes
+  real, dimension(SZI_(G),SZJ_(G),SZK_(GV)), &
+                           optional, intent(inout) :: TKE_mixing !< The energy used to drive mixing
+                                                            !! at interfaces [R Z3 T-3 ~> W m-2]
 
   ! local
 
@@ -1059,6 +1065,7 @@ subroutine add_int_tide_diffusivity(dz, j, N2_bot, Rho_bot, N2_lay, TKE_to_Kd, m
   real :: TKE_itide_lay ! internal tide TKE imparted to a layer (from barotropic) [H Z2 T-3 ~> m3 s-3 or W m-2]
   real :: TKE_Niku_lay  ! lee-wave TKE imparted to a layer [H Z2 T-3 ~> m3 s-3 or W m-2]
   real :: TKE_lowmode_lay ! internal tide TKE imparted to a layer (from low mode) [H Z2 T-3 ~> m3 s-3 or W m-2]
+  real :: TKE_mix_lay   ! The sum of the sources of TKE inparted to a layer [R Z3 T-3 ~> W m-2]
   real :: frac_used     ! fraction of TKE that can be used in a layer [nondim]
   real :: Izeta         ! inverse of TKE decay scale [Z-1 ~> m-1]
   real :: Izeta_lee     ! inverse of TKE decay scale for lee waves [Z-1 ~> m-1]
@@ -1306,6 +1313,12 @@ subroutine add_int_tide_diffusivity(dz, j, N2_bot, Rho_bot, N2_lay, TKE_to_Kd, m
         Kd_int(i,K+1) = Kd_int(i,K+1) + 0.5 * Kd_add
       endif
 
+      if (present(TKE_mixing)) then
+        TKE_mix_lay = GV%H_to_RZ*(TKE_itide_lay + (TKE_Niku_lay + TKE_lowmode_lay))
+        TKE_mixing(i,j,K) = TKE_mixing(i,j,K) + 0.5*TKE_mix_lay
+        TKE_mixing(i,j,K+1) = TKE_mixing(i,j,K+1) + 0.5*TKE_mix_lay
+      endif
+
       ! diagnostics
       if (allocated(CS%dd%Kd_itidal).or.(associated(VBF%Kd_itides))) then
         ! If at layers, CS%dd%Kd_itidal is just TKE_to_Kd(i,k) * TKE_itide_lay
@@ -1419,6 +1432,12 @@ subroutine add_int_tide_diffusivity(dz, j, N2_bot, Rho_bot, N2_lay, TKE_to_Kd, m
       if (present(Kd_int)) then
         Kd_int(i,K)   = Kd_int(i,K)   + 0.5 * Kd_add
         Kd_int(i,K+1) = Kd_int(i,K+1) + 0.5 * Kd_add
+      endif
+
+      if (present(TKE_mixing)) then
+        TKE_mix_lay = GV%H_to_RZ*(TKE_itide_lay + (TKE_Niku_lay + TKE_lowmode_lay))
+        TKE_mixing(i,j,K) = TKE_mixing(i,j,K) + 0.5*TKE_mix_lay
+        TKE_mixing(i,j,K+1) = TKE_mixing(i,j,K+1) + 0.5*TKE_mix_lay
       endif
 
       ! diagnostics
