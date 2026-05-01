@@ -76,7 +76,7 @@ type, public :: energetic_mixing_CS ; private
   type(EFP_type), dimension(2) :: sum_its !< The total number of iterations and columns worked on
 
   !>@{ Diagnostic IDs
-  integer :: id_TKE_mixing = -1
+  integer :: id_dPE_mixing = -1
   integer :: id_TKE_forcing = -1
   integer :: id_frac_en_diff = -1
   integer :: id_Mixing_Length = -1, id_Velocity_Scale = -1
@@ -169,11 +169,7 @@ subroutine energetic_mixing(h_3d, tv, dSV_dT, dSV_dS, TKE_forcing, dt, Kd_int, G
     mixlen          ! A turbulent mixing length [Z ~> m].
   real :: h_neglect ! A thickness that is so small it is usually lost
                     ! in roundoff and can be neglected [H ~> m or kg m-2].
-
-  real :: I_rho     ! The inverse of the Boussinesq reference density [R-1 ~> m3 kg-1]
   real :: I_dt      ! The Adcroft reciprocal of the timestep [T-1 ~> s-1]
-  real :: I_rho0dt  ! The inverse of the Boussinesq reference density times the time
-                    ! step [R-1 T-1 ~> m3 kg-1 s-1]
 
   type(eMix_column_diags) :: eCD ! A container for passing around diagnostics.
 
@@ -184,24 +180,25 @@ subroutine energetic_mixing(h_3d, tv, dSV_dT, dSV_dS, TKE_forcing, dt, Kd_int, G
   real, dimension(SZI_(G),SZJ_(G)) :: &
     ! The next 7 diagnostics are terms in the mixed layer TKE budget, all in [R Z3 T-3 ~> W m-2].
     diag_TKE_forcing, & ! The TKE sink required to mix surface penetrating shortwave heating [R Z3 T-3 ~> W m-2]
-    diag_TKE_mixing, &  ! The work done by TKE to deepen the mixed layer [R Z3 T-3 ~> W m-2]
+    diag_dPE_mixing, &  ! The column-integrated work change in potential energy due to mixing [R Z3 T-3 ~> W m-2]
     frac_en_diff        ! The fractional difference between the energy used and the energy input [nondim]
 
   ! The following variables are used for debugging.
-  real :: pres(SZK_(GV)+1)    ! Interface pressures [R L2 T-2 ~> Pa].
+  real :: pres(SZK_(GV)+1)    ! Interface pressures [R Z2 T-2 ~> Pa].
   real :: Kddt_h(SZK_(GV)+1)  ! The diapycnal diffusivity times a timestep divided by the
                               ! average thicknesses around a layer [H ~> m or kg m-2].
   real :: Tf(SZK_(GV))        ! Updated values of the temperatures after mixing [C ~> degC]
   real :: Sf(SZK_(GV))        ! Updated values of the salinities after mixing [S ~> ppt].
   real :: dMass               ! The mass per unit area within a layer [R Z ~> kg m-2].
-  real :: dPres               ! The hydrostatic pressure change across a layer [R L2 T-2 ~> Pa].
+  real :: dPres               ! The hydrostatic pressure change across a layer [R Z2 T-2 ~> Pa] or
+                              ! equivalently [R Z2 T-2 ~> J m-3].
   real :: dT_to_dPE(SZK_(GV)) ! Partial derivative of column potential energy with the temperature
-                              ! changes within a layer [R Z L2 T-2 C-1 ~> J m-2 degC-1]
+                              ! changes within a layer, in [R Z3 T-2 C-1 ~> J m-2 degC-1].
   real :: dS_to_dPE(SZK_(GV)) ! Partial derivative of column potential energy with the salinity
-                              ! changes within a layer [R Z L2 T-2 S-1 ~> J m-2 ppt-1]
-  real :: PE_chg_tot1D        ! Changes in column potential energy [R Z L2 T-2 ~> J m-2]
+                              ! changes within a layer, in [R Z3 T-2 S-1 ~> J m-2 ppt-1].
+  real :: PE_chg_tot1D        ! Changes in column potential energy [R Z3 T-2 ~> J m-2]
   real :: TKE_force_tot1D     ! The time-integrated column-integrated energy driving mixing
-                              ! within a timestep [R Z L2 T-2 ~> J m-2]
+                              ! within a timestep [R Z3 T-2 ~> J m-2]
 
   ! The following variables are only used for diagnosing sensitivities to eMix settings
   real, dimension(SZK_(GV)+1) :: &
@@ -211,7 +208,7 @@ subroutine energetic_mixing(h_3d, tv, dSV_dT, dSV_dS, TKE_forcing, dt, Kd_int, G
   real :: max_abs_diff_Kd(SZI_(G),SZJ_(G))  ! The column maximum magnitude of the change in diapycnal
                         ! diffusivities found with different eMix options [H Z T-1 ~> m2 s-1 or kg m-1 s-1]
   type(eMix_column_diags) :: eCD_tmp   ! A container for not passing around diagnostics.
-  type(energetic_mixing_CS)  :: CS_tmp1, CS_tmp2 ! Copies of the energetic PBL control structure that
+  type(energetic_mixing_CS)  :: CS_tmp1, CS_tmp2 ! Copies of the energetic mixing control structure that
                                        ! can be modified to test for sensitivities
   integer :: i, j, k, is, ie, js, je, nz
 
@@ -222,21 +219,18 @@ subroutine energetic_mixing(h_3d, tv, dSV_dT, dSV_dS, TKE_forcing, dt, Kd_int, G
   if (.not. CS%initialized) call MOM_error(FATAL, "energetic_mixing: "//&
          "Module must be initialized before it is used.")
   if (.not. associated(tv%eqn_of_state)) call MOM_error(FATAL, &
-      "energetic_mixing: Temperature, salinity and an equation of state "//&
-      "must now be used.")
+      "energetic_mixing: Temperature, salinity and an equation of state must be used.")
 
   h_neglect = GV%H_subroundoff
-  I_rho = GV%H_to_Z * GV%RZ_to_H ! == 1.0 / GV%Rho0 ! This is not used when fully non-Boussinesq.
   I_dt = 0.0 ; if (dt > 0.0) I_dt = 1.0 / dt
-  I_rho0dt = 1.0 / (GV%Rho0 * dt)  ! This is not used when fully non-Boussinesq.
 
   ! Zero out diagnostics before accumulation.
   if (CS%TKE_diagnostics) then
     !!OMP parallel do default(shared)
     do j=js,je ; do i=is,ie
       diag_TKE_forcing(i,j) = 0.0
-      diag_TKE_mixing(i,j) = 0.0
-      !; diag_TKE_unbalanced(i,j) = 0.0
+      diag_dPE_mixing(i,j) = 0.0
+      frac_en_diff(i,j) = 0.0
     enddo ; enddo
   endif
   if (CS%debug .or. (CS%id_Mixing_Length>0)) diag_Mixing_Length(:,:,:) = 0.0
@@ -292,18 +286,13 @@ subroutine energetic_mixing(h_3d, tv, dSV_dT, dSV_dS, TKE_forcing, dt, Kd_int, G
         Kd_2d(i,K) = Kd(K)
       enddo
 
-      if (CS%TKE_diagnostics) then
-        diag_TKE_forcing(i,j) = diag_TKE_forcing(i,j) + eCD%dTKE_forcing
-        diag_TKE_mixing(i,j) = diag_TKE_mixing(i,j) + eCD%dTKE_mixing
-       ! diag_TKE_unbalanced(i,j) = diag_TKE_unbalanced(i,j) + eCD%dTKE_unbalanced
-      endif
       ! Write mixing length and velocity scale to 3-D arrays for diagnostic output
       if (CS%debug .or. (CS%id_Mixing_Length > 0)) then ; do K=1,nz+1
         diag_Mixing_Length(i,j,K) = mixlen(K)
       enddo ; endif
       if (CS%debug .or. (CS%id_Velocity_Scale > 0)) then ; do K=1,nz+1
-        if (.not. is_NaN(mixvel(K))) &
-          diag_Velocity_Scale(i,j,K) = mixvel(K)
+!       if (.not. is_NaN(mixvel(K))) &
+        diag_Velocity_Scale(i,j,K) = mixvel(K)
       enddo ; endif
       if (report_avg_its) then
         CS%sum_its(1) = CS%sum_its(1) + real_to_EFP(real(eCD%eMix_its))
@@ -329,7 +318,7 @@ subroutine energetic_mixing(h_3d, tv, dSV_dT, dSV_dS, TKE_forcing, dt, Kd_int, G
         endif
       endif
 
-      if (CS%id_frac_en_diff > 0) then
+      if (CS%TKE_diagnostics) then
         ! Recalculate the change in column integrated potential energy to verify
         ! the plausibility of the calculations.
 
@@ -345,12 +334,12 @@ subroutine energetic_mixing(h_3d, tv, dSV_dT, dSV_dS, TKE_forcing, dt, Kd_int, G
         PE_chg_tot1D = 0.0
         do k=1,nz
           dMass = GV%H_to_RZ * h(k)
-          dPres = (GV%g_Earth * GV%H_to_RZ) * h(k)
+          dPres = GV%g_Earth_Z_T2 * dMass
           dT_to_dPE(k) = (dMass * (pres(K) + 0.5*dPres)) * dSV_dT_1d(k)
           dS_to_dPE(k) = (dMass * (pres(K) + 0.5*dPres)) * dSV_dS_1d(k)
           ! dT_to_dColHt(k) = dMass * dSV_dT(k) * CS%ColHt_scaling
           ! dS_to_dColHt(k) = dMass * dSV_dS(k) * CS%ColHt_scaling
-          pres(K+1) = pres(K) + (GV%g_Earth * GV%H_to_RZ) * h(k)
+          pres(K+1) = pres(K) + dPres
 
           PE_chg_tot1D = PE_chg_tot1D + (dT_to_dPE(k) * (Tf(k) - T0(k)) + &
                                          dS_to_dPE(k) * (Sf(k) - S0(k)))
@@ -359,6 +348,8 @@ subroutine energetic_mixing(h_3d, tv, dSV_dT, dSV_dS, TKE_forcing, dt, Kd_int, G
           TKE_force_tot1D = TKE_force_tot1D + TKE_forcing_2d(i,K)*dt
         enddo
         frac_en_diff(i,j) = (PE_chg_tot1D - TKE_force_tot1D) / (0.5*(TKE_force_tot1D + PE_chg_tot1D))
+        diag_dPE_mixing(i,j) = PE_chg_tot1D * I_dt
+        diag_TKE_forcing(i,j) = TKE_force_tot1D * I_dt
       endif
 
     else ! End of the ocean-point part of the i-loop
@@ -367,9 +358,8 @@ subroutine energetic_mixing(h_3d, tv, dSV_dT, dSV_dS, TKE_forcing, dt, Kd_int, G
     endif ; enddo ! Close of i-loop - Note the unusual loop order, with k-loops inside i-loops.
 
     do K=1,nz+1 ; do i=is,ie
-      if (.not. is_NaN(Kd_2d(i,K))) then
-        Kd_int(i,j,K) = Kd_int(i,j,K) + Kd_2d(i,K)
-      endif
+      ! if (.not. is_NaN(Kd_2d(i,K))) &
+      Kd_int(i,j,K) = Kd_int(i,j,K) + Kd_2d(i,K)
     enddo ; enddo
 
   enddo ! j-loop
@@ -380,7 +370,7 @@ subroutine energetic_mixing(h_3d, tv, dSV_dT, dSV_dS, TKE_forcing, dt, Kd_int, G
   endif
 
   if (CS%id_TKE_forcing > 0) call post_data(CS%id_TKE_forcing, diag_TKE_forcing, CS%diag)
-  if (CS%id_TKE_mixing > 0) call post_data(CS%id_TKE_mixing, diag_TKE_mixing, CS%diag)
+  if (CS%id_dPE_mixing > 0) call post_data(CS%id_dPE_mixing, diag_dPE_mixing, CS%diag)
   if (CS%id_Mixing_Length > 0) call post_data(CS%id_Mixing_Length, diag_Mixing_Length, CS%diag)
   if (CS%id_Velocity_Scale >0) call post_data(CS%id_Velocity_Scale, diag_Velocity_Scale, CS%diag)
   if (CS%id_frac_en_diff >0) call post_data(CS%id_frac_en_diff, frac_en_diff, CS%diag)
@@ -423,7 +413,7 @@ subroutine eMix_column(h, dz, T0, S0, dSV_dT, dSV_dS, TKE_source, &
                                                    !! [Z T-1 ~> m s-1].
   real, dimension(SZK_(GV)+1), &
                            intent(out)   :: mixlen !< The mixing length scale used in Kd [Z ~> m].
-  type(energetic_mixing_CS), intent(in)  :: CS     !< Energetic PBL control structure
+  type(energetic_mixing_CS), intent(in)  :: CS     !< Energetic mixing control structure
   type(eMix_column_diags), intent(inout) :: eCD    !< A container for passing around diagnostics.
   real, dimension(SZK_(GV)+1), intent(in) :: Kd_other !< A diapycnal diffusivity due to other processes
                                                    !! whose energetics are dealt with elsewhere or a
@@ -490,10 +480,10 @@ subroutine eMix_column(h, dz, T0, S0, dSV_dT, dSV_dS, TKE_source, &
                     ! in the water column [R Z3 T-2 S-1 ~> J m-2 ppt-1].
     dT_to_dPE_b, &  ! Partial derivative of column potential energy with the temperature changes
                     ! within a layer, including the implicit effects  of mixing with layers lower
-                    ! in the water column, in units of [R Z L2 T-2 C-1 ~> J m-2 degC-1].
+                    ! in the water column, in units of [R Z3 T-2 C-1 ~> J m-2 degC-1].
     dS_to_dPE_b, &  ! Partial derivative of column potential energy with the salinity changes
                     ! within a layer, including the implicit effects  of mixing with layers lower
-                    ! in the water column, in units of [R Z L2 T-2 S-1 ~> J m-2 ppt-1].
+                    ! in the water column, in units of [R Z3 T-2 S-1 ~> J m-2 ppt-1].
     ! Tf, &           ! Final values of T in the column [C ~> degC].
     ! Sf, &           ! Final values of S in the column [S ~> ppt].
     hp_a, &         ! An effective pivot thickness of the layer including the effects
@@ -558,6 +548,11 @@ subroutine eMix_column(h, dz, T0, S0, dSV_dT, dSV_dS, TKE_source, &
                     ! in units of [H Z2 T-2 ~> m3 s-2 or J m-2]
   real :: w2_err    ! The imbalance in the present iteration in the w2 equation
                     ! in units of [H Z2 T-2 ~> m3 s-2 or J m-2]
+  real :: w2_est    ! An estimate of the next value of w2 [Z2 T-2 ~> m2 s-2]
+  real :: w_min     ! A lower bound on w [Z T-1 ~> m s-1]
+  real :: w2_err_w_min ! The imbalance in the w2 equation when w is w_min [H Z2 T-2 ~> m3 s-2 or J m-2]
+                    ! notating that because w2_err is a decreasing function of 2, w2_err_min is
+                    ! actually the maximum value of w2_err in the remaining bounded range.
   real :: dFn_dw    ! The partial derivative of the TKE equation with turbulent velocity
                     ! in units of [H Z T-1 ~> m2 s-1 or J s m-3]
 
@@ -571,8 +566,8 @@ subroutine eMix_column(h, dz, T0, S0, dSV_dT, dSV_dS, TKE_source, &
   real :: PE_chg_core  ! The local diffusivity invariant coefficient out front of an expression
                        ! relating the change in column potential energy from applying
                        ! Kddt_h at the present interface to that diffusivity
-                       ! [H3 R Z L2 T-2 ~> J m or J kg3 m-8]
-                       ! [H4 L2 T-2 ~> m6 s-2 or J kg3 m-8]
+                       ! [H3 R Z3 T-2 ~> J m or J kg3 m-8]
+                       ! [H4 Z2 T-2 ~> m6 s-2 or J kg3 m-8]
   real :: PE_chg_w0    ! The derviative of the potential energy change with w when w is 0 [R Z2 T-1 ~> J s m-3]
                        ! [H Z T-1 ~> m2 s-1 or J s m-3]
   real :: PE_chg    ! The change in potential energy due to mixing at an interface [R Z3 T-2 ~> J m-2],
@@ -588,7 +583,7 @@ subroutine eMix_column(h, dz, T0, S0, dSV_dT, dSV_dS, TKE_source, &
   ! The following is only used for diagnostics.
   real :: I_dtdiag  !  = 1.0 / dt [T-1 ~> s-1].
 
-  integer :: eMix_it        ! Iteration counter
+  integer :: eMix_it    ! Iteration counter
 
   logical :: calc_Te    ! If true calculate the expected final temperature and salinity values.
   logical :: debug      ! This is used as a hard-coded value for debugging.
@@ -674,7 +669,7 @@ subroutine eMix_column(h, dz, T0, S0, dSV_dT, dSV_dS, TKE_source, &
 
     Ldt_h(K) = L_mix(K)*dt_dz_int(K)
     w2_term(K) = H_int(K) * (1.0 + lam_dt)
-    w3_term(K) = dt*CS%decay_w_L_scale * H_int(K) / (US%H_to_Z*L_mix(K))
+    w3_term(K) = dt*CS%decay_w_L_scale * H_int(K) / max(GV%H_to_Z*L_mix(K), dz_neglect)
   enddo
   Kddt_dz_other(nz+1) = 0.0
   H_int(nz+1) = max(0.5*h(nz), GV%H_subroundoff)
@@ -815,48 +810,80 @@ subroutine eMix_column(h, dz, T0, S0, dSV_dT, dSV_dS, TKE_source, &
 
       w_prev(K) = w(K)
 
-      if (w(K) <= 0.0) then
-        ! For the first guess, ignore the cubic terms, giving an underestimate.
-        PE_chg_w0 = PE_chg_core * Ldt_h(K) / (bdt1 * bdt1)
-        !  w2_dgnl*w(K)**2 + PE_chg_w0 * w(K) - w2_RHS = 0.0
-        !  For accuracy with the relevant root, avoid subtraction by solving for 1/w(K) and inverting:
-        w(K) = 2.0*w2_RHS / (PE_chg_w0 + sqrt(PE_chg_w0**2 + 4.0*w2_RHS*w2_dgnl))
-        ! Note that this agrees with the Osborn relation limit, in which w2_dgnl is small and
-        ! w2_RHS ~= TKE_source(K), in which case this expression is  w(K) = TKE_source(K) / PE_chg_w0.
-      endif
-
-      ! Iterate with Newton's method, either in w or w2, depending on which is more nearly linear.
-      do local_itt=1,max_itt
-        w2_err = w2_RHS - ( (w2_dgnl + w3_term(K)*w(K))*w(K)**2 + &
-                            PE_chg_core * (w(K)*Ldt_h(K) / (bdt1 * (bdt1 + w(K)*Ldt_h(K) * hps))) )
-
-        ! For positive w, dFn_dw is always positive:
-        dFn_dw = (2.0*w2_dgnl + 3.0*w3_term(K)*w(K))*w(K) + &
-                 PE_chg_core * Ldt_h(K) / (bdt1 + w(K)*Ldt_h(K) * hps)**2
-
-        if (PE_chg_core * Ldt_h(K) / (bdt1 + w(K)*Ldt_h(K) * hps)**2 >= &
-            (2.0*w2_dgnl + 3.0*w3_term(K)*w(K))*w(K) ) then
-
-          ! Use Newton's method in w, because the linear term is dominant.
-          w(K) = w(K) + w2_err / dFn_dw
-
-          ! The sign of the second derivative determines whether Newton's method converges from above or below.
-          ! d2Fn_dw_2 = (2.0*w2_dgnl + 6.0*w3_term(K)*w(K)) - &
-          !             2.0*PE_chg_core * Ldt_h(K)**2 * hps / (bdt1 + w(K)*Ldt_h(K) * hps)**3
-          ! if ((w2_dgnl+3.0*w3_term(K)*w(K))*(bdt1 + w(K)*Ldt_h(K) * hps)**3 >= PE_chg_core * Ldt_h(K)**2 * hps) then
-          !   ! At this value of w(K), the Newton's method solution will converge monotonically from above
-          ! else
-          !   ! At this value of w(K), the Newton's method solution will converge monotonically from below
-          ! endif
-        else
-          ! Use Newton's method in w**2, because the quadratic term is dominant.
-          ! dFn_dw2 = dFn_dw / (2.0*w(K))
-          !  w(K) = sqrt(w(K)**2 + w2_err / dFn_dw2)
-          w(K) = sqrt(w(K)**2 + 2.0 * w(K) * w2_err / dFn_dw)
+      ! Update the estimate of w(K).
+      if (w2_RHS <= 0.0) then
+        ! The correct solution is obvious, and no further calculation is needed.
+        w(K) = 0.0
+      elseif (PE_chg_core <= 0.0) then
+        ! This is the well-mixed limit, nearly linear in w2.
+        ! This first guess is exact or an over-estimate
+        w(K) = sqrt(w2_RHS / w2_dgnl)
+        if (w3_term(K) > 0.0) then ; do local_itt=1,max_itt
+          ! This case converges monotonically from above, so no bounds are needed.
+          w2_err = w2_RHS - (w2_dgnl + w3_term(K)*w(K)) * w(K)**2
+          dFn_dw = (2.0*w2_dgnl + 3.0*w3_term(K)*w(K))*w(K)
+          w(K) = sqrt(w(K)**2 + w2_err / (w2_dgnl + 1.5*w3_term(K)*w(K)))
+          if (abs(w2_err) < CS%w_tol * dFn_dw) exit  ! Stop after this iteration.
+        enddo ; endif
+      else
+        if (w(K) <= 0.0) then
+          ! For the first guess, ignore the cubic terms, giving an underestimate.
+          PE_chg_w0 = PE_chg_core * Ldt_h(K) / (bdt1 * bdt1)
+          !  w2_dgnl*w(K)**2 + PE_chg_w0 * w(K) - w2_RHS = 0.0
+          !  For accuracy with the relevant root, avoid subtraction by solving for 1/w(K) and inverting:
+          w(K) = 2.0*w2_RHS / (PE_chg_w0 + sqrt(PE_chg_w0**2 + 4.0*w2_RHS*w2_dgnl))
+          ! Note that this agrees with the Osborn relation limit, in which w2_dgnl is small and
+          ! w2_RHS ~= TKE_source(K), in which case this expression is  w(K) = TKE_source(K) / PE_chg_w0.
         endif
 
-        if (abs(w2_err) < CS%w_tol * dFn_dw) exit  ! Stop after this iteration.
-      enddo
+        ! Iterate with Newton's method, either in w or w2, depending on which is more nearly linear.
+        w_min = 0.0 ; w2_err_w_min = w2_RHS
+        do local_itt=1,max_itt
+          w2_err = w2_RHS - ( (w2_dgnl + w3_term(K)*w(K))*w(K)**2 + &
+                              PE_chg_core * (w(K)*Ldt_h(K) / (bdt1 * (bdt1 + w(K)*Ldt_h(K) * hps))) )
+          if (w2_err > 0.0) then
+            w_min = w(K) ; w2_err_w_min = w2_err
+          endif
+
+          ! For positive w, dFn_dw is always positive:
+          dFn_dw = (2.0*w2_dgnl + 3.0*w3_term(K)*w(K))*w(K) + &
+                   PE_chg_core * Ldt_h(K) / (bdt1 + w(K)*Ldt_h(K) * hps)**2
+
+          if (PE_chg_core * Ldt_h(K) / (bdt1 + w(K)*Ldt_h(K) * hps)**2 >= &
+              (2.0*w2_dgnl + 3.0*w3_term(K)*w(K))*w(K) ) then
+
+            ! Use Newton's method in w, because the linear term is dominant, or the Secant method if
+            ! Newton's method would jump below the lower bound.
+            if (w(K) + w2_err / dFn_dw > w_min) then
+              w(K) = w(K) + w2_err / dFn_dw
+            else
+              w(K) = (w2_err_w_min*w(K) - w2_err*w_min) / (w2_err_w_min - w2_err)
+            endif
+
+            ! The sign of the second derivative determines whether Newton's method converges from above or below.
+            ! d2Fn_dw_2 = (2.0*w2_dgnl + 6.0*w3_term(K)*w(K)) - &
+            !             2.0*PE_chg_core * Ldt_h(K)**2 * hps / (bdt1 + w(K)*Ldt_h(K) * hps)**3
+            ! if ((w2_dgnl+3.0*w3_term(K)*w(K))*(bdt1 + w(K)*Ldt_h(K) * hps)**3 >= PE_chg_core * Ldt_h(K)**2 * hps) then
+            !   ! At this value of w(K), the Newton's method solution will converge monotonically from above
+            ! else
+            !   ! At this value of w(K), the Newton's method solution will converge monotonically from below
+            ! endif
+          else
+            ! Use Newton's method in w**2, because the quadratic term is dominant.
+            ! dFn_dw2 = dFn_dw / (2.0*w(K))
+            !  w(K) = sqrt(w(K)**2 + w2_err / dFn_dw2)
+            w2_est = w(K)**2 + 2.0 * w(K) * w2_err / dFn_dw
+            if (w2_est <= w_min**2) then
+              ! Bounds are needed for this estimate, so use the secant method.  This can happen
+              ! for changes that are large enough that the linear term starts to dominate.
+              w2_est = (w2_err_w_min*w(K)**2 - w2_err*w_min**2) / (w2_err_w_min - w2_err)
+            endif
+            w(K) = sqrt(w2_est)
+          endif
+
+          if (abs(w2_err) < CS%w_tol * dFn_dw) exit  ! Stop after this iteration.
+        enddo
+      endif
 
       ! verify =  -H_int(K)*(w(K)**2 - w_in(K)**2) + TKE_source(K) - PE_chg - &
       !     (lam_dt*H_int(K)*(w(K)**2) + w3_term(K)*w(K)**3) + &
@@ -965,26 +992,58 @@ subroutine eMix_column(h, dz, T0, S0, dSV_dT, dSV_dS, TKE_source, &
         w2_RHS = (TKE_source(K) + H_int(K)*(w_in(K)**2)) + (Kddt_hlay(k) * w(K+1)**2 + Kddt_hlay(k-1)*w(K-1)**2)
       endif
 
-      ! Iterate with Newton's method, either in w or w2, depending on which is more nearly linear.
-      do local_itt=1,max_itt
-        w2_err = w2_RHS - ( (w2_dgnl + w3_term(K)*w(K)) * w(K)**2 + &
-                 PE_chg_core * (w(K)*Ldt_h(K) / (bdt1 * (bdt1 + w(K)*Ldt_h(K) * hps))) )
+      ! Update the estimate of w(K).
+      if (w2_RHS <= 0.0) then
+        ! The correct solution is obvious, and no further calculation is needed.
+        w(K) = 0.0
+      elseif (PE_chg_core <= 0.0) then
+        ! This is the well-mixed limit, nearly linear in w2.
+        ! This first guess is exact or an over-estimate
+        w(K) = sqrt(w2_RHS / w2_dgnl)
+        if (w3_term(K) > 0.0) then ; do local_itt=1,max_itt
+          ! This case converges monotonically from above, so no bounds are needed.
+          w2_err = w2_RHS - (w2_dgnl + w3_term(K)*w(K)) * w(K)**2
+          dFn_dw = (2.0*w2_dgnl + 3.0*w3_term(K)*w(K))*w(K)
+          w(K) = sqrt(w(K)**2 + w2_err / (w2_dgnl + 1.5*w3_term(K)*w(K)))
+          if (abs(w2_err) < CS%w_tol * dFn_dw) exit  ! Stop after this iteration.
+        enddo ; endif
+      else
+        ! Iterate with Newton's method, either in w or w2, depending on which is more nearly linear.
+        w_min = 0.0 ; w2_err_w_min = w2_RHS
+        do local_itt=1,max_itt
+          w2_err = w2_RHS - ( (w2_dgnl + w3_term(K)*w(K)) * w(K)**2 + &
+                   PE_chg_core * (w(K)*Ldt_h(K) / (bdt1 * (bdt1 + w(K)*Ldt_h(K) * hps))) )
+          if (w2_err > 0.0) then
+            w_min = w(K) ; w2_err_w_min = w2_err
+          endif
 
-        ! dFn_dw is always positive:
-        dFn_dw = (2.0*w2_dgnl + 3.0*w3_term(K)*w(K))*w(K) + &
-                 PE_chg_core * Ldt_h(K) / (bdt1 + w(K)*Ldt_h(K) * hps)**2
+          ! dFn_dw is always positive:
+          dFn_dw = (2.0*w2_dgnl + 3.0*w3_term(K)*w(K))*w(K) + &
+                   PE_chg_core * Ldt_h(K) / (bdt1 + w(K)*Ldt_h(K) * hps)**2
 
-        if (PE_chg_core * Ldt_h(K) / (bdt1 + w(K)*Ldt_h(K) * hps)**2 >= &
-            (2.0*w2_dgnl + 3.0*w3_term(K)*w(K))*w(K) ) then
-          ! Use Newton's method in w, because the linear term is dominant.
-          w(K) = w(K) + w2_err / dFn_dw
-        else
-          ! Use Newton's method in w**2, because the quadratic term is dominant.
-          w(K) = sqrt(w(K)**2 + 2.0 * w(K) * w2_err / dFn_dw)
-        endif
+          if (PE_chg_core * Ldt_h(K) / (bdt1 + w(K)*Ldt_h(K) * hps)**2 >= &
+              (2.0*w2_dgnl + 3.0*w3_term(K)*w(K))*w(K) ) then
+            ! Use Newton's method in w, because the linear term is dominant, or the Secant method if
+            ! Newton's method would jump below the lower bound.
+            if (w(K) + w2_err / dFn_dw > w_min) then
+              w(K) = w(K) + w2_err / dFn_dw
+            else
+              w(K) = (w2_err_w_min*w(K) - w2_err*w_min) / (w2_err_w_min - w2_err)
+            endif
+          else
+            ! Use Newton's method in w**2, because the quadratic term is dominant in the derivative.
+            w2_est = (w(K)**2 + 2.0 * w(K) * w2_err / dFn_dw)
+            if (w2_est <= w_min**2) then
+              ! Bounds are needed for this estimate, so use the secant method.  This can happen
+              ! for changes that are large enough that the linear term starts to dominate.
+              w2_est = (w2_err_w_min*w(K)**2 - w2_err*w_min**2) / (w2_err_w_min - w2_err)
+            endif
+            w(K) = sqrt(w2_est)
+          endif
 
-        if (abs(w2_err) < CS%w_tol * dFn_dw) exit  ! Stop after this iteration.
-      enddo
+          if (abs(w2_err) < CS%w_tol * dFn_dw) exit  ! Stop after this iteration.
+        enddo
+      endif
 
       if (CS%tridiagonal_w2) then ! Because of the change in w(K), hp_w2_b(K) and w2_b(K) need to be updated.
         PE_chg = PE_chg_core * (w(K)*Ldt_h(K) / (bdt1 * (bdt1 + w(K)*Ldt_h(K) * hps)))
@@ -1051,8 +1110,8 @@ subroutine eMix_column(h, dz, T0, S0, dSV_dT, dSV_dS, TKE_source, &
       enddo
     endif
 
-    ! Now update the other layer working down from the top to determine the
-    ! final temperatures and salinities.  This is only needed for debugging.
+    ! Update the layers working down from the top to determine the
+    ! final temperatures and salinities.  This is only needed for diagnostics.
 !    b1 = 1.0 / (hp_b(1))
 !    Tf(1) = b1 * (h(1) * T0(1) + Kd_so_far(2) * Te_b(2))
 !    Sf(1) = b1 * (h(1) * S0(1) + Kd_so_far(2) * Se_b(2))
@@ -1092,28 +1151,6 @@ subroutine eMix_column(h, dz, T0, S0, dSV_dT, dSV_dS, TKE_source, &
 !    enddo
 !    mixlen(nz+1) = 0.0
 !  endif
-
-!    if (debug) then
-!      ! Complete the tridiagonal solve for Te.
-!      b1 = 1.0 / hp_a(nz)
-!      Te(nz) = b1 * (h(nz) * T0(nz) + Kd_so_far(nz) * Te(nz-1))
-!      Se(nz) = b1 * (h(nz) * S0(nz) + Kd_so_far(nz) * Se(nz-1))
-!      dT_expect(nz) = Te(nz) - T0(nz) ; dS_expect(nz) = Se(nz) - S0(nz)
-!      do k=nz-1,1,-1
-!        Te(k) = Te(k) + c1(K+1)*Te(k+1)
-!        Se(k) = Se(k) + c1(K+1)*Se(k+1)
-!        dT_expect(k) = Te(k) - T0(k) ; dS_expect(k) = Se(k) - S0(k)
-!      enddo
-!    endif
-
-!    if (debug) then
-!      dPE_debug = 0.0
-!      do k=1,nz
-!        dPE_debug = dPE_debug + (dT_to_dPE(k) * (Tf(k) - T0(k)) + &
-!                                 dS_to_dPE(k) * (Sf(k) - S0(k)))
-!      enddo
-!      mixing_debug = dPE_debug * I_dtdiag
-!    endif
 
   eCD%eMix_its = min(eMix_it, CS%max_mixing_its)
 
@@ -1185,13 +1222,13 @@ function find_PE_chg_core(hp_a, hp_b, Th_a, Sh_a, Th_b, Sh_b, &
   real :: PE_chg_core           !< The local diffusivity invariant coefficient out front of an expression
                                 !! relating the change in column potential energy from applying
                                 !! Kddt_h at the present interface to that diffusivity
-                                !! [H3 R Z L2 T-2 ~> J m or J kg3 m-8]
+                                !! [H3 R Z3 T-2 ~> J m or J kg3 m-8]
 
   ! Local variables
   real :: dT_c ! The core term in the expressions for the temperature changes [C H2 ~> degC m2 or degC kg2 m-4].
   real :: dS_c ! The core term in the expressions for the salinity changes [S H2 ~> ppt m2 or ppt kg2 m-4].
   real :: PEc_core ! The diffusivity-independent core term in the expressions
-                   ! for the potential energy changes [H3 R Z L2 T-2 ~> J m or J kg3 m-8]
+                   ! for the potential energy changes [H3 R Z3 T-2 ~> J m or J kg3 m-8]
   real :: ColHt_core ! The diffusivity-independent core term in the expressions
                      ! for the column height changes [H3 Z ~> m4 or kg3 m-5].
 
@@ -1229,15 +1266,16 @@ subroutine energetic_mixing_init(Time, G, GV, US, param_file, diag, CS)
   type(unit_scale_type),   intent(in)    :: US   !< A dimensional unit scaling type
   type(param_file_type),   intent(in)    :: param_file !< A structure to parse for run-time parameters
   type(diag_ctrl), target, intent(inout) :: diag !< A structure that is used to regulate diagnostic output
-  type(energetic_mixing_CS), pointer     :: CS   !< Energetic PBL control structure
+  type(energetic_mixing_CS), pointer     :: CS   !< Energetic mixing control structure
 
   ! Local variables
-  ! This include declares and sets the variable "version".
-# include "version_variable.h"
   character(len=40)  :: mdl = "MOM_energetic_mixing"  ! This module's name.
   character(len=120) :: diff_text ! A clause describing parameter setting that differ.
+  ! This include declares and sets the variable "version".
+# include "version_variable.h"
   logical :: debug
   integer :: isd, ied, jsd, jed
+
   isd = G%isd ; ied = G%ied ; jsd = G%jsd ; jed = G%jed
 
   if (.not.associated(CS)) then ; allocate(CS)
@@ -1247,10 +1285,10 @@ subroutine energetic_mixing_init(Time, G, GV, US, param_file, diag, CS)
   CS%diag => diag
   CS%Time => Time
 
-! Set default, read and log parameters
+  ! Set default, read and log parameters
   call log_version(param_file, mdl, version, "")
 
-!/1. General eMix settings
+  !/1. General eMix settings
   call get_param(param_file, mdl, "DEBUG", debug, &
                  "If true, write out verbose debugging data.", &
                  default=.false., debuggingParam=.true., do_not_log=.true.)
@@ -1310,9 +1348,13 @@ subroutine energetic_mixing_init(Time, G, GV, US, param_file, diag, CS)
   endif
 
 
-!/ Checking output flags
-  CS%id_TKE_mixing = register_diag_field('ocean_model', 'eMix_TKE_mixing', diag%axesT1, &
-      Time, 'TKE consumed by mixing that deepens the mixed layer', units='W m-2', conversion=US%RZ3_T3_to_W_m2)
+  !/ Checking output flags
+  CS%id_dPE_mixing = register_diag_field('ocean_model', 'eMix_TKE_mixing', diag%axesT1, &
+      Time, 'Potential energy change due to mixing integrated over the water column', &
+      units='W m-2', conversion=US%RZ3_T3_to_W_m2)
+  CS%id_TKE_forcing = register_diag_field('ocean_model', 'eMix_TKE_forcing', diag%axesT1, &
+      Time, 'TKE available to drive mixing integrated over the water column', &
+      units='W m-2', conversion=US%RZ3_T3_to_W_m2)
   CS%id_Mixing_Length = register_diag_field('ocean_model', 'eMix_Mixing_Length', diag%axesTi, &
       Time, 'Mixing Length that is used', units='m', conversion=US%Z_to_m)
   CS%id_Velocity_Scale = register_diag_field('ocean_model', 'eMix_Velocity_Scale', diag%axesTi, &
@@ -1333,7 +1375,7 @@ subroutine energetic_mixing_init(Time, G, GV, US, param_file, diag, CS)
     CS%sum_its(1) = real_to_EFP(0.0) ; CS%sum_its(2) = real_to_EFP(0.0)
   endif
 
-  CS%TKE_diagnostics = (max(CS%id_TKE_mixing, CS%id_TKE_forcing) > 0)
+  CS%TKE_diagnostics = (max(CS%id_dPE_mixing, CS%id_TKE_forcing, CS%id_frac_en_diff) > 0)
 
 end subroutine energetic_mixing_init
 
