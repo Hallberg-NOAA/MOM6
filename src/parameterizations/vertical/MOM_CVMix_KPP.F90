@@ -92,6 +92,8 @@ type, public :: KPP_CS ; private
   character(len=32) :: interpType      !< Type of interpolation to compute bulk Richardson number
   character(len=32) :: interpType2     !< Type of interpolation to compute diff and visc at OBL_depth
   logical :: StokesMOST                !< If True, use Stokes similarity package
+  logical :: StokesXi_from_CVMix       !< If true, use the CVMix version of cvmix_kpp_compute_StokesXi.
+                                       !!  Otherwise use the internal version in MOM_CVMix_KPP.
   logical :: computeEkman              !< If True, compute Ekman depth limit for OBLdepth
   logical :: computeMoninObukhov       !< If True, compute Monin-Obukhov limit for OBLdepth
   logical :: passiveMode               !< If True, makes KPP passive meaning it does NOT alter the diffusivity
@@ -551,6 +553,10 @@ logical function KPP_init(paramFile, G, GV, US, diag, Time, CS, passive)
   call get_param(paramFile, mdl, "KPP_ER_Cu", CS%KPP_ER_Cu, &
                  'Entrainment Rule TKE shear production weight', &
                  units="nondim", default=0.023)
+  call get_param(paramFile, mdl, "STOKES_MOST_XI_FROM_CVMIX", CS%StokesXi_from_CVMix, &
+                 "If true, use the CVMix version of cvmix_kpp_compute_StokesXi.  Otherwise use "//&
+                 "the internal version in MOM_CVMix_KPP.", default=.true., do_not_log=.not.CS%StokesMost)
+
 
   call get_param(paramFile, mdl, "KPP_OBL_DEPTH_BOUNDS_BUG", CS%OBL_depth_bounds_bug, &
                  "If true, limit the KPP boundary layer depth relative to the top of the "//&
@@ -1270,12 +1276,32 @@ subroutine KPP_compute_BLD(CS, G, GV, US, h, Temp, Salt, u, v, tv, uStar, buoyFl
           uE_H(k) = U_H(k) - 0.5 * (Waves%US_x(I,j,k)+Waves%US_x(I-1,j,k))
           vE_H(k) = V_H(k) - 0.5 * (Waves%US_y(i,J,k)+Waves%US_y(i,J-1,k))
 
-          ! ToDo: Explore whether it is problematic that most of the velocities are being passed
-          ! into cvmix_kpp_compute_StokesXi() in scaled units of [L T-1 ~> m s-1].
-          call cvmix_kpp_compute_StokesXi( iFaceHeight, CellHeight, ksfc ,SLdepth_0d, surfBuoyFlux, &
-               surfBuoy_NS,surfFricVel,waves%omega_w2x(i,j), uE_H, vE_H, uS_Hi, vS_Hi, uSbar_H, vSbar_H, &
-               uS_SL, vS_SL, uSb_SL, vSb_SL, StokesXI, BEdE_ER, PU_TKE, PS_TKE, PB_TKE, &
-               CVMix_kpp_params_user=CS%KPP_params )
+        ! I believe that the following two options are equivalent and that both include the correct rescaling.
+        if (CS%StokesXi_from_CVMix) then
+          call cvmix_kpp_compute_StokesXi( &
+                iFaceHeight*US%Z_to_m, CellHeight*US%Z_to_m, &  ! Cell interface and center heights <= 0 [m]
+                ksfc, &                                         ! cell index of Surface Layer Depth
+                SLdepth_0d*US%Z_to_m, &                         ! Surface Layer Depth > 0 [m]
+                surfBuoyFlux, surfBuoy_NS, &                    ! Surface buoyancy flux forcing, non-solar [m2 s-3]
+                surfFricVel, &                                  ! Surface friction velocity [m s-1]
+                waves%omega_w2x(i,j), &                         ! Angle of surface wind forcing from x-axis [rad]
+                uE_H(:)*US%L_T_to_m_s, vE_H(:)*US%L_T_to_m_s, & ! Eulerian velocity at cell centers [m s-1]
+                uS_Hi(:)*US%L_T_to_m_s, vS_Hi(:)*US%L_T_to_m_s, & ! Stokes drift at interfaces [m s-1]
+                uSbar_H(:)*US%L_T_to_m_s, vSbar_H(:)*US%L_T_to_m_s, & ! Cell average Stokes drift [m s-1]
+                uS_SL*US%L_T_to_m_s,vS_SL*US%L_T_to_m_s, &      ! Stokes drift at SLDepth [m s-1]
+                uSb_SL*US%L_T_to_m_s, vSb_SL*US%L_T_to_m_s, &   ! Average Stokes drift cell top to SLDepth [m s-1]
+                StokesXI, &  ! Stokes similarity parameter [nondim]
+                BEdE_ER, &   ! Entrainment rule product [m3 s-3]
+                PU_TKE, &    ! Shear SL TKE Production [m3 s-3]
+                PS_TKE, &    ! Stokes SL TKE Production [m3 s-3]
+                PB_TKE, &    ! Buoyancy SL TKE Production [m3 s-3]
+                CVMix_kpp_params_user=CS%KPP_params )
+        else
+          call kpp_compute_StokesXi(iFaceHeight, CellHeight, ksfc, SLdepth_0d, surfBuoyFlux, &
+                  surfBuoy_NS, surfFricVel, waves%omega_w2x(i,j), uE_H, vE_H, uS_Hi, vS_Hi, &
+                  uSbar_H, vSbar_H, uS_SL, vS_SL, uSb_SL, vSb_SL, &
+                  StokesXI, BEdE_ER, PU_TKE, PS_TKE, PB_TKE, CS, US)
+        endif
 
           ! Save 1D Stokes XI similarity parameter and entrainment rule
           StokesXI_1d(k) = StokesXI
@@ -1558,12 +1584,32 @@ subroutine KPP_compute_BLD(CS, G, GV, US, h, Temp, Salt, u, v, tv, uStar, buoyFl
                 uS_Hi(kbl+1), vS_Hi(kbl+1), uS_H(kbl), vS_H(kbl), uS_SL, vS_SL, &
                 uSbar_H(kbl), vSbar_H(kbl), uSb_SL, vSb_SL, waves)
 
-        ! ToDo: Explore whether it is problematic that most of the velocities are being passed
-        ! into cvmix_kpp_compute_StokesXi() in scaled units of [L T-1 ~> m s-1].
-        call cvmix_kpp_compute_StokesXi(iFaceHeight, CellHeight, ksfc ,SLdepth_0d, surfBuoyFlux, &
-                surfBuoy_NS,surfFricVel,waves%omega_w2x(i,j), uE_H, vE_H, uS_Hi, vS_Hi, &
-                uSbar_H, vSbar_H, uS_SL, vS_SL, uSb_SL, vSb_SL, &
-                StokesXI,BEdE_ER,PU_TKE,PS_TKE,PB_TKE,CVMix_kpp_params_user=CS%KPP_params )
+        ! I believe that the following two options are equivalent and that both include the correct rescaling.
+        if (CS%StokesXi_from_CVMix) then
+          call cvmix_kpp_compute_StokesXi( &
+                iFaceHeight*US%Z_to_m, CellHeight*US%Z_to_m, &  ! Cell interface and center heights <= 0 [m]
+                ksfc, &                                         ! cell index of Surface Layer Depth
+                SLdepth_0d*US%Z_to_m, &                         ! Surface Layer Depth > 0 [m]
+                surfBuoyFlux, surfBuoy_NS, &                    ! Surface buoyancy flux forcing, non-solar [m2 s-3]
+                surfFricVel, &                                  ! Surface friction velocity [m s-1]
+                waves%omega_w2x(i,j), &                         ! Angle of surface wind forcing from x-axis [rad]
+                uE_H(:)*US%L_T_to_m_s, vE_H(:)*US%L_T_to_m_s, & ! Eulerian velocity at cell centers [m s-1]
+                uS_Hi(:)*US%L_T_to_m_s, vS_Hi(:)*US%L_T_to_m_s, & ! Stokes drift at interfaces [m s-1]
+                uSbar_H(:)*US%L_T_to_m_s, vSbar_H(:)*US%L_T_to_m_s, & ! Cell average Stokes drift [m s-1]
+                uS_SL*US%L_T_to_m_s,vS_SL*US%L_T_to_m_s, &      ! Stokes drift at SLDepth [m s-1]
+                uSb_SL*US%L_T_to_m_s, vSb_SL*US%L_T_to_m_s, &   ! Average Stokes drift cell top to SLDepth [m s-1]
+                StokesXI, &  ! Stokes similarity parameter [nondim]
+                BEdE_ER, &   ! Entrainment rule product [m3 s-3]
+                PU_TKE, &    ! Shear SL TKE Production [m3 s-3]
+                PS_TKE, &    ! Stokes SL TKE Production [m3 s-3]
+                PB_TKE, &    ! Buoyancy SL TKE Production [m3 s-3]
+                CVMix_kpp_params_user=CS%KPP_params )
+        else
+          call kpp_compute_StokesXi(iFaceHeight, CellHeight, ksfc, SLdepth_0d, surfBuoyFlux, &
+                  surfBuoy_NS, surfFricVel, waves%omega_w2x(i,j), uE_H, vE_H, uS_Hi, vS_Hi, &
+                  uSbar_H, vSbar_H, uS_SL, vS_SL, uSb_SL, vSb_SL, &
+                  StokesXI, BEdE_ER, PU_TKE, PS_TKE, PB_TKE, CS, US)
+        endif
 
         ! The expression setting CS%Lam2 is slightly convoluted, but it avoids division by 0.
         uS_Hi_mag = US%L_T_to_m_s * sqrt((US_Hi(1)**2) + (VS_Hi(1)**2))
@@ -2000,6 +2046,201 @@ subroutine Compute_StokesDrift(i ,j, ztop, zbot, zBL, zSLtop, zSL, uS_i, vS_i, u
   vSb_SL = vSb_SL / (zSLtop-zSL)
 
 end subroutine Compute_StokesDrift
+
+!>  Compute the Stokes similarity parameter StokesXI, and Entrainment Rule BEdE,
+!!  and SL integrated tke production terms as
+!!  parameterized in Large et al., 2021 (doi:10.1175/JPO-D-20-0308.1)
+subroutine kpp_compute_StokesXi(zi, zk, kSL, SLDepth, surf_buoy_force,   &
+           surfBuoy_NS, surf_fric_vel, omega_w2x, uE, vE, uSt, vSt, uSbar, vSbar, &
+           uS_SL, vS_SL, uSb_SL, vSb_SL,                                        &
+           StokesXI, BEdE_ER, PU_TKE, PS_TKE, PB_TKE, CS, US)
+
+! !INPUT PARAMETERS:
+    real, dimension(:), intent(in) :: zi, zk          !< Cell interface and center heights <= 0 [Z ~> m]
+    integer, intent(in) :: kSL                        !< cell index of Surface Layer Depth
+    real, intent(in) :: SLDepth                       !< Surface Layer Depth > 0 [Z ~> m]
+    real, intent(in) :: surf_buoy_force, surfBuoy_NS  !< Surface buoyancy flux forcing, non-solar [m2 s-3]
+    real, intent(in) :: surf_fric_vel                 !< Surface friction velocity [m s-1]
+    real, intent(in) :: omega_w2x                     !< Angle of surface wind forcing from x-axis [rad]
+    real, dimension(:), intent(in) :: uE, vE          !< Eulerian velocity at cell centers [L T-1 ~> m s-1]
+    real, dimension(:), intent(in) :: uSt, vSt        !< Stokes drift at interfaces [L T-1 ~> m s-1]
+    real, dimension(:), intent(in) :: uSbar, vSbar    !< Cell average Stokes drift [L T-1 ~> m s-1]
+    real, intent(in) :: uS_SL, vS_SL                  !< Stokes drift at SLDepth [L T-1 ~> m s-1]
+    real, intent(in) :: uSb_SL, vSb_SL                !< Average Stokes drift cell top to SLDepth [L T-1 ~> m s-1]
+    type(KPP_CS),   intent(in) :: CS                  !< Control structure for the MOM_CVMix_KPP module
+    type(unit_scale_type), intent(in) :: US           !< A dimensional unit scaling type
+
+! !OUTPUT PARAMETERS:
+    real, intent(out) :: StokesXI                   !< Stokes similarity parameter [nondim]
+    real, intent(out) :: BEdE_ER                    !< Entrainment rule product [m3 s-3]
+    real, intent(out) :: PU_TKE                     !< Shear SL TKE Production [m3 s-3] 
+    real, intent(out) :: PS_TKE                     !< Stokes SL TKE Production [m3 s-3]
+    real, intent(out) :: PB_TKE                     !< Buoyancy SL TKE Production [m3 s-3]
+
+! !Local variables:
+    real, parameter :: CempCGm = 3.5  ! Coeff. relating cross-shear mtm flux to sfc stress [nondim]
+    real, parameter :: CempCGs = 4.7  ! Coeff. relating non-local scalar flux to sfc flux  [nondim]
+    real :: PBfact                  ! Ratio of TKE surface layer production to w*^3 [nondim]
+    real :: PU, PS, PB             ! Surface layer TKE production terms increments  ! [L Z2 T-3 ~> m3 s-3]
+    real :: ustar ! [Z T-1 ~> m s-1]
+    real :: delH  ! [Z ~> m]
+    real :: delU, delV  ! [L T-1 ~> m s-1]
+    real :: delz  ! [Z ~> m]
+    real :: omega_E2x, cosOmega, sinOmega  ! [nondim]
+    real :: BLDepth  ! [Z ~> m]
+    real :: TauMAG, TauCG, TauDG    ! [Z2 T-2 ~> m2 s-2]
+    real :: taux0, tauy0    ! [Z2 T-2 ~> m2 s-2]
+    real :: Stk0  ! [L T-1 ~> m s-1]
+    real :: Pinc ! [L Z2 T-3 ~> m3 s-3]
+    real :: dtop              ! Cell top depth [Z ~> m]
+    real :: tauEtop           ! Cell top values[L Z T-3  ~> m2 s-3]
+    real :: tauxtop, tauytop  ! Cell top values  ! [Z2 T-2 ~> m2 s-2]
+    real :: dbot              ! Cell bottom depth ! [Z ~> m]
+    real :: tauEbot           ! Cell bottom values   ! [L Z T-3  ~> m2 s-3]
+    real :: tauxbot, tauybot  ! Cell bottom values  ! [Z2 T-2 ~> m2 s-2]
+    real :: sigbot, Gbot      ! Cell bottom values [nondim]
+    real :: I_buoy_scale  ! [L Z s3 m-2 T-3 ~> 1]
+    integer        :: ktmp                                              ! vertical loop index
+
+    I_buoy_scale = US%m_to_L*US%m_to_Z*US%T_to_s**3
+
+
+    ustar   = MAX( surf_fric_vel , 1.e-4 ) * US%m_to_Z*US%T_to_S  ! > 0  ! [Z T-1 ~> m s-1]
+    taux0   = ustar**2 * cos(omega_w2x)  ! [Z2 T-2 ~> m2 s-2]
+    tauy0   = ustar**2 * sin(omega_w2x)  ! [Z2 T-2 ~> m2 s-2]
+    Stk0    = sqrt( uSt(1)**2 + vSt(1)**2 )  ! [L T-1 ~> m s-1]
+    BLdepth = SLDepth / CS%surf_layer_ext ! [Z ~> m]
+
+    ! Parameterized Buoyancy production of TKE
+    PBfact = 0.0893759
+    PB     = MAX( -surfBuoy_NS * BLdepth * PBfact , 0.0 ) * I_buoy_scale ! [L Z2 T-3 ~> m3 s-3]
+    PBfact = 0.00215 * CempCGs ! [nondim]
+    PB     = PB + PBfact * BLdepth * ( abs(surf_buoy_force) - surf_buoy_force ) * I_buoy_scale  ! [L Z2 T-3 ~> m3 s-3]
+
+    cosOmega = 0.0
+    sinOmega = 0.0
+    PU      = 0.0
+    PS      = 0.0
+    dtop    = 0.0
+    delU    = uE(1) - uE(2)  ! [L T-1 ~> m s-1]
+    delV    = vE(1) - vE(2)  ! [L T-1 ~> m s-1]
+    delz    = zk(1) - zk(2)  ! [Z ~> m]
+    tauEtop = (taux0 * delU + tauy0 * delV ) / delz    ! [L Z T-3  ~> m2 s-3]
+    tauxtop = taux0 !  [Z2 T-2 ~> m2 s-2]
+    tauytop = tauy0 !  [Z2 T-2 ~> m2 s-2]
+
+! Integrate Both Shear Production Terms from Surface to top of surface layer cell
+    do ktmp = 1, kSL-1
+      delU     = uE(ktmp) - uE(ktmp+1)  ! [L T-1 ~> m s-1]
+      delV     = vE(ktmp) - vE(ktmp+1)  ! [L T-1 ~> m s-1]
+      delz     = zk(ktmp) - zk(ktmp+1)  ! [Z ~> m]
+      Omega_E2x= atan2( delV  , delU )  ! [nondim]
+      cosOmega = cos(Omega_E2x)  ! [nondim]
+      sinOmega = sin(Omega_E2x)  ! [nondim]
+
+      delH = zi(ktmp) - zi(ktmp+1)  ! [Z ~> m]
+      dbot = dtop + delH  ! [Z ~> m]
+      sigbot = dbot / BLdepth  ! [nondim]
+      Gbot     = KPP_composite_shape(sigbot)
+      TauMAG   = ustar * ustar * Gbot / sigbot   ! [Z2 T-2 ~> m2 s-2]
+      tauCG    = CempCGm * Gbot *  (taux0 * cosOmega - tauy0 * sinOmega)  ! [Z2 T-2 ~> m2 s-2]
+      ! tauDG    = sqrt( TauMAG**2 - tauCG**2 ) ! G
+      tauDG    = TauMAG                       ! E  ! [Z2 T-2 ~> m2 s-2]
+      tauxbot  = tauDG * cosOmega  -  tauCG * sinOmega  ! [Z2 T-2 ~> m2 s-2]
+      tauybot  = tauDG * sinOmega  +  tauCG * cosOmega  ! [Z2 T-2 ~> m2 s-2]
+      tauEbot  = (tauxbot * delU + tauybot * delV) / delz    ! [L Z T-3  ~> m2 s-3]
+
+      ! Increment Eulerian Shear Production
+      Pinc     = 0.5 * (tauEbot + tauEtop) * delH    ! [L Z2 T-3  ~> m3 s-3]
+      PU       = PU + MAX( Pinc, 0.0 )   ! [L Z2 T-3  ~> m3 s-3]
+
+      ! Increment Stokes Shear Production
+      Pinc   = tauxtop*uSt(ktmp) - tauxbot*uSt(ktmp+1) + tauytop*vSt(ktmp) - tauybot*vSt(ktmp+1)  ! [L Z2 T-3 ~> m3 s-3]
+      Pinc   = Pinc - (tauxtop-tauxbot) * uSbar(ktmp)  - (tauytop-tauybot) * vSbar(ktmp)  ! [L Z2 T-3 ~> m3 s-3]
+      PS     = PS +  MAX( Pinc , 0.0 )  ! [L Z2 T-3 ~> m3 s-3]
+
+      ! Bottom becomes next top
+      dtop    = dbot   ! [Z ~> m]
+      tauxtop = tauxbot ! [Z2 T-2 ~> m2 s-2]
+      tauytop = tauybot ! [Z2 T-2 ~> m2 s-2]
+      tauEtop = tauEbot   ! [L Z T-3  ~> m2 s-3]
+    enddo
+
+! Integrate from top of surface layer cell to Surface layer Depth
+    delH     = SLDepth + zi(kSL)  ! [Z ~> m]
+    sigbot   = CS%surf_layer_ext  ! [nondim]
+    Gbot     = kpp_composite_shape(sigbot)  ! [nondim]
+    TauMAG   = ustar * ustar * Gbot / sigbot  ! [Z2 T-2 ~> m2 s-2]
+    tauCG    = CempCGm * Gbot *  (taux0 * cosOmega - tauy0 * sinOmega)  ! [Z2 T-2 ~> m2 s-2]
+    ! tauDG  = sqrt( TauMAG**2 - tauCG**2 ) ! G
+    tauDG   = TauMAG                       ! E  ! [Z2 T-2 ~> m2 s-2]
+    tauxbot  = tauDG * cosOmega  -  tauCG * sinOmega  ! [Z2 T-2 ~> m2 s-2]
+    tauybot  = tauDG * sinOmega  +  tauCG * cosOmega  ! [Z2 T-2 ~> m2 s-2]
+    if( (kSL > 1) .and. (kSL < size(zk) ) .and. ( SLDepth > -zk(kSL) ) ) then
+      delU     = uE(kSL) - uE(kSL+1)  ! [L T-1 ~> m s-1]
+      delV     = vE(kSL) - vE(kSL+1)  ! [L T-1 ~> m s-1]
+      delz     = zk(kSL) - zk(kSL+1)  ! [L T-1 ~> m s-1]
+    endif
+    tauEbot  = (tauxbot * delU + tauybot * delV) / delz    ! [L Z T-3  ~> m2 s-3]
+    ! Increment Eulerian Shear Production
+    Pinc     = 0.5 * (tauEbot + tauEtop) * delH ! [L Z2 T-3 ~> m3 s-3]
+    PU       = PU + MAX( Pinc , 0.0 ) ! [L Z2 T-3 ~> m3 s-3]
+
+    ! Increment Stokes Shear Production
+    Pinc   = tauxtop*uSt(kSL) - tauxbot*uS_SL   + tauytop*vSt(kSL) - tauybot*vS_SL ! [L Z2 T-3 ~> m3 s-3]
+    Pinc   = Pinc - (tauxtop-tauxbot) * uSb_SL  - (tauytop-tauybot) * vSb_SL ! [L Z2 T-3 ~> m3 s-3]
+    PS     = PS +  MAX( Pinc , 0.0 ) ! [L Z2 T-3 ~> m3 s-3]
+
+         ! Compute Stokes similarity parameter,   Entrainment Rule, and TKE prodction Rates
+    if ( (PU + PB + PS) >  0.0 )  then ! [L Z2 T-3 ~> m3 s-3]
+      StokesXI = PS / (PU + PS + PB)
+    else
+      StokesXI = 0.0
+    endif
+    BEdE_ER  = MAX( ( CS%KPP_ER_Cu*PU + CS%KPP_ER_Cs*PS + &
+                      CS%KPP_ER_Cb*PB ) , 0.0 ) * US%L_T_to_m_s**3*US%Z_to_L**2 ! [m3 s-3]
+    PU_TKE   = PU ! [L Z2 T-3 ~> m3 s-3]
+    PS_TKE   = PS ! [L Z2 T-3 ~> m3 s-3]
+    PB_TKE   = PB ! [L Z2 T-3 ~> m3 s-3]
+
+end subroutine kpp_compute_StokesXi
+
+real function kpp_composite_shape( sigma , Gat1)
+
+!  !DESCRIPTION:
+!   This function returns the value of the composite shape function for both
+!   momentum and scalars at fractional depth sigma in the boundary layer.
+!   This shape function is a cubic for sigma<sig\_m; and a quadratic below, as
+!   fit to Fig. 6 of Large et al., 2020 (doi:10.1175/JPO-D-20-0308.1)
+!   The subroutine also returns the derivative  dG / dsig
+!\\
+!\\
+
+! !INPUT PARAMETERS:
+    real,                    intent(in)  ::  sigma
+    real, optional,          intent(in)  ::  Gat1
+
+    real  :: a2Gsig, a3Gsig, sig_m, G_m, G_1, sig ! All [nondim]
+    a2Gsig = -2.1637
+    a3Gsig =  0.5831
+    sig_m  =  0.35
+    G_m    =  0.11    ! sig_m + sig_m * sig_m * (a2Gsig + a3Gsig * sig_m)
+    if ( present(Gat1) ) then
+      G_1  = MAX( 0.0  ,  MIN( Gat1 , G_m ) )
+    else
+      G_1  =  0.0
+    end if
+
+    if (sigma .lt. sig_m)  then
+      sig = MAX( sigma , 0.0 )
+      kpp_composite_shape = sig + sig * sig * (a2Gsig + a3Gsig * sig)
+    else
+      sig = MIN( sigma , 1.0 )
+      kpp_composite_shape = G_1 + (G_m-G_1) * ((1.-sig) / (1.-sig_m))**2
+    end if
+
+end function kpp_composite_shape
+
 
 !> Clear pointers, deallocate memory
 subroutine KPP_end(CS)
