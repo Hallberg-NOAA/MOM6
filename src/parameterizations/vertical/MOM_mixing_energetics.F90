@@ -196,7 +196,12 @@ subroutine energetic_mixing(h_3d, tv, dSV_dT, dSV_dS, TKE_forcing, dt, Kd_int, G
                               ! changes within a layer, in [R Z3 T-2 C-1 ~> J m-2 degC-1].
   real :: dS_to_dPE(SZK_(GV)) ! Partial derivative of column potential energy with the salinity
                               ! changes within a layer, in [R Z3 T-2 S-1 ~> J m-2 ppt-1].
+  real :: dT_to_dColHt(SZK_(GV)) ! Partial derivative of the total column height with the temperature changes
+                              ! within a layer [Z C-1 ~> m degC-1].
+  real :: dS_to_dColHt(SZK_(GV)) ! Partial derivative of the total column height with the salinity changes
+                              ! within a layer  [Z S-1 ~> m ppt-1].
   real :: PE_chg_tot1D        ! Changes in column potential energy [R Z3 T-2 ~> J m-2]
+  real :: ColHt_chg1D         ! The total change in the height of the water column from mixing [Z ~> m]
   real :: TKE_force_tot1D     ! The time-integrated column-integrated energy driving mixing
                               ! within a timestep [R Z3 T-2 ~> J m-2]
 
@@ -332,23 +337,27 @@ subroutine energetic_mixing(h_3d, tv, dSV_dT, dSV_dS, TKE_forcing, dt, Kd_int, G
 
         pres(1) = 0.0
         PE_chg_tot1D = 0.0
+        ColHt_chg1D = 0.0
+        TKE_force_tot1D = 0.0
         do k=1,nz
           dMass = GV%H_to_RZ * h(k)
           dPres = GV%g_Earth_Z_T2 * dMass
           dT_to_dPE(k) = (dMass * (pres(K) + 0.5*dPres)) * dSV_dT_1d(k)
           dS_to_dPE(k) = (dMass * (pres(K) + 0.5*dPres)) * dSV_dS_1d(k)
-          ! dT_to_dColHt(k) = dMass * dSV_dT(k) * CS%ColHt_scaling
-          ! dS_to_dColHt(k) = dMass * dSV_dS(k) * CS%ColHt_scaling
+          dT_to_dColHt(k) = dMass * dSV_dT_1d(k)
+          dS_to_dColHt(k) = dMass * dSV_dS_1d(k)
           pres(K+1) = pres(K) + dPres
 
           PE_chg_tot1D = PE_chg_tot1D + (dT_to_dPE(k) * (Tf(k) - T0(k)) + &
                                          dS_to_dPE(k) * (Sf(k) - S0(k)))
+          ColHt_chg1D = ColHt_chg1D + (dT_to_dColHt(k) * (Tf(k) - T0(k)) + &
+                                       dS_to_dColHt(k) * (Sf(k) - S0(k)))
         enddo
         do K=1,nz+1
           TKE_force_tot1D = TKE_force_tot1D + TKE_forcing_2d(i,K)*dt
         enddo
         frac_en_diff(i,j) = (PE_chg_tot1D - TKE_force_tot1D) / (0.5*(TKE_force_tot1D + PE_chg_tot1D))
-        diag_dPE_mixing(i,j) = PE_chg_tot1D * I_dt
+        diag_dPE_mixing(i,j) = (PE_chg_tot1D - pres(K+1)*min(ColHt_chg1D, 0.0)) * I_dt
         diag_TKE_forcing(i,j) = TKE_force_tot1D * I_dt
       endif
 
@@ -546,15 +555,7 @@ subroutine eMix_column(h, dz, T0, S0, dSV_dT, dSV_dS, TKE_source, &
   real :: w2_dgnl   ! The diagonal element in the solution for w2 [H ~> m or kg m-2]
   real :: w2_RHS    ! The right hand side, including the energy source, in the w2 equation
                     ! in units of [H Z2 T-2 ~> m3 s-2 or J m-2]
-  real :: w2_err    ! The imbalance in the present iteration in the w2 equation
-                    ! in units of [H Z2 T-2 ~> m3 s-2 or J m-2]
-  real :: w2_est    ! An estimate of the next value of w2 [Z2 T-2 ~> m2 s-2]
-  real :: w_min     ! A lower bound on w [Z T-1 ~> m s-1]
-  real :: w2_err_w_min ! The imbalance in the w2 equation when w is w_min [H Z2 T-2 ~> m3 s-2 or J m-2]
-                    ! notating that because w2_err is a decreasing function of 2, w2_err_min is
-                    ! actually the maximum value of w2_err in the remaining bounded range.
-  real :: dFn_dw    ! The partial derivative of the TKE equation with turbulent velocity
-                    ! in units of [H Z T-1 ~> m2 s-1 or J s m-3]
+  real :: w_underflow ! A value of w that is so small that it is reset to 0 [Z T-1 ~> m s-1]
 
   real :: h_tot     ! The total thickness in the water column [H ~> m or kg m-2]
   real :: dztot     ! The total depth of the layers above an interface or across layers [Z ~> m]
@@ -566,16 +567,14 @@ subroutine eMix_column(h, dz, T0, S0, dSV_dT, dSV_dS, TKE_source, &
   real :: PE_chg_core  ! The local diffusivity invariant coefficient out front of an expression
                        ! relating the change in column potential energy from applying
                        ! Kddt_h at the present interface to that diffusivity
-                       ! [H3 R Z3 T-2 ~> J m or J kg3 m-8]
                        ! [H4 Z2 T-2 ~> m6 s-2 or J kg3 m-8]
-  real :: PE_chg_w0    ! The derviative of the potential energy change with w when w is 0 [R Z2 T-1 ~> J s m-3]
-                       ! [H Z T-1 ~> m2 s-1 or J s m-3]
-  real :: PE_chg    ! The change in potential energy due to mixing at an interface [R Z3 T-2 ~> J m-2],
-                    ! [H Z2 T-2 ~> m3 s-2 or J m-2]
-                    ! positive for the column increasing in potential energy (i.e., consuming TKE).
-  real :: dPE_dw2   ! The partial derivative of the potential energy change with w**2 [R Z ~> J s2] [H ~> m or J s2]
-!  logical :: use_Newt  ! Use Newton's method for the next guess at Kddt_h(K).
-
+  real :: PE_chg    ! The change in potential energy due to mixing at an interface, in
+                    ! [H Z2 T-2 ~> m3 s-2 or J m-2], positive for the column increasing
+                    ! in potential energy (i.e., consuming TKE).
+  real :: w_half_dPE  ! The turbulent velocity that gives half the PE change [Z T-1 ~> m s-1]
+  real :: max_PE_chg  ! The change in PE for an infinite mixing at this point [H Z2 T-2 ~> m3 s-2 or J m-2]
+  real :: dPE_dw2   ! The partial derivative of the potential energy change with w**2 [H ~> m or J s2]
+  real :: dPE_dw    ! The partial derivative of the potential energy change with w [H Z T-1 ~> m2 s-1 or J s m-1]
   real :: hps       ! The sum of the two effective pivot thicknesses [H ~> m or kg m-2]
   real :: bdt1      ! A product of the two pivot thicknesses plus a diffusive term [H2 ~> m2 or kg2 m-4]
   real :: lam_dt    ! The timestep times the turbulence decay rate [nondim]
@@ -590,16 +589,8 @@ subroutine eMix_column(h, dz, T0, S0, dSV_dT, dSV_dS, TKE_source, &
   logical :: converged  ! If true, the iteration for each layer of w(K) has converged to within
                         ! the specified tolerance.
 
-  !  The following arrays are used only for debugging purposes.
-!  real :: dPE_debug     ! An estimate of the potential energy change [R Z3 T-2 ~> J m-2]
-!  real :: mixing_debug  ! An estimate of the rate of change of potential energy due to mixing [R Z3 T-3 ~> W m-2]
-!  real, dimension(20) :: PE_chg_itt     ! The value of PE_chg after each iteration [R Z3 T-2 ~> J m-2]
-!  real, dimension(20) :: Kddt_h_itt     ! The value of Kddt_h_guess after each iteration [H ~> m or kg m-2]
-!  real, dimension(SZK_(GV)) :: dT_expect ! Expected temperature changes [C ~> degC]
-!  real, dimension(SZK_(GV)) :: dS_expect ! Expected salinity changes [S ~> ppt]
-!  integer, dimension(SZK_(GV)) :: num_itts
-
-  integer :: k, nz, local_itt, max_itt
+  integer, parameter :: max_itt = 20
+  integer :: k, nz
 
   nz = GV%ke
 
@@ -609,8 +600,10 @@ subroutine eMix_column(h, dz, T0, S0, dSV_dT, dSV_dS, TKE_source, &
   h_neglect = GV%H_subroundoff
   dz_neglect = GV%dZ_subroundoff
 
+  w_underflow = 1.0e-20*CS%w_tol
+
   I_dtdiag = 1.0 / dt
-  max_itt = 20
+!  max_itt = 20
 
   lam_dt = dt*CS%decay_rate
 
@@ -734,14 +727,6 @@ subroutine eMix_column(h, dz, T0, S0, dSV_dT, dSV_dS, TKE_source, &
       dS_to_dColHt_b(k-1) = dS_to_dColHt(k-1) + c1_b(K)*dS_to_dColHt_b(k)
     enddo
 
-    if (CS%tridiagonal_w2) then
-      ! Set up the coefficients for an inside-out tridiagonal solver at interfaces for w2,
-      ! subject to a Dirichlet boundary condition of 0 on w2 at the top and bottom.
-      ! Setting hp_w2_a(1) and hp_w2_b(nz+1) to huge values gives a de-facto Dirichlet boundary condition.
-      hp_w2_a(1) = H_huge ; hp_w2_b(nz+1) = H_huge
-      w2_a(1) = 0.0 ; w2_b(nz+1) = 0.0
-    endif
-
   else
     do K=1,nz+1 ; Kddt_dz_other(K) = 0.0 ; enddo
     do k=1,nz ; Kddt_other_lay(k) = 0.0 ; enddo
@@ -756,6 +741,13 @@ subroutine eMix_column(h, dz, T0, S0, dSV_dT, dSV_dS, TKE_source, &
     enddo
   endif
 
+  if (CS%tridiagonal_w2) then
+    ! Set up the coefficients for an inside-out tridiagonal solver at interfaces for w2,
+    ! subject to a Dirichlet boundary condition of 0 on w2 at the top and bottom.
+    ! Setting hp_w2_a(1) and hp_w2_b(nz+1) to huge values gives a de-facto Dirichlet boundary condition.
+    hp_w2_a(1) = h_huge ; hp_w2_b(nz+1) = h_huge
+    w2_a(1) = 0.0 ; w2_b(nz+1) = 0.0
+  endif
 
   do K=1,nz+1
     Kd_so_far(K) = Kddt_dz_other(K) ; w(K) = 0.0
@@ -785,23 +777,31 @@ subroutine eMix_column(h, dz, T0, S0, dSV_dT, dSV_dS, TKE_source, &
       ! These terms are independent of w(K):
       hps = hp_a(k-1) + hp_b(k)
       bdt1 = hp_a(k-1) * hp_b(k) + hps * Kddt_dz_other(K)
+      if (PE_chg_core > 0.0) then
+        w_half_dPE = (bdt1 / (hps*Ldt_h(K)))
+        max_PE_chg = (PE_chg_core/(hps*bdt1))
+      else
+        w_half_dPE = 0.0
+        max_PE_chg = 0.0
+      endif
 
       ! kappa_dt(K) = w(K)*Ldt_h(K)
 
       ! Find the increase in column potential energy due to the change in the
       ! diffusivity at this interface by w(K)*L_mix(K):
-      !   PE_chg = PE_chg_core * (w(K)*Ldt_h(K) / (bdt1 * (bdt1 + w(K)*Ldt_h(K) * hps)))
+      !   PE_chg = max_PE_chg * (w(K) / (w_half_dPE + w(K)))
 
       ! Solve for the value of w(K) such that Fn_w = w2_RHS.
       ! Fn_w is a monotonically increasing function of positive w(K) that is 0 at w=0,
       ! while the right hand side is always positive.
-      ! Fn_w = w2_dgnl*w(K)**2 + PE_chg_core * (w(K)*Ldt_h(K) / (bdt1 * (bdt1 + w(K)*Ldt_h(K) * hps)))
+      ! Fn_w = w2_dgnl*w(K)**2 + max_PE_chg * (w(K) / (w_half_dPE + w(K)))
 
       if ((eMix_it > 1) .and. (CS%tridiagonal_w2)) then
         ! This turns the expression into the pivot for a tridiagonal solver for w2.
         w2_dgnl = (w2_term(K) + (Kddt_hlay(k)*hp_w2_b(K+1) / (hp_w2_b(K+1) + Kddt_hlay(k)) + &
                                  Kddt_hlay(k-1)*hp_w2_a(K-1) / (hp_w2_a(K-1) + Kddt_hlay(k-1))) )
-        w2_RHS = (TKE_source(K) + H_int(K)*(w_in(K)**2)) + (Kddt_hlay(k)*w2_b(K+1) + Kddt_hlay(k-1)*w2_a(K-1))
+        w2_RHS = (TKE_source(K) + H_int(K)*(w_in(K)**2)) + &
+                  (max(Kddt_hlay(k)*w2_b(K+1), 0.0) + max(Kddt_hlay(k-1)*w2_a(K-1), 0.0))
       else
         ! This is the pivot for a simple local solution.
         w2_dgnl = (w2_term(K) + (Kddt_hlay(k) + Kddt_hlay(k-1)))
@@ -810,80 +810,8 @@ subroutine eMix_column(h, dz, T0, S0, dSV_dT, dSV_dS, TKE_source, &
 
       w_prev(K) = w(K)
 
-      ! Update the estimate of w(K).
-      if (w2_RHS <= 0.0) then
-        ! The correct solution is obvious, and no further calculation is needed.
-        w(K) = 0.0
-      elseif (PE_chg_core <= 0.0) then
-        ! This is the well-mixed limit, nearly linear in w2.
-        ! This first guess is exact or an over-estimate
-        w(K) = sqrt(w2_RHS / w2_dgnl)
-        if (w3_term(K) > 0.0) then ; do local_itt=1,max_itt
-          ! This case converges monotonically from above, so no bounds are needed.
-          w2_err = w2_RHS - (w2_dgnl + w3_term(K)*w(K)) * w(K)**2
-          dFn_dw = (2.0*w2_dgnl + 3.0*w3_term(K)*w(K))*w(K)
-          w(K) = sqrt(w(K)**2 + w2_err / (w2_dgnl + 1.5*w3_term(K)*w(K)))
-          if (abs(w2_err) < CS%w_tol * dFn_dw) exit  ! Stop after this iteration.
-        enddo ; endif
-      else
-        if (w(K) <= 0.0) then
-          ! For the first guess, ignore the cubic terms, giving an underestimate.
-          PE_chg_w0 = PE_chg_core * Ldt_h(K) / (bdt1 * bdt1)
-          !  w2_dgnl*w(K)**2 + PE_chg_w0 * w(K) - w2_RHS = 0.0
-          !  For accuracy with the relevant root, avoid subtraction by solving for 1/w(K) and inverting:
-          w(K) = 2.0*w2_RHS / (PE_chg_w0 + sqrt(PE_chg_w0**2 + 4.0*w2_RHS*w2_dgnl))
-          ! Note that this agrees with the Osborn relation limit, in which w2_dgnl is small and
-          ! w2_RHS ~= TKE_source(K), in which case this expression is  w(K) = TKE_source(K) / PE_chg_w0.
-        endif
-
-        ! Iterate with Newton's method, either in w or w2, depending on which is more nearly linear.
-        w_min = 0.0 ; w2_err_w_min = w2_RHS
-        do local_itt=1,max_itt
-          w2_err = w2_RHS - ( (w2_dgnl + w3_term(K)*w(K))*w(K)**2 + &
-                              PE_chg_core * (w(K)*Ldt_h(K) / (bdt1 * (bdt1 + w(K)*Ldt_h(K) * hps))) )
-          if (w2_err > 0.0) then
-            w_min = w(K) ; w2_err_w_min = w2_err
-          endif
-
-          ! For positive w, dFn_dw is always positive:
-          dFn_dw = (2.0*w2_dgnl + 3.0*w3_term(K)*w(K))*w(K) + &
-                   PE_chg_core * Ldt_h(K) / (bdt1 + w(K)*Ldt_h(K) * hps)**2
-
-          if (PE_chg_core * Ldt_h(K) / (bdt1 + w(K)*Ldt_h(K) * hps)**2 >= &
-              (2.0*w2_dgnl + 3.0*w3_term(K)*w(K))*w(K) ) then
-
-            ! Use Newton's method in w, because the linear term is dominant, or the Secant method if
-            ! Newton's method would jump below the lower bound.
-            if (w(K) + w2_err / dFn_dw > w_min) then
-              w(K) = w(K) + w2_err / dFn_dw
-            else
-              w(K) = (w2_err_w_min*w(K) - w2_err*w_min) / (w2_err_w_min - w2_err)
-            endif
-
-            ! The sign of the second derivative determines whether Newton's method converges from above or below.
-            ! d2Fn_dw_2 = (2.0*w2_dgnl + 6.0*w3_term(K)*w(K)) - &
-            !             2.0*PE_chg_core * Ldt_h(K)**2 * hps / (bdt1 + w(K)*Ldt_h(K) * hps)**3
-            ! if ((w2_dgnl+3.0*w3_term(K)*w(K))*(bdt1 + w(K)*Ldt_h(K) * hps)**3 >= PE_chg_core * Ldt_h(K)**2 * hps) then
-            !   ! At this value of w(K), the Newton's method solution will converge monotonically from above
-            ! else
-            !   ! At this value of w(K), the Newton's method solution will converge monotonically from below
-            ! endif
-          else
-            ! Use Newton's method in w**2, because the quadratic term is dominant.
-            ! dFn_dw2 = dFn_dw / (2.0*w(K))
-            !  w(K) = sqrt(w(K)**2 + w2_err / dFn_dw2)
-            w2_est = w(K)**2 + 2.0 * w(K) * w2_err / dFn_dw
-            if (w2_est <= w_min**2) then
-              ! Bounds are needed for this estimate, so use the secant method.  This can happen
-              ! for changes that are large enough that the linear term starts to dominate.
-              w2_est = (w2_err_w_min*w(K)**2 - w2_err*w_min**2) / (w2_err_w_min - w2_err)
-            endif
-            w(K) = sqrt(w2_est)
-          endif
-
-          if (abs(w2_err) < CS%w_tol * dFn_dw) exit  ! Stop after this iteration.
-        enddo
-      endif
+      call local_w_balance(w(K), w2_RHS, w2_dgnl, w3_term(K), max_PE_chg, w_half_dPE, CS%w_tol)
+      if (w(K) < w_underflow) w(K) = 0.0
 
       ! verify =  -H_int(K)*(w(K)**2 - w_in(K)**2) + TKE_source(K) - PE_chg - &
       !     (lam_dt*H_int(K)*(w(K)**2) + w3_term(K)*w(K)**3) + &
@@ -894,13 +822,23 @@ subroutine eMix_column(h, dz, T0, S0, dSV_dT, dSV_dS, TKE_source, &
 
       !   If the layer-center diffusivities are already known from a previous iteration, solve for w(K):
       ! ((w2_term(K) + w3_term(K)*w(K)) + (Kddt_hlay(k) + Kddt_hlay(k-1)))*w(K)**2 + &
-      !    PE_chg_core * (w(K)*Ldt_h(K) / (bdt1 * (bdt1 + w(K)*Ldt_h(K) * hps))) = &
+      !    max_PE_chg * (w(K) / (w_half_dPE + w(K))) = &
       !       (TKE_source(K) + H_int(K)*(w_in(K)**2)) + (Kddt_hlay(k) * w(K+1)**2 + Kddt_hlay(k-1)*w(K-1)**2)
 
       if (CS%tridiagonal_w2) then ! Because of the change in w(K), hp_w2_a(K) and w2_a(K) need to be updated.
-        PE_chg = PE_chg_core * (w(K)*Ldt_h(K) / (bdt1 * (bdt1 + w(K)*Ldt_h(K) * hps)))
-        dPE_dw2 = 0.5*PE_chg_core * Ldt_h(K) / (w(K) * (bdt1 + w(K)*Ldt_h(K) * hps)**2)
-        net_TKE_input(K) = h_int(K)*w_in(K)**2 + (TKE_source(K) - (PE_chg - dPE_dw2*w(K)**2))
+        PE_chg = max_PE_chg * (w(K) / (w_half_dPE + w(K)))
+        dPE_dw = max_PE_chg * w_half_dPE / (w_half_dPE + w(K))**2
+        ! The following handles the singularity in dPE_dw2 when w is 0.
+        if (w(K) * bdt1 <= 0.0) then
+          dPE_dw2 = 0.0
+        elseif (0.5*dPE_dw >= h_huge*w(K)) then
+          dPE_dw2 = h_huge
+        else
+          dPE_dw2 = 0.5*dPE_dw / w(K)
+        endif
+        ! This includes a linearization of the PE change with w**2 back to an estimated loss at w(K) = 0 that
+        ! compensates for the term that is added to the pivot.
+        net_TKE_input(K) = h_int(K)*w_in(K)**2 + (TKE_source(K) - (PE_chg - 0.5*w(K)*dPE_dw))
         H_int_eff(K) = (w2_term(K) + 1.5*w3_term(K)*w(K)) + dPE_dw2
 
         b1 = 1.0 / (hp_w2_a(K-1) + Kddt_hlay(k-1))
@@ -933,7 +871,7 @@ subroutine eMix_column(h, dz, T0, S0, dSV_dT, dSV_dS, TKE_source, &
 
     if (CS%tridiagonal_w2) then
       ! We need to reestimate w2_b, hp_w2_b, w2_a and hp_w2_a because they depend on Kddt_hlay.
-      hp_w2_a(1) = H_huge
+      hp_w2_a(1) = h_huge
       w2_a(1) = 0.0
       do K=2,nz-1
         b1 = 1.0 / (hp_w2_a(K-1) + Kddt_hlay(k-1))
@@ -943,7 +881,7 @@ subroutine eMix_column(h, dz, T0, S0, dSV_dT, dSV_dS, TKE_source, &
         ! w2_a includes a linearization of the potential energy change.
         w2_a(K) = b1 * (net_TKE_input(K) + Kddt_hlay(k-1)*w2_a(K-1))
       enddo
-      hp_w2_b(nz+1) = H_huge
+      hp_w2_b(nz+1) = h_huge
       w2_b(nz+1) = 0.0
       do K=nz,3,-1
         b1 = 1.0 / (hp_w2_b(K+1) + Kddt_hlay(k))
@@ -974,81 +912,48 @@ subroutine eMix_column(h, dz, T0, S0, dSV_dT, dSV_dS, TKE_source, &
       ! These terms are independent of w(K):
       hps = hp_a(k-1) + hp_b(k)
       bdt1 = hp_a(k-1) * hp_b(k) + hps * Kddt_dz_other(K)
+      if (PE_chg_core > 0.0) then
+        w_half_dPE = (bdt1 / (hps*Ldt_h(K)))
+        max_PE_chg = (PE_chg_core/(hps*bdt1))
+      else
+        w_half_dPE = 0.0
+        max_PE_chg = 0.0
+      endif
 
       ! Store the current value of w to test for convergence.
       w_prev(K) = w(K)
 
       ! Solve for an updated value of w(K) such that Fn_w = w2_RHS.
-      ! Fn_w = w2_dgnl*w(K)**2 + w3_term(K)*w(K)**3 + &
-      !        PE_chg_core * (w(K)*Ldt_h(K) / (bdt1 * (bdt1 + w(K)*Ldt_h(K) * hps)))
+      ! Fn_w = w2_dgnl*w(K)**2 + w3_term(K)*w(K)**3 + max_PE_chg * (w(K) / (w_half_dPE + w(K)))
       if ((eMix_it > 1) .and. (CS%tridiagonal_w2)) then
         ! This turns the expression into the pivot for a tridiagonal solver for w2.
         w2_dgnl = w2_term(K) + (Kddt_hlay(k)*hp_w2_b(K+1) / (hp_w2_b(K+1) + Kddt_hlay(k)) + &
                                 Kddt_hlay(k-1)*hp_w2_a(K-1) / (hp_w2_a(K-1) + Kddt_hlay(k-1)))
-        w2_RHS = (TKE_source(K) + H_int(K)*(w_in(K)**2)) + (Kddt_hlay(k) * w2_b(K+1) + Kddt_hlay(k-1)*w2_a(K-1))
+        w2_RHS = (TKE_source(K) + H_int(K)*(w_in(K)**2)) + &
+                 (max(Kddt_hlay(k) * w2_b(K+1), 0.0) + max(Kddt_hlay(k-1)*w2_a(K-1), 0.0))
       else
         ! This is the simpler local solution.
         w2_dgnl = w2_term(K) + (Kddt_hlay(k) + Kddt_hlay(k-1))
         w2_RHS = (TKE_source(K) + H_int(K)*(w_in(K)**2)) + (Kddt_hlay(k) * w(K+1)**2 + Kddt_hlay(k-1)*w(K-1)**2)
       endif
 
-      ! Update the estimate of w(K).
-      if (w2_RHS <= 0.0) then
-        ! The correct solution is obvious, and no further calculation is needed.
-        w(K) = 0.0
-      elseif (PE_chg_core <= 0.0) then
-        ! This is the well-mixed limit, nearly linear in w2.
-        ! This first guess is exact or an over-estimate
-        w(K) = sqrt(w2_RHS / w2_dgnl)
-        if (w3_term(K) > 0.0) then ; do local_itt=1,max_itt
-          ! This case converges monotonically from above, so no bounds are needed.
-          w2_err = w2_RHS - (w2_dgnl + w3_term(K)*w(K)) * w(K)**2
-          dFn_dw = (2.0*w2_dgnl + 3.0*w3_term(K)*w(K))*w(K)
-          w(K) = sqrt(w(K)**2 + w2_err / (w2_dgnl + 1.5*w3_term(K)*w(K)))
-          if (abs(w2_err) < CS%w_tol * dFn_dw) exit  ! Stop after this iteration.
-        enddo ; endif
-      else
-        ! Iterate with Newton's method, either in w or w2, depending on which is more nearly linear.
-        w_min = 0.0 ; w2_err_w_min = w2_RHS
-        do local_itt=1,max_itt
-          w2_err = w2_RHS - ( (w2_dgnl + w3_term(K)*w(K)) * w(K)**2 + &
-                   PE_chg_core * (w(K)*Ldt_h(K) / (bdt1 * (bdt1 + w(K)*Ldt_h(K) * hps))) )
-          if (w2_err > 0.0) then
-            w_min = w(K) ; w2_err_w_min = w2_err
-          endif
-
-          ! dFn_dw is always positive:
-          dFn_dw = (2.0*w2_dgnl + 3.0*w3_term(K)*w(K))*w(K) + &
-                   PE_chg_core * Ldt_h(K) / (bdt1 + w(K)*Ldt_h(K) * hps)**2
-
-          if (PE_chg_core * Ldt_h(K) / (bdt1 + w(K)*Ldt_h(K) * hps)**2 >= &
-              (2.0*w2_dgnl + 3.0*w3_term(K)*w(K))*w(K) ) then
-            ! Use Newton's method in w, because the linear term is dominant, or the Secant method if
-            ! Newton's method would jump below the lower bound.
-            if (w(K) + w2_err / dFn_dw > w_min) then
-              w(K) = w(K) + w2_err / dFn_dw
-            else
-              w(K) = (w2_err_w_min*w(K) - w2_err*w_min) / (w2_err_w_min - w2_err)
-            endif
-          else
-            ! Use Newton's method in w**2, because the quadratic term is dominant in the derivative.
-            w2_est = (w(K)**2 + 2.0 * w(K) * w2_err / dFn_dw)
-            if (w2_est <= w_min**2) then
-              ! Bounds are needed for this estimate, so use the secant method.  This can happen
-              ! for changes that are large enough that the linear term starts to dominate.
-              w2_est = (w2_err_w_min*w(K)**2 - w2_err*w_min**2) / (w2_err_w_min - w2_err)
-            endif
-            w(K) = sqrt(w2_est)
-          endif
-
-          if (abs(w2_err) < CS%w_tol * dFn_dw) exit  ! Stop after this iteration.
-        enddo
-      endif
+      call local_w_balance(w(K), w2_RHS, w2_dgnl, w3_term(K), max_PE_chg, w_half_dPE, CS%w_tol)
+      if (w(K) < w_underflow) w(K) = 0.0
 
       if (CS%tridiagonal_w2) then ! Because of the change in w(K), hp_w2_b(K) and w2_b(K) need to be updated.
-        PE_chg = PE_chg_core * (w(K)*Ldt_h(K) / (bdt1 * (bdt1 + w(K)*Ldt_h(K) * hps)))
-        dPE_dw2 = 0.5*PE_chg_core * Ldt_h(K) / (w(K) * (bdt1 + w(K)*Ldt_h(K) * hps)**2)
-        net_TKE_input(K) = h_int(K)*w_in(K)**2 + (TKE_source(K) - (PE_chg - dPE_dw2*w(K)**2))
+        PE_chg = max_PE_chg * (w(K) / (w_half_dPE + w(K)))
+        dPE_dw = max_PE_chg * (w_half_dPE / (w_half_dPE + w(K))**2)
+        ! The following handles the singularity in dPE_dw2 when w is 0.
+        if (w(K) * bdt1 <= 0.0) then
+          dPE_dw2 = 0.0
+        elseif (0.5*dPE_dw >= h_huge*w(K)) then
+          dPE_dw2 = h_huge
+        else
+          dPE_dw2 = 0.5*dPE_dw / w(K)
+        endif
+        ! This includes a linearization of the PE change back to an estimated loss at w(K) = 0 that
+        ! compensates for the term that is added to the pivot.
+        net_TKE_input(K) = h_int(K)*w_in(K)**2 + (TKE_source(K) - (PE_chg - 0.5*w(K)*dPE_dw))
         H_int_eff(K) = (w2_term(K) + 1.5*w3_term(K)*w(K)) + dPE_dw2
 
         b1 = 1.0 / (hp_w2_b(K+1) + Kddt_hlay(k))
@@ -1088,7 +993,7 @@ subroutine eMix_column(h, dz, T0, S0, dSV_dT, dSV_dS, TKE_source, &
 
     if (CS%tridiagonal_w2) then
       ! We need to reestimate w2_b, hp_w2_b, w2_a and hp_w2_a because they depend on Kddt_hlay.
-      hp_w2_a(1) = H_huge
+      hp_w2_a(1) = h_huge
       w2_a(1) = 0.0
       do K=2,nz-1
         b1 = 1.0 / (hp_w2_a(K-1) + Kddt_hlay(k-1))
@@ -1098,7 +1003,7 @@ subroutine eMix_column(h, dz, T0, S0, dSV_dT, dSV_dS, TKE_source, &
         ! w2_a includes a linearization of the potential energy change.
         w2_a(K) = b1 * (net_TKE_input(K) + Kddt_hlay(k-1)*w2_a(K-1))
       enddo
-      hp_w2_b(nz+1) = H_huge
+      hp_w2_b(nz+1) = h_huge
       w2_b(nz+1) = 0.0
       do K=nz,3,-1
         b1 = 1.0 / (hp_w2_b(K+1) + Kddt_hlay(k))
@@ -1156,6 +1061,191 @@ subroutine eMix_column(h, dz, T0, S0, dSV_dT, dSV_dS, TKE_source, &
 
 end subroutine eMix_column
 
+!> Solve a cubic or quartic local energy balance for an updated value of the turbulent velocity (w)
+!! to within a tolerance of w_tol.  The equation being solved takes the form
+!! (w2_dgnl + w3_term*w)*w**2 + max_PE_chg * (w / (w_half + w)) = w2_RHS
+subroutine local_w_balance(w, w2_RHS, w2_dgnl, w3_term, max_PE_chg, w_half, w_tol)
+  real, intent(inout) :: w       !< The turbulent velocity [Z T-1 ~> m s-1]
+  real, intent(in)    :: w2_RHS  !< The right hand side of the local energy balance [H Z2 T-2 ~> m3 s-2 or J m-2]
+  real, intent(in)    :: w2_dgnl !< The diagonal coefficient in the solution for w2 [H ~> m or kg m-2]
+  real, intent(in)    :: w3_term !< A term related to the TKE decay that scales with the turbulent velocity
+                                 !! cubed [H T Z-1 ~> s or s kg m-3]
+  real, intent(in)    :: max_PE_chg !< The change in PE for an infinite mixing at this
+                                 !! point [H Z2 T-2 ~> m3 s-2 or J m-2]
+  real, intent(in)    :: w_half  !< The turbulent velocity that gives half the PE change [Z T-1 ~> m s-1]
+  real, intent(in)    :: w_tol   !< The tolerance for convergence of the iterations for the turbulent velocity
+                                 !! in the local turbulent kinetic energy equation [Z T-1 ~> m s-1]
+
+  ! Local variables
+  real :: w2_err    ! The imbalance in the present iteration in the w2 equation
+                    ! in units of [H Z2 T-2 ~> m3 s-2 or J m-2]
+  real :: w3_err    ! The imbalance in the present iteration in the modified w2 equation
+                    ! in units of [H Z3 T-3 ~> m4 s-3 or J m-1 s-1]
+  real :: PE_chg    ! The change in potential energy due to mixing at an interface, in
+                    ! [H Z2 T-2 ~> m3 s-2 or J m-2], positive for the column increasing
+                    ! in potential energy (i.e., consuming TKE).
+  real :: w_infl    ! The turbulent velocity at the approximate inflection point of the energy equation [Z T-1 ~> m s-1]
+  real :: PE_chg_infl ! The change in potential energy from mixing when w is w_infl [H Z T-1 ~> m2 s-1 or J s m-3]
+  real :: w2_err_infl ! The error in the energy balance when w is w_infl [H Z2 T-2 ~> m3 s-2 or J m-2]
+  real :: dw        ! The change in the estimate of w [Z T-1 ~> m s-1]
+  real :: dFn_dw    ! The derivative of the TKE equation with turbulent velocity
+                    ! in units of [H Z T-1 ~> m2 s-1 or J s m-3]
+  real :: d2Fn_dw2_2 ! The second derivative of the TKE equation with turbulent velocity
+                    ! in units of [H ~> m or kg m-2]
+  real :: derr_dw   ! The first derivative of w3_err with w [H Z2 T-2 ~> m3 s-2 or J m-2]
+  real :: d2err_dw2_2 ! Half the second derivative of w3_err with w [H Z T-1 ~> m2 s-1 or kg m-1 s-1]
+  real :: PE_mix_term ! The mixing sink of energy [H Z2 T-2 ~> m3 s-2 or J m-2]
+
+  logical :: use_PE_mix_est ! Use the potential energy mixing term to estimate the turbulent velocity.
+  logical :: w2_exceeds_w3  ! The quadratic loss term is likely to be larger than the cubic loss term
+                            ! in the energy balance.
+  logical :: reestimate_w   ! Discard and recalculate the initial input estimate for w.
+  integer :: local_itt
+  ! The schemes used here have been found to converge within just 3 or 4 iterations in all cases.
+  integer, parameter :: max_itt = 10
+
+  ! Update or replace the estimate of w.
+  if (w2_RHS <= 0.0) then
+    ! The correct solution is obvious, and no further calculation is needed.
+    w = 0.0
+  elseif (max_PE_chg <= 0.0) then
+    ! This is the well-mixed limit, with single term balances that are exact or close overestimates.
+    ! x**2 + x**3 = 1 for x ~= 0.7549 so the true solution is between 0.7549 * w_estimate and w_estimate.
+    if ( (w3_term <= 0.0) .or. ( w2_RHS * w3_term**2 <= w2_dgnl**3 ) ) then
+      ! This is the value of w where the quadratic (molecular) dissipation alone balances w2_RHS.
+      w = sqrt(w2_RHS / w2_dgnl)
+    else
+      ! This is the value of w where the cubic dissipation term balances w2_RHS
+      w = cuberoot(w2_RHS / w3_term)
+    endif
+
+    if (w3_term > 0.0) then ; do local_itt=1,max_itt
+      ! This case converges monotonically from above, so no bounds checking is needed when the
+      ! iteration starts with an overestimate.
+      w2_err = w2_RHS - (w2_dgnl + w3_term*w) * w**2
+      dFn_dw = (2.0*w2_dgnl + 3.0*w3_term*w)*w
+      d2Fn_dw2_2 = (w2_dgnl + 3.0*w3_term*w)
+      dw = w2_err * dFn_dw / (dFn_dw**2 + w2_err * d2Fn_dw2_2)
+      w = w + dw
+    enddo ; endif
+
+  else
+    ! For a cubic or quadratic equation, Newton's method only converges quickly once the
+    ! estimate is close enough.  If the previous estimate has larger errors than a single-
+    ! term balance, it should be replaced with a more accurate estimate.
+    if (w <= 0.0) then
+      reestimate_w = .true.
+    else
+      PE_mix_term = max_PE_chg * (w / (w_half + w))
+      w2_err = w2_RHS - ( (w2_dgnl + w3_term*w)*w**2 + PE_mix_term )
+      ! Determine whether the present estimate is more accurate than a single-term estimate
+      ! by comparing the error with the sum of all but the largest term.
+      if (PE_mix_term >= max(w2_dgnl, w3_term*w) * w**2) then
+        reestimate_w = ( abs(w2_err) > 0.5*(w2_dgnl + w3_term*w) * w**2 )
+      elseif (w2_dgnl > w3_term*w) then
+        reestimate_w = ( abs(w2_err) > 0.5*(PE_mix_term + w3_term*w**3) )
+      else
+        reestimate_w = ( abs(w2_err) > 0.5*(PE_mix_term + w2_dgnl*w**2) )
+      endif
+      ! Alternately:
+      !   reestimate_w = ( abs(w2_err) > 0.027*(w2_dgnl + w3_term*w)*w**2 )
+      !   This is already a good guess that could be corrected by a change in the cubic
+      !   dissipation term due to a 30% change in the velocity, or a 16% change with quadratic
+      !   dissipation.
+    endif
+
+    if (reestimate_w) then
+      ! Start from an estimate based on the dominant term on the right-hand side.
+      w2_exceeds_w3 = ( (w3_term <= 0.0) .or. (w2_RHS * w3_term**2 <= w2_dgnl**3) )
+      ! The rest of the tests can get expensive, so first check for the common case where the solution
+      ! is in the limit where the potential energy change is often linear.
+      if (w2_RHS <= 0.5*max_PE_chg) then
+        if (w2_exceeds_w3) then
+          ! use_PE_mix_est = ( w2_RHS * w_half / (max_PE_chg - w2_RHS) <= sqrt(w2_RHS / w2_dgnl) )
+          use_PE_mix_est = ( w2_RHS * w_half**2 * w2_dgnl <= (max_PE_chg - w2_RHS)**2 )
+        else
+          ! use_PE_mix_est = ( w2_RHS * w_half / (max_PE_chg - w2_RHS) <= cuberoot(w2_RHS / w3_term) )
+          use_PE_mix_est = ( w2_RHS**2 * w_half**3 * w3_term <= (max_PE_chg - w2_RHS)**3 )
+        endif
+
+        ! Start from an estimate based on the dominant term on the right-hand side.
+        ! These are all overestimates of w
+        if (use_PE_mix_est) then
+          ! This is the value of w where the PE change term balances w2_RHS
+          w = w2_RHS * w_half / (max_PE_chg - w2_RHS)
+        elseif (w2_exceeds_w3) then
+          ! This is the value of w where the quadratic dissipation term balances w2_RHS
+          w = sqrt(w2_RHS / w2_dgnl)
+        else
+          ! This is the value of w where the cubic dissipation term balances w2_RHS
+          w = cuberoot(w2_RHS / w3_term)
+        endif
+      else
+
+        ! Evaluate the solution at the approximate inflection point.  The actual inflection
+        ! point considering both terms occurs at a lower value than these estimates.
+        ! The full expression for the second derivative with w of the error is
+        !  d_w2_err_dw = (2.0*w2_dgnl + 3.0*w3_term*w)*w + max_PE_chg * w_half / (w_half + w)**2
+        !  d2_w2_err_dw2 = (2.0*w2_dgnl + 6.0*w3_term*w) - 2.0*max_PE_chg * w_half / (w_half + w)**3
+        if (w2_exceeds_w3) then
+          ! w2_dgnl * (w_half + w_infl)**3 = max_PE_chg * w_half
+          w_infl = cuberoot(max_PE_chg * w_half / w2_dgnl) - w_half
+        else
+          ! 3.0*w3_term*w_infl*(w_infl + w_half)**3 = max_PE_chg * w_half
+          !   w*(w+a)**3 = w**4 + 3*w**3*a + 3*w**2*a**2 + w*a**3
+          !   (w+b)**4 = w**4 + 4*w**3*b + 6*w**2*b**2 + 4*w*b**3 + b**4
+          ! So w*(w+a)**3 = (w+0.75*a)**4 - (3/8)*w**2*a**2 - (11/16)*w*a**3 + (81/256)*a**4
+          ! When w_infl >> w_half, (w_infl + 0.75*w_half)**4 ~= (max_PE_chg * w_half / (3*w3_term))
+          w_infl = sqrt(sqrt(max_PE_chg * w_half / (3.0*w3_term))) - 0.75*w_half
+        endif
+        if (w_infl <= 0.0) then
+          w_infl = 0.0
+          PE_chg_infl = 0.0
+          w2_err_infl = w2_RHS
+        else
+          PE_chg_infl = max_PE_chg * (w_infl / (w_half + w_infl))
+          w2_err_infl = w2_RHS - ( (w2_dgnl + w3_term*w_infl)*w_infl**2 + PE_chg_infl )
+        endif
+
+        if (abs(w2_err_infl) <= 0.125 * ((w2_dgnl + w3_term*w_infl)*w_infl**2)) then
+          ! The inflection point is already a good enough guess (within 50% for cubic dissipation),
+          ! so just start Newton's method iterations from there, noting that Newton's method tends
+          ! to work particularly well near the inflection point.
+          w = w_infl
+        elseif (w2_err_infl > 0.0) then  ! The inflection point is an under-estimate
+          if (w2_exceeds_w3) then  ! This is an over estimate
+            w = max(sqrt((w2_RHS - PE_chg_infl) / w2_dgnl), w_infl)
+          else
+            w = max(cuberoot((w2_RHS - PE_chg_infl) / w3_term), w_infl)
+          endif
+        else ! if (w2_err_infl < 0.0) then  ! The inflection point is an over-estimate
+          ! Use the smaller of the mixing estimate and the inflection point.
+          if (((max_PE_chg - w2_RHS) <= 0.0) .or. &
+              (w2_RHS * w_half >= w_infl * (max_PE_chg - w2_RHS)) ) then
+            w = w_infl
+          else
+            w = w2_RHS * w_half / (max_PE_chg - w2_RHS)
+          endif
+        endif
+      endif
+    endif  ! reestimate_w
+
+    do local_itt=1,max_itt
+      ! Do Halley's method iterations on a modified version of the w2_err equation.
+      w3_err = ((max_PE_chg-w2_RHS) + (w2_dgnl + w3_term*w)*(w_half + w)*w)*w - w2_RHS*w_half
+      derr_dw = (max_PE_chg-w2_RHS) + (w2_dgnl*(2.0*w_half + 3.0*w) + w3_term*(3.0*w_half + 4.0*w)*w)*w
+      ! d2err_dw2 = (w2_dgnl*(2.0*w_half + 6.0*w) + w3_term*(6.0*w_half + 12.0*w)*w)
+      d2err_dw2_2 = (w2_dgnl*(w_half + 3.0*w) + w3_term*(3.0*w_half + 6.0*w)*w)
+      dw = -w3_err * derr_dw / (derr_dw**2 - w3_err * d2err_dw2_2)
+
+      w = w + dw
+
+      if (abs(dw) < w_tol) exit  ! Stop after this iteration.
+    enddo
+
+  endif  ! (max_PE_chg > 0.0) and (w2_RHS > 0.0)
+
+end subroutine local_w_balance
 
 
 !> This subroutine calculates the change in potential energy and or derivatives
