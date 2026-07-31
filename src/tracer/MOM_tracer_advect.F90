@@ -36,8 +36,6 @@ type, public :: tracer_advect_CS ; private
   type(diag_ctrl), pointer :: diag !< A structure that is used to regulate the
                                    !< timing of diagnostic output.
   logical :: debug                 !< If true, write verbose checksums for debugging purposes.
-  logical :: useHuynhStencilBug = .false. !< If true, use the incorrect stencil width.
-                                   !! This is provided for compatibility with legacy simuations.
   type(group_pass_type) :: pass_uhr_vhr_t_hprev !< A structure used for group passes
   integer :: default_advect_scheme = -1 !< Determines which reconstruction to use
 end type tracer_advect_CS
@@ -160,11 +158,7 @@ subroutine advect_tracer(h_end, uhtr, vhtr, OBC, dt, G, GV, US, CS, Reg, x_first
      elseif (local_advect_scheme(m) == ADVECT_PPM) then
        stencil_local = 3
      elseif (local_advect_scheme(m) == ADVECT_PPMH3) then
-       if (CS%useHuynhStencilBug) then
-         stencil_local = 2
-       else
-         stencil_local = 3
-       endif
+       stencil_local = 3
      endif
      stencil = max(stencil, stencil_local)
   enddo
@@ -1296,16 +1290,6 @@ subroutine tracer_advect_init(Time, G, US, param_file, diag, CS)
 
   ! Get the integer value of the tracer scheme
   call set_tracer_advect_scheme(CS%default_advect_scheme, mesg)
-
-  if (CS%default_advect_scheme == ADVECT_PPMH3) then
-      call get_param(param_file, mdl, "USE_HUYNH_STENCIL_BUG", &
-        CS%useHuynhStencilBug, &
-        desc="If true, use a stencil width of 2 in PPM:H3 tracer advection. " &
-        // "This is incorrect and will produce regressions in certain " &
-        // "configurations, but may be required to reproduce results in " &
-        // "legacy simulations.", &
-        default=.false.)
-  endif
 
   id_clock_advect = cpu_clock_id('(Ocean advect tracer)', grain=CLOCK_MODULE)
   id_clock_pass = cpu_clock_id('(Ocean tracer halo updates)', grain=CLOCK_ROUTINE)
