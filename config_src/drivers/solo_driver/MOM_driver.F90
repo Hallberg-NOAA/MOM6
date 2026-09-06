@@ -260,9 +260,9 @@ program MOM6
     elseif (calendar(1:10)=='THIRTY_DAY') then ;  calendar_type = THIRTY_DAY_MONTHS
     elseif (calendar(1:11)=='NO_CALENDAR') then ; calendar_type = NO_CALENDAR
     elseif (calendar(1:1) /= ' ') then
-      call MOM_error(FATAL,'MOM_driver: Invalid namelist value '//trim(calendar)//' for calendar')
+      call MOM_error(FATAL, 'MOM_driver: Invalid namelist value '//trim(calendar)//' for calendar')
     else
-      call MOM_error(FATAL,'MOM_driver: No namelist value for calendar')
+      call MOM_error(FATAL, 'MOM_driver: No namelist value for calendar')
     endif
     call set_calendar_type(calendar_type)
   endif
