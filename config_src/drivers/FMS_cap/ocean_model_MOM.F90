@@ -336,7 +336,7 @@ subroutine ocean_model_init(Ocean_sfc, OS, Time_init, Time_in, wind_stagger, gas
   if (uppercase(stagger(1:1)) == 'A') then ; Ocean_sfc%stagger = AGRID
   elseif (uppercase(stagger(1:1)) == 'B') then ; Ocean_sfc%stagger = BGRID_NE
   elseif (uppercase(stagger(1:1)) == 'C') then ; Ocean_sfc%stagger = CGRID_NE
-  else ; call MOM_error(FATAL,"ocean_model_init: OCEAN_SURFACE_STAGGER = "// &
+  else ; call MOM_error(FATAL, "ocean_model_init: OCEAN_SURFACE_STAGGER = "// &
                         trim(stagger)//" is invalid.") ; endif
 
   call get_param(param_file, mdl, "RHO_0", Rho0, &
@@ -1128,7 +1128,7 @@ subroutine ocean_model_data2D_get(OS, Ocean, name, array2D, isc, jsc)
     case('obld')
       array2D(isc:,jsc:) = Ocean%OBLD(isc:,jsc:)
     case default
-      call MOM_error(FATAL,'get_ocean_grid_data2D: unknown argument name='//name)
+      call MOM_error(FATAL, 'get_ocean_grid_data2D: unknown argument name='//name)
   end select
 
 end subroutine ocean_model_data2D_get
@@ -1149,7 +1149,7 @@ subroutine ocean_model_data1D_get(OS, Ocean, name, value)
   case('c_p')
     value = OS%C_p
   case default
-    call MOM_error(FATAL,'get_ocean_grid_data1D: unknown argument name='//name)
+    call MOM_error(FATAL, 'get_ocean_grid_data1D: unknown argument name='//name)
   end select
 
 end subroutine ocean_model_data1D_get
@@ -1258,7 +1258,7 @@ subroutine ocean_model_get_UV_surf(OS, Ocean, name, array2D, isc, jsc)
       array2D(i,j) = G%mask2dCv(I+i0,J+j0) * sfc_state%v(i+i0,J+j0)
     enddo ; enddo
   case default
-    call MOM_error(FATAL,'ocean_model_get_UV_surf: unknown argument name='//name)
+    call MOM_error(FATAL, 'ocean_model_get_UV_surf: unknown argument name='//name)
   end select
 
 end subroutine ocean_model_get_UV_surf

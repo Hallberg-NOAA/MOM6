@@ -218,9 +218,9 @@ program Shelf_main
     elseif (calendar(1:10)=='THIRTY_DAY') then ;  calendar_type = THIRTY_DAY_MONTHS
     elseif (calendar(1:11)=='NO_CALENDAR') then ; calendar_type = NO_CALENDAR
     elseif (calendar(1:1) /= ' ') then
-      call MOM_error(FATAL,'Shelf_driver: Invalid namelist value '//trim(calendar)//' for calendar')
+      call MOM_error(FATAL, 'Shelf_driver: Invalid namelist value '//trim(calendar)//' for calendar')
     else
-      call MOM_error(FATAL,'Shelf_driver: No namelist value for calendar')
+      call MOM_error(FATAL, 'Shelf_driver: No namelist value for calendar')
     endif
   endif
   call set_calendar_type(calendar_type)

@@ -990,7 +990,7 @@ subroutine apply_force_adjustments(G, US, CS, Time, forces)
   call data_override('OCN', 'tauy_adj', tempy_at_h(isc:iec,jsc:jec), Time, override=overrode_y)
 
   if (overrode_x .or. overrode_y) then
-    if (.not. (overrode_x .and. overrode_y)) call MOM_error(FATAL,"apply_flux_adjustments: "//&
+    if (.not. (overrode_x .and. overrode_y)) call MOM_error(FATAL, "apply_flux_adjustments: "//&
             "Both taux_adj and tauy_adj must be specified, or neither, in data_table")
 
     ! Rotate winds
@@ -1157,7 +1157,7 @@ subroutine surface_forcing_init(Time, G, US, param_file, diag, CS, restore_salt,
   if (uppercase(stagger(1:1)) == 'A') then ; CS%wind_stagger = AGRID
   elseif (uppercase(stagger(1:1)) == 'B') then ; CS%wind_stagger = BGRID_NE
   elseif (uppercase(stagger(1:1)) == 'C') then ; CS%wind_stagger = CGRID_NE
-  else ; call MOM_error(FATAL,"surface_forcing_init: WIND_STAGGER = "// &
+  else ; call MOM_error(FATAL, "surface_forcing_init: WIND_STAGGER = "// &
                         trim(stagger)//" is invalid.") ; endif
   call get_param(param_file, mdl, "WIND_STRESS_MULTIPLIER", CS%wind_stress_multiplier, &
                  "A factor multiplying the wind-stress given to the ocean by the "//&

@@ -1942,7 +1942,7 @@ subroutine write_metadata_axis(IO_handle, axis, name, units, longname, cartesian
     ! This is the unlimited (time) dimension.
     call register_axis(IO_handle%fileobj, trim(name), unlimited)
   else
-    if (.not.present(data)) call MOM_error(FATAL,"MOM_io:register_diagnostic_axis: "//&
+    if (.not.present(data)) call MOM_error(FATAL, "MOM_io:register_diagnostic_axis: "//&
                       "An axis_length argument is required to register the axis "//trim(name))
     call register_axis(IO_handle%fileobj, trim(name), size(data))
   endif

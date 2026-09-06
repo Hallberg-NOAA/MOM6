@@ -1032,9 +1032,9 @@ subroutine extract_IOB_stresses(IOB, index_bounds, Time, G, US, CS, taux, tauy, 
   if ((IOB%wind_stagger == AGRID) .or. (IOB%wind_stagger == BGRID_NE) .or. &
       (IOB%wind_stagger == CGRID_NE)) wind_stagger = IOB%wind_stagger
 
-  if (associated(IOB%u_flux).neqv.associated(IOB%v_flux)) call MOM_error(FATAL,"extract_IOB_stresses: "//&
+  if (associated(IOB%u_flux).neqv.associated(IOB%v_flux)) call MOM_error(FATAL, "extract_IOB_stresses: "//&
             "associated(IOB%u_flux) /= associated(IOB%v_flux !!!")
-  if (present(taux).neqv.present(tauy)) call MOM_error(FATAL,"extract_IOB_stresses: "//&
+  if (present(taux).neqv.present(tauy)) call MOM_error(FATAL, "extract_IOB_stresses: "//&
             "present(taux) /= present(tauy) !!!")
 
   ! Set surface momentum stress related fields as a function of staggering.
@@ -1299,7 +1299,7 @@ subroutine apply_force_adjustments(G, US, CS, Time, forces)
                      override=overrode_y, scale=US%Pa_to_RLZ_T2)
 
   if (overrode_x .or. overrode_y) then
-    if (.not. (overrode_x .and. overrode_y)) call MOM_error(FATAL,"apply_flux_adjustments: "//&
+    if (.not. (overrode_x .and. overrode_y)) call MOM_error(FATAL, "apply_flux_adjustments: "//&
             "Both taux_adj and tauy_adj must be specified, or neither, in data_table")
 
     ! Rotate winds
@@ -1495,7 +1495,7 @@ subroutine surface_forcing_init(Time, G, US, param_file, diag, CS, wind_stagger)
     if     (wind_stagger == AGRID)    then ; stagger = 'AGRID'
     elseif (wind_stagger == BGRID_NE) then ; stagger = 'BGRID_NE'
     elseif (wind_stagger == CGRID_NE) then ; stagger = 'CGRID_NE'
-    else ; stagger = 'UNKNOWN' ; call MOM_error(FATAL,"surface_forcing_init: WIND_STAGGER = "// &
+    else ; stagger = 'UNKNOWN' ; call MOM_error(FATAL, "surface_forcing_init: WIND_STAGGER = "// &
                       trim(stagger)// "is invalid.") ; endif
     call log_param(param_file, mdl, "WIND_STAGGER", stagger, &
                    "The staggering of the input wind stress field "//&
@@ -1509,7 +1509,7 @@ subroutine surface_forcing_init(Time, G, US, param_file, diag, CS, wind_stagger)
     if     (uppercase(stagger(1:1)) == 'A') then ; CS%wind_stagger = AGRID
     elseif (uppercase(stagger(1:1)) == 'B') then ; CS%wind_stagger = BGRID_NE
     elseif (uppercase(stagger(1:1)) == 'C') then ; CS%wind_stagger = CGRID_NE
-    else ; call MOM_error(FATAL,"surface_forcing_init: WIND_STAGGER = "// &
+    else ; call MOM_error(FATAL, "surface_forcing_init: WIND_STAGGER = "// &
                           trim(stagger)//" is invalid.") ; endif
   endif
 

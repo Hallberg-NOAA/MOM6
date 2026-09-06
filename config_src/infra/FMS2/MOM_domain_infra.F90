@@ -1386,7 +1386,7 @@ subroutine create_MOM_domain(MOM_dom, n_global, n_halo, reentrant, tripolar_N, l
   if (reentrant(2)) Y_FLAGS = CYCLIC_GLOBAL_DOMAIN
   if (tripolar_N) then
     Y_FLAGS = FOLD_NORTH_EDGE
-    if (reentrant(2)) call MOM_error(FATAL,"MOM_domains: "// &
+    if (reentrant(2)) call MOM_error(FATAL, "MOM_domains: "// &
       "TRIPOLAR_N and REENTRANT_Y may not be used together.")
   endif
 

@@ -350,7 +350,7 @@ subroutine ocean_model_init(Ocean_sfc, OS, Time_init, Time_in, gas_fields_ocn, i
   if (uppercase(stagger(1:1)) == 'A') then ; Ocean_sfc%stagger = AGRID
   elseif (uppercase(stagger(1:1)) == 'B') then ; Ocean_sfc%stagger = BGRID_NE
   elseif (uppercase(stagger(1:1)) == 'C') then ; Ocean_sfc%stagger = CGRID_NE
-  else ; call MOM_error(FATAL,"ocean_model_init: OCEAN_SURFACE_STAGGER = "// &
+  else ; call MOM_error(FATAL, "ocean_model_init: OCEAN_SURFACE_STAGGER = "// &
                         trim(stagger)//" is invalid.") ; endif
 
   call get_param(param_file, mdl, "EPS_OMESH",OS%eps_omesh, &
