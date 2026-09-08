@@ -225,7 +225,7 @@ program MOM6
     call open_ASCII_file(unit, 'input.nml', action=READONLY_FILE)
     read(unit, ocean_solo_nml, iostat=io_status)
     call close_file(unit)
-    ierr = check_nml_error(io_status,'ocean_solo_nml')
+    ierr = check_nml_error(io_status, 'ocean_solo_nml')
     if (is_root_pe() .and. (years+months+days+hours+minutes+seconds > 0)) write(*,ocean_solo_nml)
   endif
 
@@ -325,7 +325,7 @@ program MOM6
 
 
   call get_param(param_file, mod_name, "USE_WAVES", Use_Waves, &
-       "If true, enables surface wave modules.",default=.false.)
+       "If true, enables surface wave modules.", default=.false.)
   ! MOM_wave_interface_init is called regardless of the value of USE_WAVES because
   ! it also initializes statistical waves.
   call MOM_wave_interface_init(Time, grid, GV, US, param_file, Waves_CSp, diag)
@@ -439,7 +439,7 @@ program MOM6
 
   if (cpu_steps > 0) call write_cputime(Time, 0, write_CPU_CSp)
 
-  if (((.not.BTEST(Restart_control,1)) .and. (.not.BTEST(Restart_control,0))) &
+  if (((.not.BTEST(Restart_control, 1)) .and. (.not.BTEST(Restart_control, 0))) &
       .or. (Restart_control < 0)) permit_incr_restart = .false.
 
   if (restint > real_to_time(0.0)) then
@@ -458,7 +458,7 @@ program MOM6
 
   ns = 1
   do while ((ns < nmax) .and. (Time < Time_end))
-    call callTree_enter("Main loop, MOM_driver.F90",ns)
+    call callTree_enter("Main loop, MOM_driver.F90", ns)
 
     ! Set the forcing for the next steps.
     if (.not. offline_tracer_mode) then
@@ -572,7 +572,7 @@ program MOM6
 !  See if it is time to write out a restart file - timestamped or not.
     if ((permit_incr_restart) .and. (fluxes%fluxes_used) .and. &
         (Time + (Time_step_ocean/2) > restart_time)) then
-      if (BTEST(Restart_control,1)) then
+      if (BTEST(Restart_control, 1)) then
         call save_MOM_restart(MOM_CSp, dirs%restart_output_dir, Time, grid, &
             time_stamped=.true., GV=GV)
         call forcing_save_restart(surface_forcing_CSp, grid, Time, &
@@ -580,7 +580,7 @@ program MOM6
         if (use_ice_shelf) call ice_shelf_save_restart(ice_shelf_CSp, Time, &
                                     dirs%restart_output_dir, .true.)
       endif
-      if (BTEST(Restart_control,0)) then
+      if (BTEST(Restart_control, 0)) then
         call save_MOM_restart(MOM_CSp, dirs%restart_output_dir, Time, grid, GV=GV)
         call forcing_save_restart(surface_forcing_CSp, grid, Time, &
                             dirs%restart_output_dir)

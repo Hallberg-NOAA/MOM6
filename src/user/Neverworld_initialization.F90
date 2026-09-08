@@ -67,15 +67,15 @@ subroutine Neverworld_initialize_topography(D, G, param_file, max_depth)
     x = (G%geoLonT(i,j)-G%west_lon) / G%len_lon
     y = (G%geoLatT(i,j)-G%south_lat) / G%len_lat
 !  This sets topography that has a reentrant channel to the south.
-    D(i,j) = 1.0 - 1.1 * spike(y-1,0.12) - 1.1 * spike(y,0.12) - & !< The great northern wall and Antarctica
+    D(i,j) = 1.0 - 1.1 * spike(y-1, 0.12) - 1.1 * spike(y, 0.12) - & !< The great northern wall and Antarctica
               nl_top_amp*( &
-                (1.2 * spike(x,0.2) + 1.2 * spike(x-1.0,0.2)) * spike(MIN(0.0,y-0.3),0.2) & !< South America
-              +  1.2 * spike(x-0.5,0.2) * spike(MIN(0.0,y-0.55),0.2)       & !< Africa
-              +  1.2 * (spike(x,0.12)  + spike(x-1,0.12)) * spike(MAX(0.0,y-0.06),0.12)    & !< Antarctic Peninsula
-              +  0.1 * (cosbell(x,0.1) + cosbell(x-1,0.1))                 & !< Drake Passage ridge
-              +  0.5 * cosbell(x-0.16,0.05) * (cosbell(y-0.18,0.13)**0.4)  & !< Scotia Arc East
-              +  0.4 * (cosbell(x-0.09,0.08)**0.4) * cosbell(y-0.26,0.05)  & !< Scotia Arc North
-              +  0.4 * (cosbell(x-0.08,0.08)**0.4) * cosbell(y-0.1,0.05))   & !< Scotia Arc South
+                (1.2 * spike(x, 0.2) + 1.2 * spike(x-1.0, 0.2)) * spike(MIN(0.0, y-0.3), 0.2) & !< South America
+              +  1.2 * spike(x-0.5, 0.2) * spike(MIN(0.0, y-0.55), 0.2)      & !< Africa
+              +  1.2 * (spike(x, 0.12)  + spike(x-1, 0.12)) * spike(MAX(0.0, y-0.06), 0.12) & !< Antarctic Peninsula
+              +  0.1 * (cosbell(x, 0.1) + cosbell(x-1, 0.1))                 & !< Drake Passage ridge
+              +  0.5 * cosbell(x-0.16, 0.05) * (cosbell(y-0.18, 0.13)**0.4)  & !< Scotia Arc East
+              +  0.4 * (cosbell(x-0.09, 0.08)**0.4) * cosbell(y-0.26, 0.05)  & !< Scotia Arc North
+              +  0.4 * (cosbell(x-0.08, 0.08)**0.4) * cosbell(y-0.1, 0.05))   & !< Scotia Arc South
               -  nl_roughness_amp * cos(14*PI*x) * sin(14*PI*y)            & !< roughness
               -  nl_roughness_amp * cos(20*PI*x) * cos(20*PI*y)              !< roughness
     if (D(i,j) < 0.0) D(i,j) = 0.0
@@ -144,7 +144,7 @@ real function cstprof(x, x0, L, lf, bf, sf, sh)
   real :: s ! A rescaled position [nondim]
 
   s = max( 0., min( 1.,( x - x0 ) / L ) )
-  cstprof = sh * scurve(s-lf,0.,bf) + (1.-sh) * scurve(s - (1.-sf),0.,sf)
+  cstprof = sh * scurve(s-lf, 0., bf) + (1.-sh) * scurve(s - (1.-sf), 0., sf)
 end function cstprof
 
 !> Distance between points x,y and a line segment (x0,y0) and (x0,y1) in arbitrary units [A].
@@ -297,7 +297,7 @@ subroutine Neverworld_initialize_thickness(h, depth_tot, G, GV, US, param_file, 
       r1 = sqrt(((x-0.7)**2) + ((y-0.2)**2))
       r2 = sqrt(((x-0.3)**2) + ((y-0.25)**2))
       h(i,j,k) = h(i,j,k) + pert_amp * (e0(k) - e0(nz+1)) * &
-                            (spike(r1,0.15)-spike(r2,0.15)) ! Prescribed perturbation
+                            (spike(r1, 0.15) - spike(r2, 0.15)) ! Prescribed perturbation
       if (h_noise /= 0.) then
         rns = initializeRandomNumberStream( int( 4096*(x + (y+1.)) ) )
         call getRandomNumbers(rns, noise) ! x will be in (0,1)

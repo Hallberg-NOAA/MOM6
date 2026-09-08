@@ -76,11 +76,11 @@ subroutine initialize_ice_thickness(h_shelf, area_shelf_h, hmask, melt_mask, G, 
       case ("USER") ; call USER_init_ice_thickness (tmp1_2d, tmp2_2d, tmp3_2d, G_in, US, PF)
       case default  ; call MOM_error(FATAL, "MOM_initialize: Unrecognized ice profile setup "//trim(config))
     end select
-    call rotate_array(tmp1_2d,turns, h_shelf)
-    call rotate_array(tmp2_2d,turns, area_shelf_h)
-    call rotate_array(tmp3_2d,turns, hmask)
-    call rotate_array(tmp4_2d,turns, melt_mask)
-    deallocate(tmp1_2d,tmp2_2d,tmp3_2d)
+    call rotate_array(tmp1_2d, turns, h_shelf)
+    call rotate_array(tmp2_2d, turns, area_shelf_h)
+    call rotate_array(tmp3_2d, turns, hmask)
+    call rotate_array(tmp4_2d, turns, melt_mask)
+    deallocate(tmp1_2d, tmp2_2d, tmp3_2d)
   else
     select case ( trim(config) )
       case ("CHANNEL") ; call initialize_ice_thickness_channel (h_shelf, area_shelf_h, hmask, G, US, PF)
@@ -142,7 +142,7 @@ subroutine initialize_ice_thickness_from_file(h_shelf, area_shelf_h, hmask, melt
   if (.not.file_exists(filename, G%Domain)) call MOM_error(FATAL, &
        " initialize_topography_from_file: Unable to open "//trim(filename))
   call MOM_read_data(filename, trim(thickness_varname), h_shelf, G%Domain, scale=US%m_to_Z)
-  call MOM_read_data(filename,trim(area_varname), area_shelf_h, G%Domain, scale=US%m_to_L**2)
+  call MOM_read_data(filename, trim(area_varname), area_shelf_h, G%Domain, scale=US%m_to_L**2)
   if (field_exists(filename, trim(hmask_varname), MOM_domain=G%Domain)) then
     call MOM_read_data(filename, trim(hmask_varname), hmask, G%Domain)
     hmask_set = .true.
@@ -557,7 +557,7 @@ subroutine initialize_ice_shelf_boundary_from_file(u_face_mask_bdry, v_face_mask
   call MOM_read_data(filename, trim(vmask_varname), vmask, G%Domain, position=CORNER, scale=1.)
   filename = trim(inputdir)//trim(icethick_file)
 
-  call MOM_read_data(filename,trim(hmsk_varname), hmask, G%Domain, scale=1.)
+  call MOM_read_data(filename, trim(hmsk_varname), hmask, G%Domain, scale=1.)
   isc = G%isc ; jsc = G%jsc ; iec = G%iec ; jec = G%jec
 
   do j=jsc,jec

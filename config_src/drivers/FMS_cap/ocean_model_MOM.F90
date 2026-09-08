@@ -566,7 +566,7 @@ subroutine update_ocean_model(Ice_ocean_boundary, OS, Ocean_sfc, time_start_upda
                                  OS%grid, OS%US, OS%forcing_CSp, OS%sfc_state)
 
       if (OS%use_ice_shelf) &
-        call shelf_calc_flux(OS%sfc_state, OS%flux_tmp, OS%Time,dt_coupling, OS%Ice_shelf_CSp)
+        call shelf_calc_flux(OS%sfc_state, OS%flux_tmp, OS%Time, dt_coupling, OS%Ice_shelf_CSp)
       if (OS%icebergs_alter_ocean) &
         call iceberg_fluxes(OS%grid, OS%US, OS%flux_tmp, OS%use_ice_shelf, &
                             OS%sfc_state, dt_coupling, OS%marine_ice_CSp)
@@ -694,7 +694,7 @@ subroutine update_ocean_model(Ice_ocean_boundary, OS, Ocean_sfc, time_start_upda
 !  call convert_state_to_ocean_type(OS%sfc_state, Ocean_sfc, OS%grid, OS%US, &
 !                                   OS%fluxes%p_surf_full, OS%press_to_z)
   call convert_state_to_ocean_type(OS%sfc_state, Ocean_sfc, OS%grid, OS%US)
-  if (OS%calve_ice_shelf_bergs) call convert_shelf_state_to_ocean_type(Ocean_sfc,OS%Ice_shelf_CSp, OS%US)
+  if (OS%calve_ice_shelf_bergs) call convert_shelf_state_to_ocean_type(Ocean_sfc, OS%Ice_shelf_CSp, OS%US)
   Time1 = OS%Time ; if (do_dyn) Time1 = OS%Time_dyn
   call coupler_type_send_data(Ocean_sfc%fields, Time1)
 
@@ -716,7 +716,7 @@ subroutine ocean_model_restart(OS, timestamp)
       "was called with unused buoyancy fluxes.  For conservation, the ocean "//&
       "restart files can only be created after the buoyancy forcing is applied.")
 
-  if (BTEST(OS%Restart_control,1)) then
+  if (BTEST(OS%Restart_control, 1)) then
     call save_MOM_restart(OS%MOM_CSp, OS%dirs%restart_output_dir, OS%Time, &
         OS%grid, time_stamped=.true., GV=OS%GV)
     call forcing_save_restart(OS%forcing_CSp, OS%grid, OS%Time, &
@@ -725,7 +725,7 @@ subroutine ocean_model_restart(OS, timestamp)
       call ice_shelf_save_restart(OS%Ice_shelf_CSp, OS%Time, OS%dirs%restart_output_dir, .true.)
     endif
   endif
-  if (BTEST(OS%Restart_control,0)) then
+  if (BTEST(OS%Restart_control, 0)) then
     call save_MOM_restart(OS%MOM_CSp, OS%dirs%restart_output_dir, OS%Time, &
         OS%grid, GV=OS%GV)
     call forcing_save_restart(OS%forcing_CSp, OS%grid, OS%Time, &
@@ -976,7 +976,7 @@ subroutine convert_shelf_state_to_ocean_type(Ocean_sfc, CS, US)
 
   call get_domain_extent(Ocean_sfc%Domain, isc_bnd, iec_bnd, jsc_bnd, jec_bnd)
 
-  call ice_sheet_calving_to_ocean_sfc(CS,US,Ocean_sfc%calving(isc_bnd:iec_bnd,jsc_bnd:jec_bnd),&
+  call ice_sheet_calving_to_ocean_sfc(CS, US, Ocean_sfc%calving(isc_bnd:iec_bnd,jsc_bnd:jec_bnd), &
     Ocean_sfc%calving_hflx(isc_bnd:iec_bnd,jsc_bnd:jec_bnd))
 
 end subroutine convert_shelf_state_to_ocean_type

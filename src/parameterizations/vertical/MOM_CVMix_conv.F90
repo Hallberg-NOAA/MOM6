@@ -96,7 +96,7 @@ logical function CVMix_conv_init(Time, G, GV, US, param_file, diag, CS)
   call get_param(param_file, mdl, 'MIN_THICKNESS', CS%min_thickness, &
                  units="m", scale=US%m_to_Z, default=0.001, do_not_log=.True.)
 
-  call openParameterBlock(param_file,'CVMix_CONVECTION')
+  call openParameterBlock(param_file, 'CVMix_CONVECTION')
 
   call get_param(param_file, mdl, "PRANDTL_CONV", prandtl_conv, &
                  "The turbulent Prandtl number applied to convective "//&

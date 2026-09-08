@@ -442,7 +442,7 @@ subroutine propagate_int_tide(h, tv, Nb, Rho_bot, dt, G, GV, US, inttide_input_C
                    ! It can be 1 point smaller if teleport is not used.
   endif
 
-  call pass_var(cn,G%Domain)
+  call pass_var(cn, G%Domain)
 
   if (CS%debug) then
     call hchksum(cn(:,:,1), "CN mode 1", G%HI, haloshift=0, unscale=US%L_to_m*US%s_to_T)
@@ -1072,7 +1072,7 @@ subroutine propagate_int_tide(h, tv, Nb, Rho_bot, dt, G, GV, US, inttide_input_C
 
   if (query_averaging_enabled(CS%diag)) then
     ! Output internal wave modal wave speeds
-    if (CS%id_cg1 > 0) call post_data(CS%id_cg1, cn(:,:,1),CS%diag)
+    if (CS%id_cg1 > 0) call post_data(CS%id_cg1, cn(:,:,1), CS%diag)
     do m=1,CS%nMode ; if (CS%id_cn(m) > 0) call post_data(CS%id_cn(m), cn(:,:,m), CS%diag) ; enddo
 
     ! Output two-dimensional diagnostics
@@ -1977,7 +1977,7 @@ subroutine refract(En, cn, freq, dt, G, US, NAngle, use_PPMang)
     else
       ! Use PPM
       do i=is,ie
-        call PPM_angular_advect(En2d(i,:),CFL_ang(i,j,:),Flux_E(i,:),NAngle,dt,stencil)
+        call PPM_angular_advect(En2d(i,:), CFL_ang(i,j,:), Flux_E(i,:), NAngle, dt, stencil)
       enddo
     endif
 
@@ -3886,7 +3886,7 @@ subroutine internal_tides_init(Time, G, GV, US, param_file, diag, CS)
   do m=1,CS%nMode
     write(var_name, '("cn_mode",i1)') m
     write(var_descript, '("Baroclinic (eigen) speed of mode ",i1)') m
-    CS%id_cn(m) = register_diag_field('ocean_model',var_name, diag%axesT1, &
+    CS%id_cn(m) = register_diag_field('ocean_model', var_name, diag%axesT1, &
                  Time, var_descript, 'm s-1', conversion=US%L_T_to_m_s)
     call MOM_mesg("Registering "//trim(var_name)//", Described as: "//var_descript, 5)
   enddo

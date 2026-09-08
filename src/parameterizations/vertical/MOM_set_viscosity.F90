@@ -350,7 +350,7 @@ subroutine set_viscous_BBL(u, v, h, tv, visc, G, GV, US, CS, pbv)
 
   if (CS%debug) then
     call uvchksum("Start set_viscous_BBL [uv]", u, v, G%HI, haloshift=1, unscale=US%L_T_to_m_s)
-    call hchksum(h,"Start set_viscous_BBL h", G%HI, haloshift=1, unscale=GV%H_to_m)
+    call hchksum(h, "Start set_viscous_BBL h", G%HI, haloshift=1, unscale=GV%H_to_m)
     if (associated(tv%T)) call hchksum(tv%T, "Start set_viscous_BBL T", G%HI, haloshift=1, unscale=US%C_to_degC)
     if (associated(tv%S)) call hchksum(tv%S, "Start set_viscous_BBL S", G%HI, haloshift=1, unscale=US%S_to_ppt)
     if (allocated(tv%SpV_avg)) &
@@ -2923,9 +2923,9 @@ subroutine set_visc_register_restarts(HI, G, GV, US, param_file, visc, restart_C
     if (.not.allocated(visc%tauy_shelf)) &
       allocate(visc%tauy_shelf(G%isd:G%ied, G%JsdB:G%JedB), source=0.0)
     u_desc = var_desc("u_taux_shelf", "Pa", "the zonal stress on the ocean under ice shelves", &
-                      hor_grid='Cu',z_grid='1')
+                      hor_grid='Cu', z_grid='1')
     v_desc = var_desc("v_tauy_shelf", "Pa", "the meridional stress on the ocean under ice shelves", &
-                      hor_grid='Cv',z_grid='1')
+                      hor_grid='Cv', z_grid='1')
     call register_restart_pair(visc%taux_shelf, visc%tauy_shelf, u_desc, v_desc, &
                                .false., restart_CS, conversion=US%RZ_T_to_kg_m2s*US%L_T_to_m_s)
   endif
@@ -3071,7 +3071,7 @@ subroutine set_visc_init(Time, G, GV, US, param_file, diag, visc, CS, restart_CS
   call get_param(param_file, mdl, "ADIABATIC", adiabatic, default=.false., &
                  do_not_log=.true.)
   if (adiabatic) then
-    call log_param(param_file, mdl, "ADIABATIC",adiabatic, &
+    call log_param(param_file, mdl, "ADIABATIC", adiabatic, &
                  "There are no diapycnal mass fluxes if ADIABATIC is true.  "//&
                  "This assumes that KD = 0.0 and that there is no buoyancy forcing, "//&
                  "but makes the model faster by eliminating subroutine calls.", default=.false.)
@@ -3329,7 +3329,7 @@ subroutine set_visc_init(Time, G, GV, US, param_file, diag, visc, CS, restart_CS
       filename = trim(CS%inputdir) // trim(tideamp_file)
       call log_param(param_file, mdl, "INPUTDIR/TIDEAMP_FILE", filename)
       call MOM_read_data(filename, tideamp_var, CS%tideamp, G%domain, scale=US%m_s_to_L_T)
-      call pass_var(CS%tideamp,G%domain)
+      call pass_var(CS%tideamp, G%domain)
     endif
   endif
   if (CS%Channel_drag .or. CS%body_force_drag) then
@@ -3351,8 +3351,8 @@ subroutine set_visc_init(Time, G, GV, US, param_file, diag, visc, CS, restart_CS
        diag%axesCv1, Time, 'Number of layers in viscous mixed layer at v points', 'nondim')
   endif
 
-  call register_restart_field_as_obsolete('Kd_turb','Kd_shear', restart_CS)
-  call register_restart_field_as_obsolete('Kv_turb','Kv_shear', restart_CS)
+  call register_restart_field_as_obsolete('Kd_turb', 'Kd_shear', restart_CS)
+  call register_restart_field_as_obsolete('Kv_turb', 'Kv_shear', restart_CS)
 
 end subroutine set_visc_init
 

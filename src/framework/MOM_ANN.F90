@@ -120,7 +120,7 @@ subroutine ANN_init(CS, NNfile)
     write(layer_num_str, '(I0)') i-1
     fieldname = trim('A') // trim(layer_num_str)
     call MOM_read_data(NNfile, fieldname, CS%layers(i)%A, &
-                        (/1,1,1,1/),(/CS%layers(i)%output_width,CS%layers(i)%input_width,1,1/))
+                        (/1,1,1,1/), (/CS%layers(i)%output_width,CS%layers(i)%input_width,1,1/))
 
     ! Reading bias b
     fieldname = trim('b') // trim(layer_num_str)
@@ -697,8 +697,8 @@ logical function ANN_unit_tests(verbose)
       x2(i,:) = x(:)
     enddo
     call ANN_apply_array_sio(20, x2, y2, ANN)
-    rand_res = rand_res .or. maxval( abs( maxval(y2(:,:),1) - y_good(:) ) ) > 0. ! Check results from array v2 = v1
-    rand_res = rand_res .or. maxval( abs( minval(y2(:,:),1) - y_good(:) ) ) > 0. ! Check results from array v2 = v1
+    rand_res = rand_res .or. maxval( abs( maxval(y2(:,:), 1) - y_good(:) ) ) > 0. ! Check results from array v2 = v1
+    rand_res = rand_res .or. maxval( abs( minval(y2(:,:), 1) - y_good(:) ) ) > 0. ! Check results from array v2 = v1
     deallocate( x, y, y_good, x2, y2 )
     call ANN_end(ANN)
   enddo

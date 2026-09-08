@@ -281,7 +281,7 @@ logical function KPP_init(paramFile, G, GV, US, diag, Time, CS, passive)
                  "This sets the default value for the various _ANSWER_DATE parameters.", &
                  default=99991231, do_not_log=.true.)
 
-  call openParameterBlock(paramFile,'KPP')
+  call openParameterBlock(paramFile, 'KPP')
   call get_param(paramFile, mdl, 'PASSIVE', CS%passiveMode,           &
                  'If True, puts KPP into a passive-diagnostic mode.', &
                   default=.False.)
@@ -420,7 +420,7 @@ logical function KPP_init(paramFile, G, GV, US, diag, Time, CS, passive)
                  'If true, adds KPP diffusivity to diffusivity from other schemes.\n'//&
                  'If false, KPP is the only diffusivity wherever KPP is non-zero.',  &
                  default=.True.)
-  call get_param(paramFile, mdl, 'KPP_SHORTWAVE_METHOD',string,                      &
+  call get_param(paramFile, mdl, 'KPP_SHORTWAVE_METHOD', string, &
                  'Determines contribution of shortwave radiation to KPP surface '// &
                  'buoyancy flux.  Options include:\n'//                             &
                  '  ALL_SW: use total shortwave radiation\n'//                      &
@@ -495,7 +495,7 @@ logical function KPP_init(paramFile, G, GV, US, diag, Time, CS, passive)
        'Flag for Langmuir turbulence enhancement of Vt2 '//&
        'in Bulk Richardson Number.', Default=.false.)
   if (CS%LT_Vt2_Enhancement) then
-    call get_param(paramFile, mdl, "KPP_LT_VT2_METHOD",string ,                  &
+    call get_param(paramFile, mdl, "KPP_LT_VT2_METHOD", string, &
                    'Method to enhance Vt2 in KPP. '//                            &
                    'Valid options are: \n'//                                     &
                    '\t CONSTANT = Constant value (KPP_VT2_ENH_FAC) \n'//         &
@@ -664,11 +664,11 @@ logical function KPP_init(paramFile, G, GV, US, diag, Time, CS, passive)
   CS%id_NLTs = register_diag_field('ocean_model', 'KPP_NLtransport_salt', diag%axesTi, Time, &
       'Non-local tranpsort (Cs*G(sigma)) for scalars, as calculated by [CVMix] KPP', 'nondim')
   CS%id_EnhK = register_diag_field('ocean_model', 'EnhK', diag%axesTI, Time, &
-      'Langmuir number enhancement to K as used by [CVMix] KPP','nondim')
+      'Langmuir number enhancement to K as used by [CVMix] KPP', 'nondim')
   CS%id_EnhVt2 = register_diag_field('ocean_model', 'EnhVt2', diag%axesTL, Time, &
-      'Langmuir number enhancement to Vt2 as used by [CVMix] KPP','nondim')
+      'Langmuir number enhancement to Vt2 as used by [CVMix] KPP', 'nondim')
   CS%id_La_SL = register_diag_field('ocean_model', 'KPP_La_SL', diag%axesT1, Time, &
-      'Surface-layer Langmuir number computed in [CVMix] KPP','nondim')
+      'Surface-layer Langmuir number computed in [CVMix] KPP', 'nondim')
 
   ! only available when StokesMOST is enabled
   if (CS%StokesMOST) then
@@ -1043,7 +1043,7 @@ subroutine KPP_calculate(CS, G, GV, US, h, tv, uStar, buoyFlux, Kt, Ks, Kv, &
 
   ! send diagnostics to post_data
   if (CS%id_OBLdepth > 0) call post_data(CS%id_OBLdepth, CS%OBLdepth,        CS%diag)
-  if (CS%id_OBLdepth_original > 0) call post_data(CS%id_OBLdepth_original,CS%OBLdepth_original,CS%diag)
+  if (CS%id_OBLdepth_original > 0) call post_data(CS%id_OBLdepth_original, CS%OBLdepth_original, CS%diag)
   if (CS%id_sigma    > 0) call post_data(CS%id_sigma,    CS%sigma,           CS%diag)
   if (CS%id_Ws       > 0) call post_data(CS%id_Ws,       CS%Ws,              CS%diag)
   if (CS%id_uStar    > 0) call post_data(CS%id_uStar,    uStar,              CS%diag)
@@ -1052,7 +1052,7 @@ subroutine KPP_calculate(CS, G, GV, US, h, tv, uStar, buoyFlux, Kt, Ks, Kv, &
   if (CS%id_Ks_KPP   > 0) call post_data(CS%id_Ks_KPP,   CS%Ks_KPP,          CS%diag)
   if (CS%id_Kv_KPP   > 0) call post_data(CS%id_Kv_KPP,   CS%Kv_KPP,          CS%diag)
   if (CS%id_NLTt     > 0) call post_data(CS%id_NLTt,     nonLocalTransHeat,  CS%diag)
-  if (CS%id_NLTs     > 0) call post_data(CS%id_NLTs,     nonLocalTransScalar,CS%diag)
+  if (CS%id_NLTs     > 0) call post_data(CS%id_NLTs,     nonLocalTransScalar, CS%diag)
 
 
 end subroutine KPP_calculate
@@ -1263,8 +1263,8 @@ subroutine KPP_compute_BLD(CS, G, GV, US, h, Temp, Salt, u, v, tv, uStar, buoyFl
                           (buoyFlux(i,j,1) - 0.5*(buoyFlux(i,j,max(2,k))+buoyFlux(i,j,k+1)) )
           surfBuoyFlux2(k) = surfBuoyFlux
 
-          call Compute_StokesDrift(i,j, iFaceHeight(k),iFaceHeight(k+1), &
-              cellHeight(k),iFaceHeight(ksfc),-SLdepth_0d, &
+          call Compute_StokesDrift(i, j, iFaceHeight(k), iFaceHeight(k+1), &
+              cellHeight(k), iFaceHeight(ksfc), -SLdepth_0d, &
               uS_Hi(k+1), vS_Hi(k+1), uS_H(k), vS_H(k), uS_SL, vS_SL, &
               uSbar_H(k), vSbar_H(k), uSb_SL, vSb_SL, waves)
           uE_H(k) = U_H(k) - 0.5 * (Waves%US_x(I,j,k)+Waves%US_x(I-1,j,k))
@@ -1570,8 +1570,8 @@ subroutine KPP_compute_BLD(CS, G, GV, US, h, Temp, Salt, u, v, tv, uStar, buoyFl
           endif
         enddo
 
-        call Compute_StokesDrift(i,j, iFaceHeight(kbl), iFaceHeight(kbl+1), &
-                -CS%OBLdepth(i,j),iFaceHeight(ksfc),-SLdepth_0d, &
+        call Compute_StokesDrift(i, j, iFaceHeight(kbl), iFaceHeight(kbl+1), &
+                -CS%OBLdepth(i,j), iFaceHeight(ksfc), -SLdepth_0d, &
                 uS_Hi(kbl+1), vS_Hi(kbl+1), uS_H(kbl), vS_H(kbl), uS_SL, vS_SL, &
                 uSbar_H(kbl), vSbar_H(kbl), uSb_SL, vSb_SL, waves)
 

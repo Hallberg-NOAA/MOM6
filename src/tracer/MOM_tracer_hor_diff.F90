@@ -469,7 +469,7 @@ subroutine tracer_hordiff(h, dt, MEKE, VarMix, visc, G, GV, US, CS, Reg, tv, do_
     endif
 
     do itt=1,num_itts
-      if (CS%show_call_tree) call callTree_waypoint("Calling horizontal boundary diffusion (tracer_hordiff)",itt)
+      if (CS%show_call_tree) call callTree_waypoint("Calling horizontal boundary diffusion (tracer_hordiff)", itt)
       if (itt>1) then ! Update halos for subsequent iterations
         call do_group_pass(CS%pass_t, G%Domain, clock=id_clock_pass)
       endif
@@ -547,7 +547,7 @@ subroutine tracer_hordiff(h, dt, MEKE, VarMix, visc, G, GV, US, CS, Reg, tv, do_
     endif
 
     do itt=1,num_itts
-      if (CS%show_call_tree) call callTree_waypoint("Calling neutral diffusion (tracer_hordiff)",itt)
+      if (CS%show_call_tree) call callTree_waypoint("Calling neutral diffusion (tracer_hordiff)", itt)
       if (itt>1) then ! Update halos for subsequent iterations
         call do_group_pass(CS%pass_t, G%Domain, clock=id_clock_pass)
         if (CS%recalc_neutral_surf) then
@@ -891,7 +891,7 @@ subroutine tracer_epipycnal_ML_diff(h, dt, Tr, ntr, khdt_epi_x, khdt_epi_y, G, &
   endif
 
   do i=is-2,ie+2 ; p_ref_cv(i) = tv%P_Ref ; enddo
-  EOSdom(:) = EOS_domain(G%HI,halo=2)
+  EOSdom(:) = EOS_domain(G%HI, halo=2)
 
   call do_group_pass(CS%pass_t, G%Domain, clock=id_clock_pass)
   ! Determine which layers the mixed- and buffer-layers map into...
@@ -1794,7 +1794,7 @@ subroutine tracer_hor_diff_init(Time, G, GV, US, param_file, diag, EOS, diabatic
   call get_param(param_file, mdl, "DEBUG", CS%debug, default=.false.)
 
   id_clock_diffuse = cpu_clock_id('(Ocean diffuse tracer)',          grain=CLOCK_MODULE)
-  id_clock_epimix  = cpu_clock_id('(Ocean epipycnal diffuse tracer)',grain=CLOCK_MODULE)
+  id_clock_epimix  = cpu_clock_id('(Ocean epipycnal diffuse tracer)', grain=CLOCK_MODULE)
   id_clock_pass    = cpu_clock_id('(Ocean tracer halo updates)',     grain=CLOCK_ROUTINE)
   id_clock_sync    = cpu_clock_id('(Ocean tracer global synch)',     grain=CLOCK_ROUTINE)
 

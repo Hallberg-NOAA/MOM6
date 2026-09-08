@@ -74,13 +74,13 @@ real function random_01_CB(ctr, key)
   y = (ctr + 1) * (key + 65536)
   z = y + (key + 65536)
   x = x*x + y
-  x = ior(ishft(x,32),ishft(x,-32))
+  x = ior(ishft(x, 32), ishft(x, -32))
   x = x*x + z
-  x = ior(ishft(x,32),ishft(x,-32))
+  x = ior(ishft(x, 32), ishft(x, -32))
   x = x*x + y
-  x = ior(ishft(x,32),ishft(x,-32))
+  x = ior(ishft(x, 32), ishft(x, -32))
   x = x*x + z
-  random_01_CB = .5*(1. + .5*real(int(ishft(x,-32)))/real(2**30))
+  random_01_CB = .5*(1. + .5*real(int(ishft(x, -32)))/real(2**30))
 
 end function
 
@@ -394,21 +394,21 @@ logical function random_unit_tests(verbose)
 
   if (verbose) write(stdunit,'(1x,"random: ",a)') '-- index-based seeds --------------------'
   ! Check index-based seed
-  i = seed_from_index(HI,1,1)
+  i = seed_from_index(HI, 1, 1)
   random_unit_tests = random_unit_tests .or. test_fn(verbose, i==1, 'seed from index (1,1)', ivalue=i)
-  j = seed_from_index(HI,ni+1,1)
+  j = seed_from_index(HI, ni+1, 1)
   random_unit_tests = random_unit_tests .or. test_fn(verbose, j==i, 'seed from index (n+1,1)', ivalue=j)
-  i = seed_from_index(HI,ni,1)
+  i = seed_from_index(HI, ni, 1)
   random_unit_tests = random_unit_tests .or. test_fn(verbose, i==6, 'seed from index (n,1)', ivalue=i)
-  j = seed_from_index(HI,0,1)
+  j = seed_from_index(HI, 0, 1)
   random_unit_tests = random_unit_tests .or. test_fn(verbose, j==i, 'seed from index (0,1)', ivalue=j)
-  i = seed_from_index(HI,1,nj)
+  i = seed_from_index(HI, 1, nj)
   random_unit_tests = random_unit_tests .or. test_fn(verbose, i==49, 'seed from index (1,n)', ivalue=i)
-  j = seed_from_index(HI,ni,nj+1)
+  j = seed_from_index(HI, ni, nj+1)
   random_unit_tests = random_unit_tests .or. test_fn(verbose, j==i, 'seed from index (n,n+1)', ivalue=j)
-  i = seed_from_index(HI,ni,nj)
+  i = seed_from_index(HI, ni, nj)
   random_unit_tests = random_unit_tests .or. test_fn(verbose, i==54, 'seed from index (n,n)', ivalue=i)
-  j = seed_from_index(HI,1,nj+1)
+  j = seed_from_index(HI, 1, nj+1)
   random_unit_tests = random_unit_tests .or. test_fn(verbose, j==i, 'seed from index (1,n+1)', ivalue=j)
 
   if (.not.random_unit_tests) write(stdunit,'(1x,a)') 'Passed unit tests'

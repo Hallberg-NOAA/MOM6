@@ -157,8 +157,8 @@ function register_OCMIP2_CFC(HI, GV, param_file, CS, tr_Reg, restart_CS)
   !   The following vardesc types contain a package of metadata about each tracer,
   ! including, the name; units; longname; and grid information.
   CS%CFC11_name = "CFC11" ; CS%CFC12_name = "CFC12"
-  CS%CFC11_desc = var_desc(CS%CFC11_name,"mol m-3","CFC-11 Concentration", caller=mdl)
-  CS%CFC12_desc = var_desc(CS%CFC12_name,"mol m-3","CFC-12 Concentration", caller=mdl)
+  CS%CFC11_desc = var_desc(CS%CFC11_name, "mol m-3", "CFC-11 Concentration", caller=mdl)
+  CS%CFC12_desc = var_desc(CS%CFC12_name, "mol m-3", "CFC-12 Concentration", caller=mdl)
   if (GV%Boussinesq) then ; flux_units = "mol s-1"
   else ; flux_units = "mol m-3 kg s-1" ; endif
 

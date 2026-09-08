@@ -97,15 +97,15 @@ function left_real(val)
 
   if ((abs(val) < 1.0e4) .and. (abs(val) >= 1.0e-3)) then
     write(left_real, '(F30.11)') val
-    if (.not.isFormattedFloatEqualTo(left_real,val)) then
+    if (.not.isFormattedFloatEqualTo(left_real, val)) then
       write(left_real, '(F30.12)') val
-      if (.not.isFormattedFloatEqualTo(left_real,val)) then
+      if (.not.isFormattedFloatEqualTo(left_real, val)) then
         write(left_real, '(F30.13)') val
-        if (.not.isFormattedFloatEqualTo(left_real,val)) then
+        if (.not.isFormattedFloatEqualTo(left_real, val)) then
           write(left_real, '(F30.14)') val
-          if (.not.isFormattedFloatEqualTo(left_real,val)) then
+          if (.not.isFormattedFloatEqualTo(left_real, val)) then
             write(left_real, '(F30.15)') val
-            if (.not.isFormattedFloatEqualTo(left_real,val)) then
+            if (.not.isFormattedFloatEqualTo(left_real, val)) then
               write(left_real, '(F30.16)') val
             endif
           endif
@@ -123,11 +123,11 @@ function left_real(val)
   else
     if ((abs(val) <= 1.0e-100) .or. (abs(val) >= 1.0e100)) then
       write(left_real(1:32), '(ES24.14E3)') val
-      if (.not.isFormattedFloatEqualTo(left_real,val)) &
+      if (.not.isFormattedFloatEqualTo(left_real, val)) &
         write(left_real(1:32), '(ES24.15E3)') val
     else
       write(left_real(1:32), '(ES23.14)') val
-      if (.not.isFormattedFloatEqualTo(left_real,val)) &
+      if (.not.isFormattedFloatEqualTo(left_real, val)) &
         write(left_real(1:32), '(ES23.15)') val
     endif
     do
@@ -222,7 +222,7 @@ character(len=120) function extract_word(string, separators, n)
   do while (i<ns)
     i = i+1
     if (lastCharIsSeperator) then ! search for end of word
-      if (verify(string(i:i),separators)==0) then
+      if (verify(string(i:i), separators)==0) then
         continue ! Multiple separators
       else
         lastCharIsSeperator = .false. ! character is beginning of word
@@ -230,7 +230,7 @@ character(len=120) function extract_word(string, separators, n)
         continue
       endif
     else ! continue search for end of word
-      if (verify(string(i:i),separators)==0) then
+      if (verify(string(i:i), separators)==0) then
         lastCharIsSeperator = .true.
         e = i-1 ! Previous character is end of word
         nw = nw+1
@@ -324,39 +324,39 @@ logical function string_functions_unit_tests(verbose)
   fail = .false.
   v = verbose
   write(stdout,*) '==== MOM_string_functions: string_functions_unit_tests ==='
-  fail = fail .or. localTestS(v,left_int(-1),'-1')
-  fail = fail .or. localTestS(v,left_ints(i(:)),'-1, 1, 3, 3, 0')
-  fail = fail .or. localTestS(v,left_real(0.),'0.0')
-  fail = fail .or. localTestS(v,left_reals(r(:)),'0.0, 1.0, -2.0, 1.3, 3*3.0E-11, -5.1E+12')
-  fail = fail .or. localTestS(v,left_reals(r(:),sep=' '),'0.0 1.0 -2.0 1.3 3*3.0E-11 -5.1E+12')
-  fail = fail .or. localTestS(v,left_reals(r(:),sep=','),'0.0,1.0,-2.0,1.3,3*3.0E-11,-5.1E+12')
-  fail = fail .or. localTestS(v,ints_to_string(i(:),5),'_-0001_0001_0003_0003_0000')
-  fail = fail .or. localTestS(v,ints_to_string(i(2:),2),'_0001_0003')
-  fail = fail .or. localTestS(v,ints_to_string(i(:)),'_-0001_0001_0003')
-  fail = fail .or. localTestS(v,trim_trailing_commas("One, Two, Three, "), "One, Two, Three")
-  fail = fail .or. localTestS(v,extractWord("One Two,Three",1),"One")
-  fail = fail .or. localTestS(v,extractWord("One Two,Three",2),"Two")
-  fail = fail .or. localTestS(v,extractWord("One Two,Three",3),"Three")
-  fail = fail .or. localTestS(v,extractWord("One Two,  Three",3),"Three")
-  fail = fail .or. localTestS(v,extractWord(" One Two,Three",1),"One")
-  fail = fail .or. localTestS(v,extract_word("One,Two,Three",",",3),"Three")
-  fail = fail .or. localTestS(v,extract_word("One,Two,Three",",",4),"")
-  fail = fail .or. localTestS(v,remove_spaces("1 2 3"),"123")
-  fail = fail .or. localTestS(v,remove_spaces(" 1 2 3"),"123")
-  fail = fail .or. localTestS(v,remove_spaces("1 2 3 "),"123")
-  fail = fail .or. localTestS(v,remove_spaces("123"),"123")
-  fail = fail .or. localTestS(v,remove_spaces(" "),"")
-  fail = fail .or. localTestS(v,remove_spaces(""),"")
-  fail = fail .or. localTestI(v,extract_integer("1","",1),1)
-  fail = fail .or. localTestI(v,extract_integer("1,2,3",",",1),1)
-  fail = fail .or. localTestI(v,extract_integer("1,2",",",2),2)
-  fail = fail .or. localTestI(v,extract_integer("1,2",",",3),0)
-  fail = fail .or. localTestI(v,extract_integer("1,2",",",4,4),4)
-  fail = fail .or. localTestR(v,extract_real("1.","",1),1.)
-  fail = fail .or. localTestR(v,extract_real("1.,2.,3.",",",1),1.)
-  fail = fail .or. localTestR(v,extract_real("1.,2.",",",2),2.)
-  fail = fail .or. localTestR(v,extract_real("1.,2.",",",3),0.)
-  fail = fail .or. localTestR(v,extract_real("1.,2.",",",4,4.),4.)
+  fail = fail .or. localTestS(v, left_int(-1), '-1')
+  fail = fail .or. localTestS(v, left_ints(i(:)), '-1, 1, 3, 3, 0')
+  fail = fail .or. localTestS(v, left_real(0.), '0.0')
+  fail = fail .or. localTestS(v, left_reals(r(:)), '0.0, 1.0, -2.0, 1.3, 3*3.0E-11, -5.1E+12')
+  fail = fail .or. localTestS(v, left_reals(r(:), sep=' '), '0.0 1.0 -2.0 1.3 3*3.0E-11 -5.1E+12')
+  fail = fail .or. localTestS(v, left_reals(r(:), sep=','), '0.0,1.0,-2.0,1.3,3*3.0E-11,-5.1E+12')
+  fail = fail .or. localTestS(v, ints_to_string(i(:), 5), '_-0001_0001_0003_0003_0000')
+  fail = fail .or. localTestS(v, ints_to_string(i(2:), 2), '_0001_0003')
+  fail = fail .or. localTestS(v, ints_to_string(i(:)), '_-0001_0001_0003')
+  fail = fail .or. localTestS(v, trim_trailing_commas("One, Two, Three, "), "One, Two, Three")
+  fail = fail .or. localTestS(v, extractWord("One Two,Three", 1), "One")
+  fail = fail .or. localTestS(v, extractWord("One Two,Three", 2), "Two")
+  fail = fail .or. localTestS(v, extractWord("One Two,Three", 3), "Three")
+  fail = fail .or. localTestS(v, extractWord("One Two,  Three", 3), "Three")
+  fail = fail .or. localTestS(v, extractWord(" One Two,Three", 1), "One")
+  fail = fail .or. localTestS(v, extract_word("One,Two,Three", ",", 3), "Three")
+  fail = fail .or. localTestS(v, extract_word("One,Two,Three", ",", 4), "")
+  fail = fail .or. localTestS(v, remove_spaces("1 2 3"), "123")
+  fail = fail .or. localTestS(v, remove_spaces(" 1 2 3"), "123")
+  fail = fail .or. localTestS(v, remove_spaces("1 2 3 "), "123")
+  fail = fail .or. localTestS(v, remove_spaces("123"), "123")
+  fail = fail .or. localTestS(v, remove_spaces(" "), "")
+  fail = fail .or. localTestS(v, remove_spaces(""), "")
+  fail = fail .or. localTestI(v, extract_integer("1", "", 1), 1)
+  fail = fail .or. localTestI(v, extract_integer("1,2,3", ",", 1), 1)
+  fail = fail .or. localTestI(v, extract_integer("1,2", ",", 2), 2)
+  fail = fail .or. localTestI(v, extract_integer("1,2", ",", 3), 0)
+  fail = fail .or. localTestI(v, extract_integer("1,2", ",", 4, 4), 4)
+  fail = fail .or. localTestR(v, extract_real("1.", "", 1), 1.)
+  fail = fail .or. localTestR(v, extract_real("1.,2.,3.", ",", 1), 1.)
+  fail = fail .or. localTestR(v, extract_real("1.,2.", ",", 2), 2.)
+  fail = fail .or. localTestR(v, extract_real("1.,2.", ",", 3), 0.)
+  fail = fail .or. localTestR(v, extract_real("1.,2.", ",", 4, 4.), 4.)
   if (.not. fail) write(stdout,*) 'Pass'
   string_functions_unit_tests = fail
 end function string_functions_unit_tests

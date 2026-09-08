@@ -254,7 +254,7 @@ subroutine vertFPmix(ui, vi, uold, vold, hbl_h, h, forces, dt, lpost, Cemp_NL, G
   is = G%isc ; ie = G%iec ; js = G%jsc ; je = G%jec
   Isq = G%IscB ; Ieq = G%IecB ; Jsq = G%JscB ; Jeq = G%JecB ; nz = GV%ke
 
-  pi = 4. * atan2(1.,1.)
+  pi = 4. * atan2(1., 1.)
   Irho0 = 1.0 / GV%Rho0
 
   ! initialize arrays
@@ -284,7 +284,7 @@ subroutine vertFPmix(ui, vi, uold, vold, hbl_h, h, forces, dt, lpost, Cemp_NL, G
             sigma = depth / hbl_u(i,j)
             ! cell bottom
             depth = depth + 0.5*CS%h_u(I,j,k)
-            call cvmix_kpp_composite_Gshape(sigma,Gat1,Gsig,dGdsig)
+            call cvmix_kpp_composite_Gshape(sigma, Gat1, Gsig, dGdsig)
             ! nonlocal boundary-layer increment
             uInc_u(I,j,k)  = dt * Cemp_NL * taux_u(I,j) * dGdsig / (hbl_u(I,j) * GV%H_to_Z)
             ui(I,j,k) = ui(I,j,k) + uInc_u(I,j,k)
@@ -318,7 +318,7 @@ subroutine vertFPmix(ui, vi, uold, vold, hbl_h, h, forces, dt, lpost, Cemp_NL, G
             sigma = depth / hbl_v(i,J)
             ! cell bottom
             depth = depth + 0.5* CS%h_v(i,J,k)
-            call cvmix_kpp_composite_Gshape(sigma,Gat1,Gsig,dGdsig)
+            call cvmix_kpp_composite_Gshape(sigma, Gat1, Gsig, dGdsig)
             ! nonlocal boundary-layer increment
             vInc_v(i,J,k) = dt * Cemp_NL * tauy_v(i,J) * dGdsig / (hbl_v(i,J) * GV%H_to_Z)
             vi(i,J,k) = vi(i,J,k) + vInc_v(i,J,k)
@@ -3065,26 +3065,26 @@ subroutine vertvisc_init(MIS, Time, G, GV, US, param_file, diag, ADp, dirs, &
       thickness_units, conversion=US%Z_to_m)
 
  if (lfpmix) then
-  CS%id_uE_h = register_diag_field('ocean_model', 'uE_h' , CS%diag%axesTL, &
-      Time, 'x-zonal Eulerian' , 'm s-1', conversion=US%L_T_to_m_s)
-  CS%id_vE_h = register_diag_field('ocean_model', 'vE_h' , CS%diag%axesTL, &
-      Time, 'y-merid Eulerian' , 'm s-1', conversion=US%L_T_to_m_s)
-  CS%id_uInc_h = register_diag_field('ocean_model','uInc_h',CS%diag%axesTL, &
-      Time, 'x-zonal Eulerian' , 'm s-1', conversion=US%L_T_to_m_s)
-  CS%id_vInc_h = register_diag_field('ocean_model','vInc_h',CS%diag%axesTL, &
-      Time, 'x-zonal Eulerian' , 'm s-1', conversion=US%L_T_to_m_s)
-  CS%id_uStk = register_diag_field('ocean_model', 'uStk' , CS%diag%axesTL, &
-      Time, 'x-FP du increment' , 'm s-1', conversion=US%L_T_to_m_s)
-  CS%id_vStk = register_diag_field('ocean_model', 'vStk' , CS%diag%axesTL, &
-      Time, 'y-FP dv increment' , 'm s-1', conversion=US%L_T_to_m_s)
+  CS%id_uE_h = register_diag_field('ocean_model', 'uE_h', CS%diag%axesTL, &
+      Time, 'x-zonal Eulerian', 'm s-1', conversion=US%L_T_to_m_s)
+  CS%id_vE_h = register_diag_field('ocean_model', 'vE_h', CS%diag%axesTL, &
+      Time, 'y-merid Eulerian', 'm s-1', conversion=US%L_T_to_m_s)
+  CS%id_uInc_h = register_diag_field('ocean_model', 'uInc_h', CS%diag%axesTL, &
+      Time, 'x-zonal Eulerian', 'm s-1', conversion=US%L_T_to_m_s)
+  CS%id_vInc_h = register_diag_field('ocean_model', 'vInc_h', CS%diag%axesTL, &
+      Time, 'x-zonal Eulerian', 'm s-1', conversion=US%L_T_to_m_s)
+  CS%id_uStk = register_diag_field('ocean_model', 'uStk', CS%diag%axesTL, &
+      Time, 'x-FP du increment', 'm s-1', conversion=US%L_T_to_m_s)
+  CS%id_vStk = register_diag_field('ocean_model', 'vStk', CS%diag%axesTL, &
+      Time, 'y-FP dv increment', 'm s-1', conversion=US%L_T_to_m_s)
 
-  CS%id_FPtau2s = register_diag_field('ocean_model','Omega_tau2s',CS%diag%axesTi, &
-      Time, 'Stress direction from shear','radians')
-  CS%id_FPtau2w = register_diag_field('ocean_model','Omega_tau2w',CS%diag%axesTi, &
-      Time, 'Stress direction from wind','radians')
-  CS%id_uStk0 = register_diag_field('ocean_model', 'uStk0' , diag%axesT1, &
+  CS%id_FPtau2s = register_diag_field('ocean_model', 'Omega_tau2s', CS%diag%axesTi, &
+      Time, 'Stress direction from shear', 'radians')
+  CS%id_FPtau2w = register_diag_field('ocean_model', 'Omega_tau2w', CS%diag%axesTi, &
+      Time, 'Stress direction from wind', 'radians')
+  CS%id_uStk0 = register_diag_field('ocean_model', 'uStk0', diag%axesT1, &
       Time, 'Zonal Surface Stokes', 'm s-1', conversion=US%L_T_to_m_s)
-  CS%id_vStk0 = register_diag_field('ocean_model', 'vStk0' , diag%axesT1, &
+  CS%id_vStk0 = register_diag_field('ocean_model', 'vStk0', diag%axesT1, &
       Time, 'Merid Surface Stokes', 'm s-1', conversion=US%L_T_to_m_s)
   endif
 

@@ -1785,7 +1785,7 @@ subroutine setup_u_point_obc(OBC, G, US, segment_str, l_seg, l_seg_io, PF, reent
   ! This returns the global indices for the segment
   call parse_segment_str(G%ieg, G%jeg, segment_str, I_obc, Js_obc, Je_obc, action_str, reentrant_y)
 
-  call setup_segment_indices(G, OBC%segment(l_seg),I_obc,I_obc,Js_obc,Je_obc)
+  call setup_segment_indices(G, OBC%segment(l_seg), I_obc, I_obc, Js_obc, Je_obc)
 
   I_obc = I_obc - G%idg_offset ! Convert to local tile indices on this tile
   Js_obc = Js_obc - G%jdg_offset ! Convert to local tile indices on this tile
@@ -1916,7 +1916,7 @@ subroutine setup_v_point_obc(OBC, G, US, segment_str, l_seg, l_seg_io, PF, reent
   ! This returns the global indices for the segment
   call parse_segment_str(G%ieg, G%jeg, segment_str, J_obc, Is_obc, Ie_obc, action_str, reentrant_x)
 
-  call setup_segment_indices(G, OBC%segment(l_seg),Is_obc,Ie_obc,J_obc,J_obc)
+  call setup_segment_indices(G, OBC%segment(l_seg), Is_obc, Ie_obc, J_obc, J_obc)
 
   J_obc = J_obc - G%jdg_offset ! Convert to local tile indices on this tile
   Is_obc = Is_obc - G%idg_offset ! Convert to local tile indices on this tile
@@ -2046,8 +2046,8 @@ subroutine parse_segment_str(ni_global, nj_global, segment_str, l, m, n, action_
   integer, parameter :: halo = 10
 
   ! Process first word which will started with either 'I=' or 'J='
-  word1 = extract_word(segment_str,',',1)
-  word2 = extract_word(segment_str,',',2)
+  word1 = extract_word(segment_str, ',', 1)
+  word2 = extract_word(segment_str, ',', 2)
   if (word1(1:2)=='I=') then
     l_max = ni_global
     mn_max = nj_global
@@ -2071,7 +2071,7 @@ subroutine parse_segment_str(ni_global, nj_global, segment_str, l, m, n, action_
   endif
 
   ! Read m
-  m_word = extract_word(word2(3:24),':',1)
+  m_word = extract_word(word2(3:24), ':', 1)
   m = interpret_int_expr( m_word, mn_max )
   if (reentrant) then
     if (m<-halo .or. m>mn_max+halo) then
@@ -2086,7 +2086,7 @@ subroutine parse_segment_str(ni_global, nj_global, segment_str, l, m, n, action_
   endif
 
   ! Read n
-  n_word = extract_word(word2(3:24),':',2)
+  n_word = extract_word(word2(3:24), ':', 2)
   n = interpret_int_expr( n_word, mn_max )
   if (reentrant) then
     if (n<-halo .or. n>mn_max+halo) then
@@ -2106,7 +2106,7 @@ subroutine parse_segment_str(ni_global, nj_global, segment_str, l, m, n, action_
   endif
 
   ! checking if the number of provided OBC types is less than or equal to 8
-  if (extract_word(segment_str,',',3+size(action_str))/="") then
+  if (extract_word(segment_str, ',', 3+size(action_str))/="") then
     write(max_words, '(I0)') size(action_str)
     call MOM_error(FATAL, "MOM_open_boundary.F90, parse_segment_str: "// &
                    "Number of OBC descriptor words in '" // trim(segment_str) // "' is too large. " // &
@@ -2115,7 +2115,7 @@ subroutine parse_segment_str(ni_global, nj_global, segment_str, l, m, n, action_
 
   ! Type of open boundary condition
   do j = 1, size(action_str)
-    action_str(j) = extract_word(segment_str,',',2+j)
+    action_str(j) = extract_word(segment_str, ',', 2+j)
   enddo
 
   contains
@@ -4169,7 +4169,7 @@ function lookup_seg_field(OBC_seg, field)
 end function lookup_seg_field
 
 !> Return the tracer index from its name
-function get_tracer_index(OBC_seg,tr_name)
+function get_tracer_index(OBC_seg, tr_name)
   type(OBC_segment_type), pointer :: OBC_seg !< OBC segment
   character(len=*), intent(in) :: tr_name   !< The field name
   integer :: get_tracer_index, it
@@ -5488,15 +5488,15 @@ subroutine register_temp_salt_segments(GV, US, OBC, tr_Reg, param_file)
 end subroutine register_temp_salt_segments
 
 !> Sets the OBC properties of external obgc tracers, such as their source file and field name
-subroutine set_obgc_segments_props(OBC,tr_name,obc_src_file_name,obc_src_field_name,lfac_in,lfac_out)
-  type(ocean_OBC_type),pointer  :: OBC                !< Open boundary structure
+subroutine set_obgc_segments_props(OBC, tr_name, obc_src_file_name, obc_src_field_name, lfac_in, lfac_out)
+  type(ocean_OBC_type), pointer :: OBC                !< Open boundary structure
   character(len=*),  intent(in) :: tr_name            !< Tracer name
   character(len=*),  intent(in) :: obc_src_file_name  !< OBC source file name
   character(len=*),  intent(in) :: obc_src_field_name !< name of the field in the source file
   real,              intent(in) :: lfac_in            !< factors for tracer reservoir inbound length scales [nondim]
   real,              intent(in) :: lfac_out           !< factors for tracer reservoir outbound length scales [nondim]
 
-  type(external_tracers_segments_props),pointer :: node_ptr => NULL() !pointer to type that keeps
+  type(external_tracers_segments_props), pointer :: node_ptr => NULL() ! pointer to type that keeps
                                                                     ! the tracer segment properties
   allocate(node_ptr)
   node_ptr%tracer_name = trim(tr_name)
@@ -5512,8 +5512,8 @@ end subroutine set_obgc_segments_props
 
 !> Get the OBC properties of external obgc tracers, such as their source file, field name,
 !! reservoir length scale factors
-subroutine get_obgc_segments_props(node, tr_name,obc_src_file_name,obc_src_field_name,lfac_in,lfac_out)
-  type(external_tracers_segments_props),pointer :: node !< pointer to tracer segment properties
+subroutine get_obgc_segments_props(node, tr_name, obc_src_file_name, obc_src_field_name, lfac_in, lfac_out)
+  type(external_tracers_segments_props), pointer :: node !< pointer to tracer segment properties
   character(len=*), intent(out) :: tr_name            !< Tracer name
   character(len=*), intent(out) :: obc_src_file_name  !< OBC source file name
   character(len=*), intent(out) :: obc_src_field_name !< name of the field in the source file

@@ -459,7 +459,7 @@ subroutine HA_write(ha1, Time, G, CS)
   allocate(cdf_fields(2*nc+1))
 
   ! Variable names
-  cdf_vars(1) = var_desc("z0", "m" ,"mean value", ha1%grid, '1', '1')
+  cdf_vars(1) = var_desc("z0", "m", "mean value", ha1%grid, '1', '1')
   do k=1,nc
     cdf_vars(2*k  ) = var_desc(trim(CS%const_name(k))//"cos", "m", "cosine coefficient", ha1%grid, '1', '1')
     cdf_vars(2*k+1) = var_desc(trim(CS%const_name(k))//"sin", "m", "sine coefficient", ha1%grid, '1', '1')

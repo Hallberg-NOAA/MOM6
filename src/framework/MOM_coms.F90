@@ -315,7 +315,7 @@ function reproducing_sum_2d(array, isr, ier, jsr, jer, EFP_sum, reproducing, &
     do j=js,je ; do i=is,ie
       rsum(1) = rsum(1) + descale*array(i,j)
     enddo ; enddo
-    if (do_sum_across_PEs) call sum_across_PEs(rsum,1)
+    if (do_sum_across_PEs) call sum_across_PEs(rsum, 1)
     sum = rsum(1) * I_unscale
 
     if (present(err)) then ; err = 0 ; endif

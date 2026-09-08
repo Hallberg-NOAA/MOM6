@@ -95,7 +95,7 @@ subroutine MOM_write_cputime_init(param_file, directory, Input_start_time, CS)
                  "factor of the number of processors used.", &
                  units="wall-clock seconds", default=-1.0)
   call get_param(param_file, mdl, "CPU_TIME_FILE", CS%CPUfile, &
-                 "The file into which CPU time is written.",default="CPU_stats")
+                 "The file into which CPU time is written.", default="CPU_stats")
   CS%CPUfile = trim(directory)//trim(CS%CPUfile)
   call log_param(param_file, mdl, "directory/CPU_TIME_FILE", CS%CPUfile)
 #ifdef STATSLABEL
