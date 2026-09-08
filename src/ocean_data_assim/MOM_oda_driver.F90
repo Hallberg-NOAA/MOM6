@@ -203,19 +203,19 @@ subroutine init_oda(Time, G, GV, US, diag_CS, CS)
 ! Use ens1 parameters , this could be changed at a later time
 ! if it were desirable to have alternate parameters, e.g. for the grid
 ! for the analysis
-  call get_MOM_input(PF,dirs,ensemble_num=0)
+  call get_MOM_input(PF, dirs, ensemble_num=0)
   call unit_scaling_init(PF, CS%US)
 
   call get_param(PF, mdl, "ASSIM_METHOD", assim_method,  &
        "String which determines the data assimilation method "//&
        "Valid methods are: \'EAKF\',\'OI\', and \'NO_ASSIM\'", default='NO_ASSIM')
   call get_param(PF, mdl, "ASSIM_INTERVAL", CS%assim_interval,  &
-       "data assimilation update interval in hours",default=-1.0,units="hours",scale=3600.*US%s_to_T)
+       "data assimilation update interval in hours", default=-1.0, units="hours", scale=3600.*US%s_to_T)
   if (CS%assim_interval < 0.) then
      call get_param(PF, mdl, "ASSIM_FREQUENCY", CS%assim_interval,  &
           "data assimilation update  in hours. This parameter name will \n"//&
-          "be deprecated in the future. ASSIM_INTERVAL should be used instead.",default=-1.0, &
-          units="hours",scale=3600.*US%s_to_T)
+          "be deprecated in the future. ASSIM_INTERVAL should be used instead.", default=-1.0, &
+          units="hours", scale=3600.*US%s_to_T)
   endif
 
   call get_param(PF, mdl, "USE_REGRIDDING", CS%use_ALE_algorithm , &
@@ -313,7 +313,7 @@ subroutine init_oda(Time, G, GV, US, diag_CS, CS)
   call verticalGridInit( PF, CS%GV, CS%US )
   allocate(dG)
   call create_dyn_horgrid(dG, HI)
-  call clone_MOM_domain(CS%Grid%Domain, dG%Domain,symmetric=.false.)
+  call clone_MOM_domain(CS%Grid%Domain, dG%Domain, symmetric=.false.)
   call set_grid_metrics(dG, PF, CS%US)
   call MOM_initialize_topography(dG%bathyT, dG%max_depth, dG, PF, CS%US)
   call MOM_initialize_coord(CS%GV, CS%US, PF, tv_dummy, dG%max_depth)
@@ -326,11 +326,11 @@ subroutine init_oda(Time, G, GV, US, diag_CS, CS)
   CS%nk = CS%GV%ke
   ! initialize storage for prior and posterior
   allocate(CS%Ocean_prior)
-  call init_ocean_ensemble(CS%Ocean_prior,CS%Grid,CS%GV,CS%ensemble_size)
+  call init_ocean_ensemble(CS%Ocean_prior, CS%Grid, CS%GV, CS%ensemble_size)
   allocate(CS%Ocean_posterior)
-  call init_ocean_ensemble(CS%Ocean_posterior,CS%Grid,CS%GV,CS%ensemble_size)
+  call init_ocean_ensemble(CS%Ocean_posterior, CS%Grid, CS%GV, CS%ensemble_size)
   allocate(CS%Ocean_increment)
-  call init_ocean_ensemble(CS%Ocean_increment,CS%Grid,CS%GV,CS%ensemble_size)
+  call init_ocean_ensemble(CS%Ocean_increment, CS%Grid, CS%GV, CS%ensemble_size)
 
 
   call get_param(PF, 'oda_driver', "REGRIDDING_COORDINATE_MODE", coord_mode, &
@@ -342,7 +342,7 @@ subroutine init_oda(Time, G, GV, US, diag_CS, CS)
        "If true, use the OM4 remapping-via-subcells algorithm for ODA. "//&
        "See REMAPPING_USE_OM4_SUBCELLS for more details. "//&
        "We recommend setting this option to false.", default=om4_remap_via_sub_cells)
-  call initialize_regridding(CS%regridCS, CS%G, CS%GV, CS%US, dG%max_depth,PF,'oda_driver',coord_mode,'','')
+  call initialize_regridding(CS%regridCS, CS%G, CS%GV, CS%US, dG%max_depth, PF, 'oda_driver', coord_mode, '', '')
 
   h_neglect = set_h_neglect(GV, CS%answer_date, h_neglect_edge)
   call initialize_remapping(CS%remapCS, remap_scheme, om4_remap_via_sub_cells=om4_remap_via_sub_cells, &
@@ -351,8 +351,8 @@ subroutine init_oda(Time, G, GV, US, diag_CS, CS)
   isd = G%isd ; ied = G%ied ; jsd = G%jsd ; jed = G%jed
 
   ! breaking with the MOM6 convention and using global indices
-  !call get_domain_extent(G%Domain,is,ie,js,je,isd,ied,jsd,jed,&
-  !                       isg,ieg,jsg,jeg,idg_offset,jdg_offset,symmetric)
+  !call get_domain_extent(G%Domain, is, ie, js, je, isd, ied, jsd, jed, &
+  !                       isg, ieg, jsg, jeg, idg_offset, jdg_offset, symmetric)
   !isd = isd+idg_offset ; ied = ied+idg_offset ! using global indexing within the DA module
   !jsd = jsd+jdg_offset ; jed = jed+jdg_offset ! TODO:  switch to local indexing? (mjh)
 
@@ -406,9 +406,9 @@ subroutine init_oda(Time, G, GV, US, diag_CS, CS)
 
     inc_file = trim(inputdir) // trim(bias_correction_file)
     CS%INC_CS%T = init_extern_field(inc_file, "temp_increment", &
-          correct_leap_year_inconsistency=.true.,verbose=.true.,domain=G%Domain%mpp_domain)
+          correct_leap_year_inconsistency=.true., verbose=.true., domain=G%Domain%mpp_domain)
     CS%INC_CS%S = init_extern_field(inc_file, "salt_increment", &
-          correct_leap_year_inconsistency=.true.,verbose=.true.,domain=G%Domain%mpp_domain)
+          correct_leap_year_inconsistency=.true., verbose=.true., domain=G%Domain%mpp_domain)
     call get_external_field_info(CS%INC_CS%T, size=fld_sz)
     CS%INC_CS%fldno = 2
     if (CS%nk /= fld_sz(3)) call MOM_error(FATAL, 'Increment levels /= ODA levels')
@@ -453,8 +453,8 @@ subroutine set_prior_tracer(Time, G, GV, h, tv, CS)
   ! computational domain for the analysis grid
   isc = CS%Grid%isc ; iec = CS%Grid%iec ; jsc = CS%Grid%jsc ; jec = CS%Grid%jec
   ! array extents for the ensemble member
-  !call get_domain_extent(CS%domains(CS%ensemble_id),is,ie,js,je,isd,ied,jsd,jed,&
-  !     isg,ieg,jsg,jeg,idg_offset,jdg_offset,symmetric)
+  !call get_domain_extent(CS%domains(CS%ensemble_id), is, ie, js, je, isd, ied, jsd, jed, &
+  !     isg, ieg, jsg, jeg, idg_offset, jdg_offset, symmetric)
   ! remap temperature and salinity from the ensemble member to the analysis grid
   do j=G%jsc,G%jec ; do i=G%isc,G%iec
     call remapping_core_h(CS%remapCS, GV%ke, h(i,j,:), tv%T(i,j,:), &
@@ -471,8 +471,8 @@ subroutine set_prior_tracer(Time, G, GV, h, tv, CS)
   enddo
 
   do m=1,CS%ensemble_size
-    call pass_var(CS%Ocean_prior%T(:,:,:,m),CS%Grid%domain)
-    call pass_var(CS%Ocean_prior%S(:,:,:,m),CS%Grid%domain)
+    call pass_var(CS%Ocean_prior%T(:,:,:,m), CS%Grid%domain)
+    call pass_var(CS%Ocean_prior%S(:,:,:,m), CS%Grid%domain)
   enddo
 
   !! switch back to ensemble member pelist
@@ -531,8 +531,8 @@ subroutine get_posterior_tracer(Time, CS, increment)
   !! switch back to ensemble member pelist
   call set_PElist(CS%ensemble_pelist(CS%ensemble_id,:))
 
-  call pass_var(CS%T_tend,CS%domains(CS%ensemble_id))
-  call pass_var(CS%S_tend,CS%domains(CS%ensemble_id))
+  call pass_var(CS%T_tend, CS%domains(CS%ensemble_id))
+  call pass_var(CS%S_tend, CS%domains(CS%ensemble_id))
 
   !convert to a tendency (degC or PSU per second)
   CS%T_tend = CS%T_tend / (CS%assim_interval)

@@ -336,8 +336,8 @@ subroutine MOM_grid_init(G, param_file, US, HI, global_indexing, bathymetry_at_v
        "nblocks(=NI_BLOCK*NJ_BLOCK) must be no less than 1")
 
   allocate(ibegin(niblock), iend(niblock), jbegin(njblock), jend(njblock))
-  call compute_block_extent(G%HI%isc,G%HI%iec,niblock,ibegin,iend)
-  call compute_block_extent(G%HI%jsc,G%HI%jec,njblock,jbegin,jend)
+  call compute_block_extent(G%HI%isc, G%HI%iec, niblock, ibegin, iend)
+  call compute_block_extent(G%HI%jsc, G%HI%jec, njblock, jbegin, jend)
   !-- make sure the last block is the largest.
   do i = 1, niblock-1
     if (iend(i)-ibegin(i) > iend(niblock)-ibegin(niblock) ) call MOM_error(FATAL, &

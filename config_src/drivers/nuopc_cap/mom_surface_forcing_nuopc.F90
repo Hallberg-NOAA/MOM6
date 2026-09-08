@@ -1347,7 +1347,7 @@ subroutine surface_forcing_init(Time, G, US, param_file, diag, CS, restore_salt,
                    default="max_delta_srestore")
       CS%max_delta_srestore = 999.0
       call safe_alloc_ptr(CS%max_delta_srestore_2d, isd, ied, jsd, jed)
-      call MOM_read_data(flnam,varnam, CS%max_delta_srestore_2d, G%domain, timelevel=1)
+      call MOM_read_data(flnam, varnam, CS%max_delta_srestore_2d, G%domain, timelevel=1)
     endif
     call get_param(param_file, mdl, "MIN_RATIO_SRESTORE", CS%min_ratio_srestore, &
                  "Turn off MAX_DELTA_SRESTORE where the ratio of SSS to restoring salinity "//&
@@ -1367,7 +1367,7 @@ subroutine surface_forcing_init(Time, G, US, param_file, diag, CS, restore_salt,
     basin_file = trim(CS%inputdir) // trim(basin_file)
     call safe_alloc_ptr(CS%basin_mask, isd, ied, jsd, jed) ; CS%basin_mask(:,:) = 1.0
     if (CS%mask_srestore_marginal_seas) then
-      call MOM_read_data(basin_file,'basin',CS%basin_mask,G%domain, timelevel=1)
+      call MOM_read_data(basin_file, 'basin', CS%basin_mask, G%domain, timelevel=1)
       do j=jsd,jed ; do i=isd,ied
         if (CS%basin_mask(i,j) >= 6.0) then ; CS%basin_mask(i,j) = 0.0
         else ; CS%basin_mask(i,j) = 1.0 ; endif
@@ -1427,7 +1427,7 @@ subroutine surface_forcing_init(Time, G, US, param_file, diag, CS, restore_salt,
 
   if (CS%read_TIDEAMP) then
     TideAmp_file = trim(CS%inputdir) // trim(TideAmp_file)
-    call MOM_read_data(TideAmp_file,'tideamp',CS%TKE_tidal,G%domain,timelevel=1, scale=US%m_to_Z*US%T_to_s)
+    call MOM_read_data(TideAmp_file, 'tideamp', CS%TKE_tidal, G%domain, timelevel=1, scale=US%m_to_Z*US%T_to_s)
     do j=jsd,jed ; do i=isd,ied
       utide = CS%TKE_tidal(i,j)
       CS%TKE_tidal(i,j) = G%mask2dT(i,j)*CS%Rho0*CS%cd_tides*(utide*utide*utide)
@@ -1548,7 +1548,7 @@ subroutine surface_forcing_init(Time, G, US, param_file, diag, CS, restore_salt,
     call safe_alloc_ptr(CS%srestore_mask, isd, ied, jsd, jed) ; CS%srestore_mask(:,:) = 1.0
     if (CS%mask_srestore) then ! read a 2-d file containing a mask for restoring fluxes
       flnam = trim(CS%inputdir) // 'salt_restore_mask.nc'
-      call MOM_read_data(flnam,'mask', CS%srestore_mask, G%domain, timelevel=1)
+      call MOM_read_data(flnam, 'mask', CS%srestore_mask, G%domain, timelevel=1)
     endif
   endif ; endif
 

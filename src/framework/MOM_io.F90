@@ -698,7 +698,7 @@ subroutine reopen_MOM_file(IO_handle, filename, vars, novars, fields, &
   if (check_name(length-2:length) /= ".nc") check_name = trim(check_name)//".nc"
   if (thread /= SINGLE_FILE) check_name = trim(check_name)//".0000"
 
-  inquire(file=check_name,EXIST=exists)
+  inquire(file=check_name, EXIST=exists)
 
   if (.not.exists) then
     call create_MOM_file(IO_handle, filename, vars, novars, fields, &
@@ -1975,7 +1975,7 @@ end subroutine delete_axis_info
 
 
 !> Retrieve the information from an axis_info type.
-subroutine get_axis_info(axis,name,longname,units,cartesian,ax_size,ax_data)
+subroutine get_axis_info(axis, name, longname, units, cartesian, ax_size, ax_data)
   type(axis_info), intent(in) :: axis                               !< An axis type
   character(len=*), intent(out), optional    :: name                !< The axis name.
   character(len=*), intent(out), optional    :: longname            !< The axis longname.
@@ -3108,7 +3108,7 @@ function ensembler(name, ens_no_in) result(en_nm)
   integer :: n, is
 
   en_nm = trim(name)
-  if (index(name,"%") == 0) return
+  if (index(name, "%") == 0) return
 
   if (present(ens_no_in)) then
     ens_no = ens_no_in
@@ -3118,7 +3118,7 @@ function ensembler(name, ens_no_in) result(en_nm)
 
   write(ens_num_char, '(I0)') ens_no
   do
-    is = index(en_nm,"%E")
+    is = index(en_nm, "%E")
     if (is == 0) exit
     if (len(en_nm) < len(trim(en_nm)) + len(trim(ens_num_char)) - 2) &
       call MOM_error(FATAL, "MOM_io ensembler: name "//trim(name)// &
@@ -3127,13 +3127,13 @@ function ensembler(name, ens_no_in) result(en_nm)
     en_nm = tmp
   enddo
 
-  if (index(name,"%") == 0) return
+  if (index(name, "%") == 0) return
 
   write(ens_num_char, '(I10.10)') ens_no
   do n=1,9 ; do
     write(code_str, '("%",I1,"E")') n
 
-    is = index(en_nm,code_str)
+    is = index(en_nm, code_str)
     if (is == 0) exit
     if (ens_no < 10**n) then
       if (len(en_nm) < len(trim(en_nm)) + n-3) call MOM_error(FATAL, &
@@ -3258,13 +3258,13 @@ subroutine get_var_axes_info(filename, fieldname, axes_info)
   if (rcode /= 0) call MOM_error(FATAL, "error reading dimension 3 values for var_name "// &
                 trim(fieldname//",dim_name "//trim(dim_name(3)))//" in file "// trim(filename)//" in  hinterp_extrap")
 
-  call set_axis_info(axes_info(1), name=trim(dim_name(1)), ax_size=id, ax_data=x,cartesian='X')
-  call set_axis_info(axes_info(2), name=trim(dim_name(2)), ax_size=jd, ax_data=y,cartesian='Y')
-  call set_axis_info(axes_info(3), name=trim(dim_name(3)), ax_size=kd, ax_data=z,cartesian='Z')
+  call set_axis_info(axes_info(1), name=trim(dim_name(1)), ax_size=id, ax_data=x, cartesian='X')
+  call set_axis_info(axes_info(2), name=trim(dim_name(2)), ax_size=jd, ax_data=y, cartesian='Y')
+  call set_axis_info(axes_info(3), name=trim(dim_name(3)), ax_size=kd, ax_data=z, cartesian='Z')
 
   call close_file_to_read(ncid, filename)
 
-  deallocate(x,y,z)
+  deallocate(x, y, z)
 
 end subroutine get_var_axes_info
 !> \namespace mom_io

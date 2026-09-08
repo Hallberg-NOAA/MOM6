@@ -91,7 +91,7 @@ subroutine myStats(array, missing, G, k, mesg, unscale, full_halo)
   if (is_root_pe()) then
     write(lMesg(1:120),'(2(a,es12.4),a,I0,1x,a)') &
          'init_from_Z: min=',minA*scl,' max=',maxA*scl,' Level=',k,trim(mesg)
-    call MOM_mesg(lMesg,2)
+    call MOM_mesg(lMesg, 2)
   endif
 
 end subroutine myStats
@@ -167,8 +167,8 @@ subroutine fill_miss_2d(aout, good, fill, prev, G, acrit, num_pass, relc, debug,
 
   do while (nfill > 0.0)
 
-    call pass_var(good_,G%Domain)
-    call pass_var(aout,G%Domain)
+    call pass_var(good_, G%Domain)
+    call pass_var(aout, G%Domain)
 
     a_filled(:,:) = aout(:,:)
     good_new(:,:) = good_(:,:)
@@ -222,7 +222,7 @@ subroutine fill_miss_2d(aout, good, fill, prev, G, acrit, num_pass, relc, debug,
 
   ! Do Laplacian smoothing for the points that have been filled in.
   do k=1,npass
-    call pass_var(aout,G%Domain)
+    call pass_var(aout, G%Domain)
 
     a_chg(:,:) = 0.0
     if (ans_2018) then
@@ -401,17 +401,17 @@ subroutine horiz_interp_and_extrap_tracer_record(filename, varnam, recnum, G, tr
   if (allocated(tr_z)) deallocate(tr_z)
   if (allocated(mask_z)) deallocate(mask_z)
 
-  call get_axis_info(axes_info(1),ax_size=id)
-  call get_axis_info(axes_info(2),ax_size=jd)
-  call get_axis_info(axes_info(3),ax_size=kd)
+  call get_axis_info(axes_info(1), ax_size=id)
+  call get_axis_info(axes_info(2), ax_size=jd)
+  call get_axis_info(axes_info(3), ax_size=kd)
 
   allocate(lon_in(id), lat_in(jd), z_in(kd), z_edges_in(kd+1))
   allocate(tr_z(isd:ied,jsd:jed,kd), source=0.0)
   allocate(mask_z(isd:ied,jsd:jed,kd), source=0.0)
 
-  call get_axis_info(axes_info(1),ax_data=lon_in)
-  call get_axis_info(axes_info(2),ax_data=lat_in)
-  call get_axis_info(axes_info(3),ax_data=z_in)
+  call get_axis_info(axes_info(1), ax_data=lon_in)
+  call get_axis_info(axes_info(2), ax_data=lat_in)
+  call get_axis_info(axes_info(3), ax_data=z_in)
 
   call cpu_clock_end(id_clock_read)
 

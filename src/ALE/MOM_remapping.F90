@@ -150,7 +150,7 @@ subroutine remapping_set_param(CS, remapping_scheme, boundary_extrapolation,  &
 
   if (present(remapping_scheme)) then
     call setReconstructionType( remapping_scheme, CS )
-    if (index(trim(remapping_scheme),'C_')>0) then
+    if (index(trim(remapping_scheme), 'C_') > 0) then
       if (present(nk)) then
         call CS%reconstruction%init(nk, h_neglect=h_neglect)
       else

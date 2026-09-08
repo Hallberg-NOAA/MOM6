@@ -404,22 +404,22 @@ subroutine calculate_bkgnd_mixing(h, tv, N2_lay, Kd_lay, Kd_int, Kv_bkgnd, j, G,
 
       ! North Banda Sea
       if ( (G%geoLatT(i,j) < -1.0)  .and. (G%geoLatT(i,j) > -4.0) .and. &
-           ( mod(G%geoLonT(i,j)+360.0,360.0) > 103.0) .and. &
-           ( mod(G%geoLonT(i,j)+360.0,360.0) < 134.0) ) then
+           ( mod(G%geoLonT(i,j)+360.0, 360.0) > 103.0) .and. &
+           ( mod(G%geoLonT(i,j)+360.0, 360.0) < 134.0) ) then
         Kd_int(i,1) = CS%bckgrnd_vdc_Banda
       endif
 
       ! Middle Banda Sea
       if ( (G%geoLatT(i,j) <= -4.0) .and. (G%geoLatT(i,j) > -7.0) .and. &
-           ( mod(G%geoLonT(i,j)+360.0,360.0) > 106.0) .and. &
-           ( mod(G%geoLonT(i,j)+360.0,360.0) < 140.0) ) then
+           ( mod(G%geoLonT(i,j)+360.0, 360.0) > 106.0) .and. &
+           ( mod(G%geoLonT(i,j)+360.0, 360.0) < 140.0) ) then
         Kd_int(i,1) = CS%bckgrnd_vdc_Banda
       endif
 
       ! South Banda Sea
       if ( (G%geoLatT(i,j) <= -7.0) .and. (G%geoLatT(i,j) > -8.3) .and. &
-           ( mod(G%geoLonT(i,j)+360.0,360.0) > 111.0) .and. &
-           ( mod(G%geoLonT(i,j)+360.0,360.0) < 142.0) ) then
+           ( mod(G%geoLonT(i,j)+360.0, 360.0) > 111.0) .and. &
+           ( mod(G%geoLonT(i,j)+360.0, 360.0) < 142.0) ) then
         Kd_int(i,1) = CS%bckgrnd_vdc_Banda
       endif
 

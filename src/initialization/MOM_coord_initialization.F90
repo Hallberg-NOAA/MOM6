@@ -596,8 +596,8 @@ subroutine write_vertgrid_file(GV, US, param_file, directory)
 
   filepath = trim(directory) // trim("Vertical_coordinate.nc")
 
-  vars(1) = var_desc("R","kilogram meter-3","Target Potential Density",'1','L','1')
-  vars(2) = var_desc("g","meter second-2","Reduced gravity",'1','i','1')
+  vars(1) = var_desc("R", "kilogram meter-3", "Target Potential Density", '1', 'L', '1')
+  vars(2) = var_desc("g", "meter second-2", "Reduced gravity", '1', 'i', '1')
 
   call create_MOM_file(IO_handle, trim(filepath), vars, 2, fields, &
       SINGLE_FILE, GV=GV)

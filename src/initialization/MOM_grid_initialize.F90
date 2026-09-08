@@ -146,17 +146,17 @@ subroutine grid_metrics_chksum(parent, G, US)
 
   call Bchksum_pair(trim(parent)//': Id[xy]B[uv]', G%IdxBu, G%IdyBu, G%HI, haloshift=halo, unscale=US%m_to_L)
 
-  call hchksum(G%areaT, trim(parent)//': areaT',G%HI, haloshift=halo, unscale=US%L_to_m**2)
-  call Bchksum(G%areaBu, trim(parent)//': areaBu',G%HI, haloshift=halo, unscale=US%L_to_m**2)
+  call hchksum(G%areaT, trim(parent)//': areaT', G%HI, haloshift=halo, unscale=US%L_to_m**2)
+  call Bchksum(G%areaBu, trim(parent)//': areaBu', G%HI, haloshift=halo, unscale=US%L_to_m**2)
 
-  call hchksum(G%IareaT, trim(parent)//': IareaT',G%HI, haloshift=halo, unscale=US%m_to_L**2)
-  call Bchksum(G%IareaBu, trim(parent)//': IareaBu',G%HI, haloshift=halo, unscale=US%m_to_L**2)
+  call hchksum(G%IareaT, trim(parent)//': IareaT', G%HI, haloshift=halo, unscale=US%m_to_L**2)
+  call Bchksum(G%IareaBu, trim(parent)//': IareaBu', G%HI, haloshift=halo, unscale=US%m_to_L**2)
 
-  call hchksum(G%geoLonT,trim(parent)//': geoLonT',G%HI, haloshift=halo)
-  call hchksum(G%geoLatT,trim(parent)//': geoLatT',G%HI, haloshift=halo)
+  call hchksum(G%geoLonT, trim(parent)//': geoLonT', G%HI, haloshift=halo)
+  call hchksum(G%geoLatT, trim(parent)//': geoLatT', G%HI, haloshift=halo)
 
-  call Bchksum(G%geoLonBu, trim(parent)//': geoLonBu',G%HI, haloshift=halo)
-  call Bchksum(G%geoLatBu, trim(parent)//': geoLatBu',G%HI, haloshift=halo)
+  call Bchksum(G%geoLonBu, trim(parent)//': geoLonBu', G%HI, haloshift=halo)
+  call Bchksum(G%geoLatBu, trim(parent)//': geoLatBu', G%HI, haloshift=halo)
 
   call uvchksum(trim(parent)//': geoLonC[uv]', G%geoLonCu, G%geoLonCv, G%HI, haloshift=halo)
 
@@ -851,10 +851,10 @@ subroutine set_grid_metrics_mercator(G, param_file, US)
   if (.not.simple_area) then
     do j=JsdB+1,jed ; do i=IsdB+1,ied
       G%areaT(I,J) = GP%Rad_Earth_L**2 * &
-          (dL(xq(I-1,J-1),xq(I-1,J),yq(I-1,J-1),yq(I-1,J)) + &
-          (dL(xq(I-1,J),xq(I,J),yq(I-1,J),yq(I,J)) +          &
-          (dL(xq(I,J),xq(I,J-1),yq(I,J),yq(I,J-1)) +          &
-           dL(xq(I,J-1),xq(I-1,J-1),yq(I,J-1),yq(I-1,J-1)))))
+          (dL(xq(I-1,J-1), xq(I-1,J), yq(I-1,J-1), yq(I-1,J)) + &
+          (dL(xq(I-1,J), xq(I,J), yq(I-1,J), yq(I,J)) + &
+          (dL(xq(I,J), xq(I,J-1), yq(I,J), yq(I,J-1)) + &
+           dL(xq(I,J-1), xq(I-1,J-1), yq(I,J-1), yq(I-1,J-1)))))
     enddo ; enddo
     if ((IsdB == isd) .or. (JsdB == jsq)) then
       ! Fill in row and column 1 to calculate the area in the southernmost
@@ -864,7 +864,7 @@ subroutine set_grid_metrics_mercator(G, param_file, US)
       do j=jsd,jed ; G%areaT(isd,j) = G%areaT(isd+1,j) ; enddo
       do i=isd,ied ; G%areaT(i,jsd) = G%areaT(i,jsd+1) ; enddo
       ! Now replace the data in the halos, if value values exist.
-      call pass_var(G%areaT,G%Domain)
+      call pass_var(G%areaT, G%Domain)
     endif
     do j=jsd,jed ; do i=isd,ied
       G%IareaT(i,j) = 1.0 / (G%areaT(i,j))
@@ -883,7 +883,7 @@ function ds_di(x, y, GP)
 
   real :: ds_di  ! The returned grid spacing [L ~> m]
 
-  ds_di = GP%Rad_Earth_L * cos(y) * dx_di(x,GP)
+  ds_di = GP%Rad_Earth_L * cos(y) * dx_di(x, GP)
   ! In general, this might be...
   ! ds_di = GP%Rad_Earth_L * sqrt( cos(y)*cos(y) * dx_di(x,y,GP)*dx_di(x,y,GP) + &
   !                           dy_di(x,y,GP)*dy_di(x,y,GP))
@@ -897,7 +897,7 @@ function ds_dj(x, y, GP)
 
   real :: ds_dj  ! The returned grid spacing [L ~> m]
 
-  ds_dj = GP%Rad_Earth_L * dy_dj(y,GP)
+  ds_dj = GP%Rad_Earth_L * dy_dj(y, GP)
   ! In general, this might be...
   ! ds_dj = GP%Rad_Earth_L * sqrt( cos(y)*cos(y) * dx_dj(x,y,GP)*dx_dj(x,y,GP) + &
   !                           dy_dj(x,y,GP)*dy_dj(x,y,GP))

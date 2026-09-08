@@ -497,7 +497,7 @@ subroutine mom_import(ocean_public, ocean_grid, importState, ice_ocean_boundary,
   ! and preset value will be used
   ice_ocean_boundary%mi(:,:) = 0._ESMF_KIND_R8
   call state_getimport(importState, 'mass_of_overlying_ice', isc, iec, jsc, jec, &
-       ice_ocean_boundary%mi,rc=rc)
+       ice_ocean_boundary%mi, rc=rc)
   if (ChkErr(rc, __LINE__, u_FILE_u)) return
 
   !----
@@ -534,9 +534,9 @@ subroutine mom_import(ocean_public, ocean_grid, importState, ice_ocean_boundary,
       allocate(stkx(isc:iec,jsc:jec,1:nsc))
       allocate(stky(isc:iec,jsc:jec,1:nsc))
 
-      call state_getimport(importState,'Sw_pstokes_x', isc, iec, jsc, jec, 1, nsc, stkx, rc=rc)
+      call state_getimport(importState, 'Sw_pstokes_x', isc, iec, jsc, jec, 1, nsc, stkx, rc=rc)
       if (ChkErr(rc, __LINE__, u_FILE_u)) return
-      call state_getimport(importState,'Sw_pstokes_y', isc, iec, jsc, jec, 1, nsc, stky, rc=rc)
+      call state_getimport(importState, 'Sw_pstokes_y', isc, iec, jsc, jec, 1, nsc, stky, rc=rc)
       if (ChkErr(rc, __LINE__, u_FILE_u)) return
 
       ! rotate from true zonal/meridional to local coordinates
@@ -570,7 +570,7 @@ subroutine mom_import(ocean_public, ocean_grid, importState, ice_ocean_boundary,
           ice_ocean_boundary%vstkb(i,j,:) = ice_ocean_boundary%vstkb(i,j,:) * ocean_grid%mask2dT(ig,jg)
         enddo
       enddo
-      deallocate(stkx,stky)
+      deallocate(stkx, stky)
   endif
 
 end subroutine mom_import

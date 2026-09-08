@@ -2284,7 +2284,7 @@ function kappa_shear_init(Time, G, GV, US, param_file, diag, CS)
 
   CS%nkml = 1
   if (GV%nkml>0) then
-    call get_param(param_file, mdl, "KAPPA_SHEAR_MERGE_ML",merge_mixedlayer, &
+    call get_param(param_file, mdl, "KAPPA_SHEAR_MERGE_ML", merge_mixedlayer, &
                  "If true, combine the mixed layers together before solving the "//&
                  "kappa-shear equations.", default=.true., do_not_log=just_read)
     if (merge_mixedlayer) CS%nkml = GV%nkml
@@ -2295,36 +2295,36 @@ function kappa_shear_init(Time, G, GV, US, param_file, diag, CS)
 
   CS%diag => diag
 
-  CS%id_Kd_shear = register_diag_field('ocean_model','Kd_shear', diag%axesTi, Time, &
+  CS%id_Kd_shear = register_diag_field('ocean_model', 'Kd_shear', diag%axesTi, Time, &
       'Shear-driven Diapycnal Diffusivity at horizontal tracer points', 'm2 s-1', conversion=GV%HZ_T_to_m2_s)
   if (CS%KS_at_vertex) then
-    CS%id_TKE = register_diag_field('ocean_model','TKE_shear', diag%axesBi, Time, &
+    CS%id_TKE = register_diag_field('ocean_model', 'TKE_shear', diag%axesBi, Time, &
        'Shear-driven Turbulent Kinetic Energy at horizontal vertices', 'm2 s-2', conversion=US%Z_to_m**2*US%s_to_T**2)
-    CS%id_Kd_vertex = register_diag_field('ocean_model','Kd_shear_vertex', diag%axesBi, Time, &
+    CS%id_Kd_vertex = register_diag_field('ocean_model', 'Kd_shear_vertex', diag%axesBi, Time, &
          'Shear-driven Diapycnal Diffusivity at horizontal vertices', 'm2 s-1', conversion=GV%HZ_T_to_m2_s)
-    CS%id_S2_init = register_diag_field('ocean_model','S2_shear_in', diag%axesBi, Time, &
+    CS%id_S2_init = register_diag_field('ocean_model', 'S2_shear_in', diag%axesBi, Time, &
          'Interface shear squared at horizontal vertices, as input to kappa-shear', 's-2', conversion=US%s_to_T**2)
-    CS%id_N2_init = register_diag_field('ocean_model','N2_shear_in', diag%axesBi, Time, &
+    CS%id_N2_init = register_diag_field('ocean_model', 'N2_shear_in', diag%axesBi, Time, &
          'Interface stratification at horizontal vertices, as input to kappa-shear', 's-2', conversion=US%s_to_T**2)
-    CS%id_S2_mean = register_diag_field('ocean_model','S2_shear_mean', diag%axesBi, Time, &
+    CS%id_S2_mean = register_diag_field('ocean_model', 'S2_shear_mean', diag%axesBi, Time, &
          'Interface shear squared at horizontal vertices, averaged over timestep in kappa-shear', &
          's-2', conversion=US%s_to_T**2)
-    CS%id_N2_mean = register_diag_field('ocean_model','N2_shear_mean', diag%axesBi, Time, &
+    CS%id_N2_mean = register_diag_field('ocean_model', 'N2_shear_mean', diag%axesBi, Time, &
          'Interface stratification at horizontal vertices, averaged over timestep in kappa-shear', &
          's-2', conversion=US%s_to_T**2)
   else
-    CS%id_TKE = register_diag_field('ocean_model','TKE_shear', diag%axesTi, Time, &
+    CS%id_TKE = register_diag_field('ocean_model', 'TKE_shear', diag%axesTi, Time, &
          'Shear-driven Turbulent Kinetic Energy at horizontal tracer points', &
          'm2 s-2', conversion=US%Z_to_m**2*US%s_to_T**2)
-    CS%id_S2_init = register_diag_field('ocean_model','S2_shear_in', diag%axesTi, Time, &
+    CS%id_S2_init = register_diag_field('ocean_model', 'S2_shear_in', diag%axesTi, Time, &
          'Interface shear squared at horizontal tracer points, as input to kappa-shear', 's-2', conversion=US%s_to_T**2)
-    CS%id_N2_init = register_diag_field('ocean_model','N2_shear_in', diag%axesTi, Time, &
+    CS%id_N2_init = register_diag_field('ocean_model', 'N2_shear_in', diag%axesTi, Time, &
          'Interface stratification at horizontal tracer points, as input to kappa-shear', &
          's-2', conversion=US%s_to_T**2)
-    CS%id_S2_mean = register_diag_field('ocean_model','S2_shear_mean', diag%axesTi, Time, &
+    CS%id_S2_mean = register_diag_field('ocean_model', 'S2_shear_mean', diag%axesTi, Time, &
          'Interface shear squared at horizontal tracer points, averaged over timestep in kappa-shear', &
          's-2', conversion=US%s_to_T**2)
-    CS%id_N2_mean = register_diag_field('ocean_model','N2_shear_mean', diag%axesTi, Time, &
+    CS%id_N2_mean = register_diag_field('ocean_model', 'N2_shear_mean', diag%axesTi, Time, &
          'Interface stratification at horizontal tracer points, averaged ove timestep in kappa-shear', &
          's-2', conversion=US%s_to_T**2)
   endif

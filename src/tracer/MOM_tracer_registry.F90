@@ -631,7 +631,7 @@ subroutine register_tracer_diagnostics(Reg, h, Time, diag, G, GV, US, use_ALE, u
 
     if (use_ALE .and. (Reg%ntr<MAX_FIELDS_) .and. Tr%remap_tr) then
       unit2 = trim(units)//"2"
-      if (index(units(1:len_trim(units))," ") > 0) unit2 = "("//trim(units)//")2"
+      if (index(units(1:len_trim(units)), " ") > 0) unit2 = "("//trim(units)//")2"
       Tr%id_tr_vardec = register_diag_field('ocean_model', trim(shortnm)//"_vardec", diag%axesTL, &
           Time, "ALE variance decay for "//lowercase(longname), &
           trim(unit2)//" s-1", conversion=Tr%conc_scale**2*US%s_to_T)

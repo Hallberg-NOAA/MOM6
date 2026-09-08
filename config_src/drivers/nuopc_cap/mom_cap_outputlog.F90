@@ -206,7 +206,7 @@ subroutine outputlog_init(gcomp, mclock, rc)
   ! get start hour time offset (ie, fhrot)
   call ESMF_TimeGet(mcurrTime, yy=year, mm=month, dd=day, h=hour, rc=rc)
   if (ChkErr(rc, __LINE__, u_FILE_u)) return
-  if (mod(hour,6) /= 0) then
+  if (mod(hour, 6) /= 0) then
     toffset = hour - 6
   else
     toffset = 0
@@ -353,7 +353,7 @@ subroutine outputlog_run(mclock, atStopTime, rc)
           endif
         endif
       endif
-      if (debug .and. is_root_pe()) call debug_info(trim(subname)//'  ',trim(olog(n)%filename), &
+      if (debug .and. is_root_pe()) call debug_info(trim(subname)//'  ', trim(olog(n)%filename), &
            olog(n)%chkfile_nextAdvance, olog(n)%createsize, importexport)
 
       if (lstop) then
@@ -379,7 +379,7 @@ subroutine outputlog_run(mclock, atStopTime, rc)
             if (ChkErr(rc, __LINE__, u_FILE_u)) return
           endif
         endif
-        if (debug .and. is_root_pe()) call debug_info(trim(subname)//' lstop ',trim(olog(n)%filename), &
+        if (debug .and. is_root_pe()) call debug_info(trim(subname)//' lstop ', trim(olog(n)%filename), &
              olog(n)%chkfile_nextAdvance, olog(n)%createsize, importexport)
 
       endif ! lstop

@@ -4374,18 +4374,18 @@ subroutine downsample_diag_masks_set(G, nz, diag_cs)
   do dl=1, diag_cs%num_diag_dsamp_levels
     dlfac = diag_cs%diag_dsamp_levels(dl) !Actual downsampling factor for this level
     ! 2d mask
-    call downsample_mask(G%mask2dT, diag_cs%dsamp(dl)%mask2dT,  dlfac, MMP, G%isc, G%jsc, G%isd, G%jsd, &
+    call downsample_mask(G%mask2dT, diag_cs%dsamp(dl)%mask2dT, dlfac, MMP, G%isc, G%jsc, G%isd, G%jsd, &
                          G%HId(dl)%isc, G%HId(dl)%iec, G%HId(dl)%jsc, G%HId(dl)%jec, G%HId(dl)%isd, G%HId(dl)%ied, &
                          G%HId(dl)%jsd, G%HId(dl)%jed)
-    call downsample_mask(G%mask2dBu, diag_cs%dsamp(dl)%mask2dBu, dlfac, PPP,G%IscB, G%JscB, G%IsdB, G%JsdB, &
-                         G%HId(dl)%IscB,G%HId(dl)%IecB, G%HId(dl)%JscB,G%HId(dl)%JecB,G%HId(dl)%IsdB,G%HId(dl)%IedB, &
-                         G%HId(dl)%JsdB,G%HId(dl)%JedB)
+    call downsample_mask(G%mask2dBu, diag_cs%dsamp(dl)%mask2dBu, dlfac, PPP, G%IscB, G%JscB, G%IsdB, G%JsdB, &
+                         G%HId(dl)%IscB,G%HId(dl)%IecB, G%HId(dl)%JscB,G%HId(dl)%JecB, G%HId(dl)%IsdB, G%HId(dl)%IedB, &
+                         G%HId(dl)%JsdB, G%HId(dl)%JedB)
     call downsample_mask(G%mask2dCu, diag_cs%dsamp(dl)%mask2dCu, dlfac, PMP, G%IscB, G%jsc, G%IsdB, G%jsd, &
-                         G%HId(dl)%IscB,G%HId(dl)%IecB, G%HId(dl)%jsc, G%HId(dl)%jec,G%HId(dl)%IsdB,G%HId(dl)%IedB, &
+                         G%HId(dl)%IscB, G%HId(dl)%IecB, G%HId(dl)%jsc, G%HId(dl)%jec, G%HId(dl)%IsdB, G%HId(dl)%IedB, &
                          G%HId(dl)%jsd, G%HId(dl)%jed)
-    call downsample_mask(G%mask2dCv, diag_cs%dsamp(dl)%mask2dCv, dlfac, MPP, G %isc ,G%JscB, G%isd, G%JsdB, &
-                         G%HId(dl)%isc ,G%HId(dl)%iec, G%HId(dl)%JscB,G%HId(dl)%JecB,G%HId(dl)%isd ,G%HId(dl)%ied, &
-                         G%HId(dl)%JsdB,G%HId(dl)%JedB)
+    call downsample_mask(G%mask2dCv, diag_cs%dsamp(dl)%mask2dCv, dlfac, MPP, G%isc, G%JscB, G%isd, G%JsdB, &
+                         G%HId(dl)%isc, G%HId(dl)%iec, G%HId(dl)%JscB, G%HId(dl)%JecB, G%HId(dl)%isd, G%HId(dl)%ied, &
+                         G%HId(dl)%JsdB, G%HId(dl)%JedB)
     ! 3d native masks are needed by diag_manager but the native variables
     ! can only be masked 2d - for ocean points, all layers exists.
     allocate(diag_cs%dsamp(dl)%mask3dTL(G%HId(dl)%isd:G%HId(dl)%ied,G%HId(dl)%jsd:G%HId(dl)%jed,1:nz))
@@ -4454,8 +4454,8 @@ subroutine downsample_diag_indices_get(fo1, fo2, dl, diag_cs, isv, iev, jsv, jev
   f2 = fo2/dlfac
   ! Correction for the symmetric case
   if (diag_cs%G%symmetric) then
-    f1 = f1 + mod(fo1,dlfac)
-    f2 = f2 + mod(fo2,dlfac)
+    f1 = f1 + mod(fo1, dlfac)
+    f2 = f2 + mod(fo2, dlfac)
   endif
 
   ! Find the range of indices in the downsampled computational domain.
@@ -4819,8 +4819,8 @@ subroutine downsample_field_2d(field_in, field_out, dl, method, mask, diag_cs, d
   f2 = f_in2 / dL
   ! Correction for the symmetric case
   if (diag_cs%G%symmetric) then
-    f1 = f1 + mod(f_in1,dl)
-    f2 = f2 + mod(f_in2,dl)
+    f1 = f1 + mod(f_in1, dl)
+    f2 = f2 + mod(f_in2, dl)
   endif
   allocate(field_out(1:f1,1:f2))
 

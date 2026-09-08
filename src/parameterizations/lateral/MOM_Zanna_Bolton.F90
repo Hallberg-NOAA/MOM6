@@ -1082,7 +1082,7 @@ subroutine filter_hq(G, GV, CS, current_halo, remaining_iterations, q, h)
 
   logical :: direction ! The direction of the first 1D filter
 
-  direction = (MOD(G%first_direction,2) == 0)
+  direction = (MOD(G%first_direction, 2) == 0)
 
   call cpu_clock_begin(CS%id_clock_filter)
 

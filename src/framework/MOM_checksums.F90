@@ -2224,7 +2224,7 @@ subroutine chksum1d(array, mesg, start_i, end_i, compare_PEs, logunit)
 
   pe_num = pe_here() + 1 - root_pe() ; nPEs = num_pes()
   allocate(sum_here(nPEs), source=0.0) ; sum_here(pe_num) = sum
-  call sum_across_PEs(sum_here,nPEs)
+  call sum_across_PEs(sum_here, nPEs)
 
   sum1 = sum_bc
   call sum_across_PEs(sum1)

@@ -713,9 +713,9 @@ subroutine update_offline_from_files(G, GV, US, nk_input, mean_file, sum_file, s
 
     fluxes%netMassOut(:,:) = 0.0
     fluxes%netMassIn(:,:) = 0.0
-    call MOM_read_data(surf_file,'massout_flux_sum',fluxes%netMassOut, G%Domain, &
+    call MOM_read_data(surf_file, 'massout_flux_sum', fluxes%netMassOut, G%Domain, &
                        timelevel=ridx_sum, scale=GV%kg_m2_to_H)
-    call MOM_read_data(surf_file,'massin_flux_sum', fluxes%netMassIn,  G%Domain, &
+    call MOM_read_data(surf_file, 'massin_flux_sum', fluxes%netMassIn, G%Domain, &
                        timelevel=ridx_sum, scale=GV%kg_m2_to_H)
 
     do j=js,je ; do i=is,ie
@@ -736,9 +736,9 @@ subroutine update_offline_from_files(G, GV, US, nk_input, mean_file, sum_file, s
     ! Need to double check, but set_opacity seems to only need the sum of the diffuse and
     ! direct fluxes in the visible and near-infrared bands. For convenience, we store the
     ! sum of the direct and diffuse fluxes in the 'dir' field and set the 'dif' fields to zero
-    call MOM_read_data(mean_file,'sw_vis', fluxes%sw_vis_dir, G%Domain, &
+    call MOM_read_data(mean_file, 'sw_vis', fluxes%sw_vis_dir, G%Domain, &
                        timelevel=ridx_sum, scale=US%W_m2_to_QRZ_T)
-    call MOM_read_data(mean_file,'sw_nir', fluxes%sw_nir_dir, G%Domain, &
+    call MOM_read_data(mean_file, 'sw_nir', fluxes%sw_nir_dir, G%Domain, &
                        timelevel=ridx_sum, scale=US%W_m2_to_QRZ_T)
     fluxes%sw_vis_dir(:,:) = fluxes%sw_vis_dir(:,:)*0.5
     fluxes%sw_vis_dif(:,:) = fluxes%sw_vis_dir(:,:)
@@ -754,11 +754,11 @@ subroutine update_offline_from_files(G, GV, US, nk_input, mean_file, sum_file, s
         fluxes%sw_nir_dif(i,j) = 0.0
       endif
     enddo ; enddo
-    call pass_var(fluxes%sw,G%Domain)
-    call pass_var(fluxes%sw_vis_dir,G%Domain)
-    call pass_var(fluxes%sw_vis_dif,G%Domain)
-    call pass_var(fluxes%sw_nir_dir,G%Domain)
-    call pass_var(fluxes%sw_nir_dif,G%Domain)
+    call pass_var(fluxes%sw, G%Domain)
+    call pass_var(fluxes%sw_vis_dir, G%Domain)
+    call pass_var(fluxes%sw_vis_dif, G%Domain)
+    call pass_var(fluxes%sw_nir_dir, G%Domain)
+    call pass_var(fluxes%sw_nir_dif, G%Domain)
   endif
 
 end subroutine update_offline_from_files
@@ -834,7 +834,7 @@ function next_modulo_time(inidx, numtime)
 
   integer                 :: next_modulo_time
 
-  read_index = mod(inidx+1,numtime)
+  read_index = mod(inidx+1, numtime)
   if (read_index < 0)  read_index = inidx-read_index
   if (read_index == 0) read_index = numtime
 

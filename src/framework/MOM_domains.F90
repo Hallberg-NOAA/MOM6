@@ -496,7 +496,7 @@ subroutine MOM_define_layout(n_global, ndivs, layout)
   ! First try to divide ndivs to match the domain aspect ratio.  If this is not an even
   ! divisor of ndivs, reduce idiv until a factor is found.
   idiv = max(nint( sqrt(float(ndivs*isz)/jsz) ), 1)
-  do while( mod(ndivs,idiv) /= 0 )
+  do while( mod(ndivs, idiv) /= 0 )
     idiv = idiv - 1
   enddo ! This will terminate at idiv=1 if not before
   jdiv = ndivs / idiv

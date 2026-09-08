@@ -197,7 +197,7 @@ subroutine ocn_init_mct( EClock, cdata_o, x2o_o, o2x_o, NLFilename )
 
     ! open the ocn_modelio.nml file and then open a log file associated with stdout
     ocn_modelio_name = 'ocn_modelio.nml' // trim(inst_suffix)
-    call shr_file_setIO(ocn_modelio_name,stdout)
+    call shr_file_setIO(ocn_modelio_name, stdout)
 
     !  set the shr log io unit number
     call shr_file_setLogUnit(stdout)
@@ -688,17 +688,17 @@ subroutine ocn_domain_mct( lsize, gsMap_ocn, dom_ocn)
   ! Determine global gridpoint number attribute, GlobGridNum, which is set automatically by MCT
   k = pe_here()
   call mct_gsMap_orderedPoints(gsMap_ocn, k, idata)
-  call mct_gGrid_importIAttr(dom_ocn,'GlobGridNum',idata,lsize)
+  call mct_gGrid_importIAttr(dom_ocn, 'GlobGridNum', idata, lsize)
 
   !initialization
   data(:) = -9999.0
-  call mct_gGrid_importRAttr(dom_ocn,"lat"  ,data,lsize)
-  call mct_gGrid_importRAttr(dom_ocn,"lon"  ,data,lsize)
-  call mct_gGrid_importRAttr(dom_ocn,"area" ,data,lsize)
-  call mct_gGrid_importRAttr(dom_ocn,"aream",data,lsize)
+  call mct_gGrid_importRAttr(dom_ocn, "lat",   data, lsize)
+  call mct_gGrid_importRAttr(dom_ocn, "lon",   data, lsize)
+  call mct_gGrid_importRAttr(dom_ocn, "area",  data, lsize)
+  call mct_gGrid_importRAttr(dom_ocn, "aream", data, lsize)
   data(:) = 0.0
-  call mct_gGrid_importRAttr(dom_ocn,"mask",data,lsize)
-  call mct_gGrid_importRAttr(dom_ocn,"frac",data,lsize)
+  call mct_gGrid_importRAttr(dom_ocn, "mask", data, lsize)
+  call mct_gGrid_importRAttr(dom_ocn, "frac", data, lsize)
 
   k = 0
   do j = grid%jsc, grid%jec
@@ -707,7 +707,7 @@ subroutine ocn_domain_mct( lsize, gsMap_ocn, dom_ocn)
       data(k) = grid%geoLonT(i,j)
     enddo
   enddo
-  call mct_gGrid_importRattr(dom_ocn,"lon",data,lsize)
+  call mct_gGrid_importRattr(dom_ocn, "lon", data, lsize)
 
   k = 0
   do j = grid%jsc, grid%jec
@@ -716,7 +716,7 @@ subroutine ocn_domain_mct( lsize, gsMap_ocn, dom_ocn)
       data(k) = grid%geoLatT(i,j)
     enddo
   enddo
-  call mct_gGrid_importRattr(dom_ocn,"lat",data,lsize)
+  call mct_gGrid_importRattr(dom_ocn, "lat", data, lsize)
 
   k = 0
   L2_to_rad2 = 1.0 / grid%Rad_Earth_L**2
@@ -726,7 +726,7 @@ subroutine ocn_domain_mct( lsize, gsMap_ocn, dom_ocn)
       data(k) = grid%AreaT(i,j) * L2_to_rad2
     enddo
   enddo
-  call mct_gGrid_importRattr(dom_ocn,"area",data,lsize)
+  call mct_gGrid_importRattr(dom_ocn, "area", data, lsize)
 
   k = 0
   do j = grid%jsc, grid%jec
@@ -735,8 +735,8 @@ subroutine ocn_domain_mct( lsize, gsMap_ocn, dom_ocn)
       data(k) = grid%mask2dT(i,j)
     enddo
   enddo
-  call mct_gGrid_importRattr(dom_ocn,"mask",data,lsize)
-  call mct_gGrid_importRattr(dom_ocn,"frac",data,lsize)
+  call mct_gGrid_importRattr(dom_ocn, "mask", data, lsize)
+  call mct_gGrid_importRattr(dom_ocn, "frac", data, lsize)
 
   deallocate(data)
   deallocate(idata)

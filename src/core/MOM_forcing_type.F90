@@ -1470,12 +1470,12 @@ subroutine mech_forcing_SinglePointPrint(forces, G, i, j, mesg)
 
   write(0,'(2a)') 'MOM_forcing_type, forcing_SinglePointPrint: Called from ',mesg
   write(0,'(a,2es15.3)') 'MOM_forcing_type, forcing_SinglePointPrint: lon,lat = ',G%geoLonT(i,j),G%geoLatT(i,j)
-  call locMsg(forces%taux,'taux')
-  call locMsg(forces%tauy,'tauy')
+  call locMsg(forces%taux, 'taux')
+  call locMsg(forces%tauy, 'tauy')
 
   contains
   !> Format and write a message depending on associated state of array
-  subroutine locMsg(array,aname)
+  subroutine locMsg(array, aname)
     real, dimension(:,:), pointer :: array !< Array to write element from
     character(len=*)              :: aname !< Name of array
 
@@ -1498,51 +1498,51 @@ subroutine forcing_SinglePointPrint(fluxes, G, i, j, mesg)
 
   write(0,'(2a)') 'MOM_forcing_type, forcing_SinglePointPrint: Called from ',mesg
   write(0,'(a,2es15.3)') 'MOM_forcing_type, forcing_SinglePointPrint: lon,lat = ',G%geoLonT(i,j),G%geoLatT(i,j)
-  call locMsg(fluxes%ustar,'ustar')
-  call locMsg(fluxes%tau_mag,'tau_mag')
-  call locMsg(fluxes%buoy,'buoy')
-  call locMsg(fluxes%sw,'sw')
-  call locMsg(fluxes%sw_vis_dir,'sw_vis_dir')
-  call locMsg(fluxes%sw_vis_dif,'sw_vis_dif')
-  call locMsg(fluxes%sw_nir_dir,'sw_nir_dir')
-  call locMsg(fluxes%sw_nir_dif,'sw_nir_dif')
-  call locMsg(fluxes%lw,'lw')
-  call locMsg(fluxes%latent,'latent')
-  call locMsg(fluxes%latent_evap_diag,'latent_evap_diag')
-  call locMsg(fluxes%latent_fprec_diag,'latent_fprec_diag')
-  call locMsg(fluxes%latent_frunoff_diag,'latent_frunoff_diag')
-  call locMsg(fluxes%latent_frunoff_glc_diag,'latent_frunoff_glc_diag')
-  call locMsg(fluxes%sens,'sens')
-  call locMsg(fluxes%evap,'evap')
-  call locMsg(fluxes%lprec,'lprec')
-  call locMsg(fluxes%fprec,'fprec')
-  call locMsg(fluxes%vprec,'vprec')
-  call locMsg(fluxes%seaice_melt,'seaice_melt')
-  call locMsg(fluxes%seaice_melt_heat,'seaice_melt_heat')
-  call locMsg(fluxes%p_surf,'p_surf')
-  call locMsg(fluxes%salt_flux,'salt_flux')
-  call locMsg(fluxes%BBL_tidal_dis,'BBL_tidal_dis')
-  call locMsg(fluxes%ustar_tidal,'ustar_tidal')
-  call locMsg(fluxes%lrunoff,'lrunoff')
-  call locMsg(fluxes%lrunoff_glc,'lrunoff_glc')
-  call locMsg(fluxes%frunoff,'frunoff')
-  call locMsg(fluxes%frunoff_glc,'frunoff_glc')
-  call locMsg(fluxes%heat_content_lrunoff,'heat_content_lrunoff')
-  call locMsg(fluxes%heat_content_lrunoff_glc,'heat_content_lrunoff_glc')
-  call locMsg(fluxes%heat_content_frunoff,'heat_content_frunoff')
-  call locMsg(fluxes%heat_content_frunoff_glc,'heat_content_frunoff_glc')
-  call locMsg(fluxes%heat_content_lprec,'heat_content_lprec')
-  call locMsg(fluxes%heat_content_fprec,'heat_content_fprec')
-  call locMsg(fluxes%heat_content_vprec,'heat_content_vprec')
-  call locMsg(fluxes%heat_content_cond,'heat_content_cond')
-  call locMsg(fluxes%heat_content_cond,'heat_content_massout')
-  call locMsg(fluxes%heat_content_evap,'heat_content_evap')
-  call locMsg(fluxes%heat_content_massout,'heat_content_massout')
-  call locMsg(fluxes%heat_content_massin,'heat_content_massin')
+  call locMsg(fluxes%ustar, 'ustar')
+  call locMsg(fluxes%tau_mag, 'tau_mag')
+  call locMsg(fluxes%buoy, 'buoy')
+  call locMsg(fluxes%sw, 'sw')
+  call locMsg(fluxes%sw_vis_dir, 'sw_vis_dir')
+  call locMsg(fluxes%sw_vis_dif, 'sw_vis_dif')
+  call locMsg(fluxes%sw_nir_dir, 'sw_nir_dir')
+  call locMsg(fluxes%sw_nir_dif, 'sw_nir_dif')
+  call locMsg(fluxes%lw, 'lw')
+  call locMsg(fluxes%latent, 'latent')
+  call locMsg(fluxes%latent_evap_diag, 'latent_evap_diag')
+  call locMsg(fluxes%latent_fprec_diag, 'latent_fprec_diag')
+  call locMsg(fluxes%latent_frunoff_diag, 'latent_frunoff_diag')
+  call locMsg(fluxes%latent_frunoff_glc_diag, 'latent_frunoff_glc_diag')
+  call locMsg(fluxes%sens, 'sens')
+  call locMsg(fluxes%evap, 'evap')
+  call locMsg(fluxes%lprec, 'lprec')
+  call locMsg(fluxes%fprec, 'fprec')
+  call locMsg(fluxes%vprec, 'vprec')
+  call locMsg(fluxes%seaice_melt, 'seaice_melt')
+  call locMsg(fluxes%seaice_melt_heat, 'seaice_melt_heat')
+  call locMsg(fluxes%p_surf, 'p_surf')
+  call locMsg(fluxes%salt_flux, 'salt_flux')
+  call locMsg(fluxes%BBL_tidal_dis, 'BBL_tidal_dis')
+  call locMsg(fluxes%ustar_tidal, 'ustar_tidal')
+  call locMsg(fluxes%lrunoff, 'lrunoff')
+  call locMsg(fluxes%lrunoff_glc, 'lrunoff_glc')
+  call locMsg(fluxes%frunoff, 'frunoff')
+  call locMsg(fluxes%frunoff_glc, 'frunoff_glc')
+  call locMsg(fluxes%heat_content_lrunoff, 'heat_content_lrunoff')
+  call locMsg(fluxes%heat_content_lrunoff_glc, 'heat_content_lrunoff_glc')
+  call locMsg(fluxes%heat_content_frunoff, 'heat_content_frunoff')
+  call locMsg(fluxes%heat_content_frunoff_glc, 'heat_content_frunoff_glc')
+  call locMsg(fluxes%heat_content_lprec, 'heat_content_lprec')
+  call locMsg(fluxes%heat_content_fprec, 'heat_content_fprec')
+  call locMsg(fluxes%heat_content_vprec, 'heat_content_vprec')
+  call locMsg(fluxes%heat_content_cond, 'heat_content_cond')
+  call locMsg(fluxes%heat_content_cond, 'heat_content_massout')
+  call locMsg(fluxes%heat_content_evap, 'heat_content_evap')
+  call locMsg(fluxes%heat_content_massout, 'heat_content_massout')
+  call locMsg(fluxes%heat_content_massin, 'heat_content_massin')
 
   contains
   !> Format and write a message depending on associated state of array
-  subroutine locMsg(array,aname)
+  subroutine locMsg(array, aname)
     real, dimension(:,:), pointer :: array !< Array to write element from
     character(len=*)              :: aname !< Name of array
 
@@ -1680,7 +1680,7 @@ subroutine register_forcing_type_diags(Time, diag, US, use_temperature, &
         'Net surface water flux (precip+melt+lrunoff+ice calving-evap)',  &
         'kg m-2 s-1', conversion=US%RZ_T_to_kg_m2s,                       &
         standard_name='water_flux_into_sea_water', cmor_field_name='wfo', &
-        cmor_standard_name='water_flux_into_sea_water',cmor_long_name='Water Flux Into Sea Water')
+        cmor_standard_name='water_flux_into_sea_water', cmor_long_name='Water Flux Into Sea Water')
 
   handles%id_evap = register_diag_field('ocean_model', 'evap', diag%axesT1, Time, &
         'Evaporation/condensation at ocean surface (evaporation is negative)', &
@@ -1873,7 +1873,7 @@ subroutine register_forcing_type_diags(Time, diag, US, use_temperature, &
       long_name='Area integrated frozen precip into ocean',                        &
       units='kg m-2 s-1', conversion=US%RZ_T_to_kg_m2s,                            &
       standard_name='snowfall_flux_area_averaged',                                 &
-      cmor_field_name='ave_prsn',cmor_standard_name='snowfall_flux_area_averaged', &
+      cmor_field_name='ave_prsn', cmor_standard_name='snowfall_flux_area_averaged', &
       cmor_long_name='Snowfall Flux where Ice Free Ocean over Sea Area Averaged')
 
   handles%id_precip_ga = register_scalar_field('ocean_model', 'precip_ga', Time, diag, &
@@ -1920,28 +1920,28 @@ subroutine register_forcing_type_diags(Time, diag, US, use_temperature, &
         'W m-2', conversion=US%QRZ_T_to_W_m2,                                                 &
         standard_name='temperature_flux_due_to_runoff_expressed_as_heat_flux_into_sea_water')
 
-  handles%id_heat_content_lprec = register_diag_field('ocean_model', 'heat_content_lprec',             &
-        diag%axesT1,Time,'Heat content (relative to 0degC) of liquid precip entering ocean',           &
+  handles%id_heat_content_lprec = register_diag_field('ocean_model', 'heat_content_lprec', &
+        diag%axesT1, Time, 'Heat content (relative to 0degC) of liquid precip entering ocean', &
         'W m-2', conversion=US%QRZ_T_to_W_m2)
 
-  handles%id_heat_content_fprec = register_diag_field('ocean_model', 'heat_content_fprec',&
-        diag%axesT1,Time,'Heat content (relative to 0degC) of frozen prec entering ocean',&
+  handles%id_heat_content_fprec = register_diag_field('ocean_model', 'heat_content_fprec', &
+        diag%axesT1, Time, 'Heat content (relative to 0degC) of frozen prec entering ocean', &
         'W m-2', conversion=US%QRZ_T_to_W_m2)
 
   handles%id_heat_content_vprec = register_diag_field('ocean_model', 'heat_content_vprec',   &
-        diag%axesT1,Time,'Heat content (relative to 0degC) of virtual precip entering ocean',&
+        diag%axesT1, Time, 'Heat content (relative to 0degC) of virtual precip entering ocean', &
         'W m-2', conversion=US%QRZ_T_to_W_m2)
 
   handles%id_heat_content_cond = register_diag_field('ocean_model', 'heat_content_cond',   &
-        diag%axesT1,Time,'Heat content (relative to 0degC) of water condensing into ocean',&
+        diag%axesT1, Time, 'Heat content (relative to 0degC) of water condensing into ocean', &
         'W m-2', conversion=US%QRZ_T_to_W_m2)
 
   handles%id_heat_content_evap = register_diag_field('ocean_model', 'heat_content_evap',   &
-        diag%axesT1,Time,'Heat content (relative to 0degC) of water evaporating from ocean',&
+        diag%axesT1, Time, 'Heat content (relative to 0degC) of water evaporating from ocean', &
         'W m-2', conversion=US%QRZ_T_to_W_m2)
 
   handles%id_hfrainds = register_diag_field('ocean_model', 'hfrainds',                                 &
-        diag%axesT1,Time,'Heat content (relative to 0degC) of liquid+frozen precip entering ocean',    &
+        diag%axesT1, Time, 'Heat content (relative to 0degC) of liquid+frozen precip entering ocean', &
         'W m-2', conversion=US%QRZ_T_to_W_m2, &
         standard_name='temperature_flux_due_to_rainfall_expressed_as_heat_flux_into_sea_water',&
         cmor_long_name='Heat Content (relative to 0degC) of Liquid + Frozen Precipitation')
@@ -1952,21 +1952,21 @@ subroutine register_forcing_type_diags(Time, diag, US, use_temperature, &
         'W m-2', conversion=US%QRZ_T_to_W_m2)
 
   handles%id_heat_content_massout = register_diag_field('ocean_model', 'heat_content_massout',                      &
-         diag%axesT1, Time,'Heat content (relative to 0degC) of net mass leaving ocean ocean via evap and ice form',&
+        diag%axesT1, Time, 'Heat content (relative to 0degC) of net mass leaving ocean ocean via evap and ice form', &
         'W m-2', conversion=US%QRZ_T_to_W_m2,                                                      &
         cmor_field_name='hfevapds',                                                                                 &
         cmor_standard_name='temperature_flux_due_to_evaporation_expressed_as_heat_flux_out_of_sea_water',           &
         cmor_long_name='Heat Content (relative to 0degC) of Water Leaving Ocean via Evaporation and Ice Formation')
 
   handles%id_heat_content_massin = register_diag_field('ocean_model', 'heat_content_massin',   &
-         diag%axesT1, Time,'Heat content (relative to 0degC) of net mass entering ocean ocean',&
+        diag%axesT1, Time, 'Heat content (relative to 0degC) of net mass entering ocean ocean', &
         'W m-2', conversion=US%QRZ_T_to_W_m2)
 
   handles%id_net_heat_coupler = register_diag_field('ocean_model', 'net_heat_coupler',          &
-        diag%axesT1,Time,'Surface ocean heat flux from SW+LW+latent+sensible+seaice_melt_heat (via the coupler)',&
+        diag%axesT1, Time, 'Surface ocean heat flux from SW+LW+latent+sensible+seaice_melt_heat (via the coupler)', &
         'W m-2', conversion=US%QRZ_T_to_W_m2)
 
-  handles%id_net_heat_surface = register_diag_field('ocean_model', 'net_heat_surface',diag%axesT1, Time,  &
+  handles%id_net_heat_surface = register_diag_field('ocean_model', 'net_heat_surface', diag%axesT1, Time, &
         'Surface ocean heat flux from SW+LW+lat+sens+mass transfer+frazil+restore+seaice_melt_heat or '// &
         'flux adjustments', &
         'W m-2', conversion=US%QRZ_T_to_W_m2, &
@@ -2291,11 +2291,11 @@ subroutine register_forcing_type_diags(Time, diag, US, use_temperature, &
         units='kg m-2 s-1', conversion=US%RZ_T_to_kg_m2s)
 
   handles%id_saltFluxAdded = register_diag_field('ocean_model', 'salt_flux_added', &
-        diag%axesT1,Time,'Salt flux into ocean at surface due to restoring or flux adjustment', &
+        diag%axesT1, Time, 'Salt flux into ocean at surface due to restoring or flux adjustment', &
         units='kg m-2 s-1', conversion=US%RZ_T_to_kg_m2s)
 
   handles%id_saltFluxBehind = register_diag_field('ocean_model', 'salt_left_behind', &
-        diag%axesT1,Time,'Salt left in ocean at surface due to ice formation', &
+        diag%axesT1, Time, 'Salt left in ocean at surface due to ice formation', &
         units='kg m-2 s-1', conversion=US%RZ_T_to_kg_m2s)
 
   handles%id_saltFluxGlobalAdj = register_scalar_field('ocean_model',              &

@@ -151,7 +151,7 @@ subroutine dumbbell_dynamic_forcing(sfc_state, fluxes, day, dt, G, US, CS)
 
   deg_rad = atan(1.0)*4.0/180.
 
-  call get_time(day,isecs,idays)
+  call get_time(day, isecs, idays)
   rdays = real(idays) + real(isecs)/8.64e4
   ! This could be:  rdays = time_type_to_real(day)/8.64e4
 
@@ -221,10 +221,10 @@ subroutine dumbbell_surface_forcing_init(Time, G, US, param_file, diag, CS)
   call get_param(param_file, mdl, "DUMBBELL_ROTATION", dbrotate, &
                 'Logical for rotation of dumbbell domain.',&
                  default=.false., do_not_log=.true.)
-  call get_param(param_file, mdl,"INITIAL_SSS", S_surf, &
+  call get_param(param_file, mdl, "INITIAL_SSS", S_surf, &
                  "Initial surface salinity", &
                  units="ppt", default=34.0, scale=US%ppt_to_S, do_not_log=.true.)
-  call get_param(param_file, mdl,"INITIAL_S_RANGE", S_range, &
+  call get_param(param_file, mdl, "INITIAL_S_RANGE", S_range, &
                  "Initial salinity range (bottom - surface)", &
                  units="ppt", default=2., scale=US%ppt_to_S, do_not_log=.true.)
 

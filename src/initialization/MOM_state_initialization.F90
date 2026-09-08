@@ -330,7 +330,7 @@ subroutine MOM_initialize_state(u, v, h, tv, Time, G, GV, US, PF, dirs, &
                                 just_read=just_read)
       case ("benchmark"); call benchmark_initialize_thickness(dz, depth_tot, G, GV, US, PF, &
                                    tv%eqn_of_state, tv%P_Ref, just_read=just_read)
-      case ("Neverworld","Neverland"); call Neverworld_initialize_thickness(dz, depth_tot, &
+      case ("Neverworld", "Neverland"); call Neverworld_initialize_thickness(dz, depth_tot, &
                                    G, GV, US, PF, tv%P_Ref)
       case ("search"); call initialize_thickness_search()
       case ("circle_obcs"); call circle_obcs_initialize_thickness(dz, depth_tot, G, GV, US, PF, &
@@ -1449,7 +1449,7 @@ subroutine calc_sfc_displacement(PF, G, GV, US, mass_shelf, tv, h)
     endif
   enddo ; enddo
   call MOM_mesg("Calling depress_surface ")
-  call depress_surface(h, G, GV, US, PF, tv, just_read=.false.,z_top_shelf=z_top_shelf)
+  call depress_surface(h, G, GV, US, PF, tv, just_read=.false., z_top_shelf=z_top_shelf)
   call MOM_mesg("Finishing calling depress_surface ")
 end subroutine calc_sfc_displacement
 
@@ -1728,13 +1728,13 @@ subroutine initialize_velocity_circular(u, v, G, GV, US, param_file, just_read)
   dpi = acos(0.0)*2.0 ! pi
 
   do k=1,nz ; do j=js,je ; do I=Isq,Ieq
-    psi1 = my_psi(I,j)
-    psi2 = my_psi(I,j-1)
+    psi1 = my_psi(I, j)
+    psi2 = my_psi(I, j-1)
     u(I,j,k) = (psi1 - psi2) / G%dy_Cu(I,j) ! *(circular_max_u*G%len_lon/(2.0*dpi))
   enddo ; enddo ; enddo
   do k=1,nz ; do J=Jsq,Jeq ; do i=is,ie
-    psi1 = my_psi(i,J)
-    psi2 = my_psi(i-1,J)
+    psi1 = my_psi(i, J)
+    psi2 = my_psi(i-1, J)
     v(i,J,k) = (psi2 - psi1) / G%dx_Cv(i,J) ! *(circular_max_u*G%len_lon/(2.0*dpi))
   enddo ; enddo ; enddo
 
@@ -2159,10 +2159,10 @@ subroutine initialize_sponges_file(G, GV, US, use_temperature, tv, u, v, depth_t
       if (.not.file_exists(filename, G%Domain)) &
         call MOM_error(FATAL, " initialize_sponges: Unable to open "//trim(filename))
 
-      call MOM_read_vector(filename, Idamp_u_var,Idamp_v_var,Idamp_u(:,:),Idamp_v(:,:), G%Domain, scale=US%T_to_s)
+      call MOM_read_vector(filename, Idamp_u_var, Idamp_v_var, Idamp_u(:,:), Idamp_v(:,:), G%Domain, scale=US%T_to_s)
     else
       !      call MOM_error(FATAL, "Must provide SPONGE_IDAMP_U_var and SPONGE_IDAMP_V_var")
-      call pass_var(Idamp,G%Domain)
+      call pass_var(Idamp, G%Domain)
       do j=G%jsc,G%jec
         do i=G%iscB,G%iecB
           Idamp_u(I,j) = 0.5*(Idamp(i,j)+Idamp(i+1,j))
@@ -2245,7 +2245,7 @@ subroutine initialize_sponges_file(G, GV, US, use_temperature, tv, u, v, depth_t
 
   if  (use_ALE) then ! ALE mode
     if (.not. time_space_interp_sponge) then
-      call field_size(filename,eta_var,siz,no_domain=.true.)
+      call field_size(filename, eta_var, siz, no_domain=.true.)
       if (siz(1) /= G%ieg-G%isg+1 .or. siz(2) /= G%jeg-G%jsg+1) &
         call MOM_error(FATAL, "initialize_sponge_file: Array size mismatch for sponge data.")
       nz_data = siz(3)-1
@@ -2297,7 +2297,7 @@ subroutine initialize_sponges_file(G, GV, US, use_temperature, tv, u, v, depth_t
         allocate(tmp_v(isd:ied,G%JsdB:G%JedB,nz_data))
         call MOM_read_vector(filename, u_var, v_var, tmp_u(:,:,:), tmp_v(:,:,:), G%Domain, scale=US%m_s_to_L_T)
         call set_up_ALE_sponge_vel_field(tmp_u, tmp_v, G, GV, u, v, ALE_CSp)
-        deallocate(tmp_u,tmp_v)
+        deallocate(tmp_u, tmp_v)
       endif
     else
       ! Initialize sponges without supplying sponge grid
@@ -2445,7 +2445,7 @@ subroutine initialize_oda_incupd_file(G, GV, US, use_temperature, tv, h, u, v, p
   if (.not.file_exists(filename, G%Domain)) &
     call MOM_error(FATAL, " initialize_oda_incupd: Unable to open "//trim(filename))
 
-  call field_size(filename,h_var,siz,no_domain=.true.)
+  call field_size(filename, h_var, siz, no_domain=.true.)
   if (siz(1) /= G%ieg-G%isg+1 .or. siz(2) /= G%jeg-G%jsg+1) &
          call MOM_error(FATAL, "initialize_oda_incupd_file: Array size mismatch for oda data.")
   nz_data = siz(3)
@@ -2981,7 +2981,7 @@ subroutine MOM_temp_salt_initialize_from_Z(h, tv, depth_tot, G, GV, US, PF, just
 
     ! Next find interface positions using local arrays
     ! nlevs contains the number of valid data points in each column
-    nlevs = int(sum(mask_z,dim=3))
+    nlevs = int(sum(mask_z, dim=3))
 
     ! Rb contains the layer interface densities
     allocate(Rb(nz+1))

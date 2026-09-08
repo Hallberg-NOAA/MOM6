@@ -314,7 +314,7 @@ subroutine TimeInit( Time, ymd, cal, tod, desc, logunit, rc)
     return
   endif
 
-  call date2ymd (ymd,yr,mon,day)
+  call date2ymd (ymd, yr, mon, day)
 
   call ESMF_TimeSet( Time, yy=yr, mm=mon, dd=day, s=ltod, calendar=cal, rc=rc )
   if (ChkErr(rc, __LINE__, u_FILE_u)) return
@@ -336,7 +336,7 @@ subroutine date2ymd (date, year, month, day)
   if (date < 0) then
     year = -year
   endif
-  month = int( mod(tdate,10000)/  100)
+  month = int( mod(tdate, 10000) / 100)
   day = mod(tdate,  100)
 
 end subroutine date2ymd

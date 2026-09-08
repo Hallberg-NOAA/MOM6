@@ -377,7 +377,7 @@ subroutine apply_skeb(grid, GV, US, CS, uc, vc, thickness, tv, dt, Time_end)
 
   ! smooth dissipation skeb_npass times
   do iter=1,CS%skeb_npass
-    if (mod(iter,2) == 1) call pass_var(CS%skeb_diss, grid%domain)
+    if (mod(iter, 2) == 1) call pass_var(CS%skeb_diss, grid%domain)
     do k=1,GV%ke
       if (CS%answer_date < 20250701) then
         ! Do the filter with expressions that do not preserve rotational symmetry.

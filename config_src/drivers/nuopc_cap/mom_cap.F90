@@ -621,7 +621,7 @@ subroutine InitializeAdvertise(gcomp, importState, exportState, clock, rc)
   ! this ocean connector will be driven at set interval
   DT = set_time (DT_OCEAN, 0)
   ! get current time
-  time_start = set_date (YEAR,MONTH,DAY,HOUR,MINUTE,SECOND)
+  time_start = set_date(YEAR, MONTH, DAY, HOUR, MINUTE, SECOND)
 
   if (is_root_pe()) then
     write(stdout,*) subname//'current time: y,m,d-',year,month,day,'h,m,s=',hour,minute,second
@@ -634,7 +634,7 @@ subroutine InitializeAdvertise(gcomp, importState, exportState, clock, rc)
   call ESMF_TimeGet (MyTime, YY=YEAR, MM=MONTH, DD=DAY, H=HOUR, M=MINUTE, S=SECOND, RC=rc )
   if (ChkErr(rc, __LINE__, u_FILE_u)) return
 
-  time0 = set_date (YEAR,MONTH,DAY,HOUR,MINUTE,SECOND)
+  time0 = set_date(YEAR, MONTH, DAY, HOUR, MINUTE, SECOND)
 
   !-----------------
   ! optional input from cice columns due to ice thickness categories
@@ -1096,7 +1096,7 @@ subroutine InitializeRealize(gcomp, importState, exportState, clock, rc)
   ! get start and end indices of each tile and their PET
   !---------------------------------
 
-  allocate(xb(npes),xe(npes),yb(npes),ye(npes),pe(npes))
+  allocate(xb(npes), xe(npes), yb(npes), ye(npes), pe(npes))
   call mpp_get_compute_domains(ocean_public%domain, xbegin=xb, xend=xe, ybegin=yb, yend=ye)
   call mpp_get_pelist(ocean_public%domain, pe)
   if (dbug > 1) then
@@ -1277,7 +1277,7 @@ subroutine InitializeRealize(gcomp, importState, exportState, clock, rc)
 
     eps_omesh = get_eps_omesh(ocean_state)
     do n = 1,lsize
-      diff_lon = abs(mod(lonMesh(n) - lon(n),360.0))
+      diff_lon = abs(mod(lonMesh(n) - lon(n), 360.0))
       if (diff_lon > eps_omesh) then
         frmt = "('ERROR: Difference between ESMF Mesh and MOM6 domain coords is "//&
                "greater than parameter EPS_OMESH. n, lonMesh(n), lon(n), diff_lon, "//&
@@ -1428,7 +1428,7 @@ subroutine InitializeRealize(gcomp, importState, exportState, clock, rc)
          rc=rc)
     if (ChkErr(rc, __LINE__, u_FILE_u)) return
 
-    deallocate(xb,xe,yb,ye,pe)
+    deallocate(xb, xe, yb, ye, pe)
     deallocate(connectionList)
     deallocate(deLabelList)
     deallocate(deBlockList)
@@ -1606,11 +1606,11 @@ subroutine InitializeRealize(gcomp, importState, exportState, clock, rc)
   !---------------------------------
 
   if (len_trim(scalar_field_name) > 0) then
-    call State_SetScalar(real(nxg,ESMF_KIND_R8),scalar_field_idx_grid_nx, exportState, localPet, &
+    call State_SetScalar(real(nxg, ESMF_KIND_R8), scalar_field_idx_grid_nx, exportState, localPet, &
          scalar_field_name, scalar_field_count, rc)
     if (ChkErr(rc, __LINE__, u_FILE_u)) return
 
-    call State_SetScalar(real(nyg,ESMF_KIND_R8),scalar_field_idx_grid_ny, exportState, localPet, &
+    call State_SetScalar(real(nyg, ESMF_KIND_R8), scalar_field_idx_grid_ny, exportState, localPet, &
          scalar_field_name, scalar_field_count, rc)
     if (ChkErr(rc, __LINE__, u_FILE_u)) return
   endif
@@ -1892,7 +1892,7 @@ subroutine ModelAdvance(gcomp, rc)
     endif
 
     if (dbug > 0) then
-      call state_diagnose(importState,subname//':IS ',rc=rc)
+      call state_diagnose(importState, subname//':IS ', rc=rc)
       if (ChkErr(rc, __LINE__, u_FILE_u)) return
     endif
 
@@ -1932,7 +1932,7 @@ subroutine ModelAdvance(gcomp, rc)
     if (ChkErr(rc, __LINE__, u_FILE_u)) return
 
     if (dbug > 0) then
-      call state_diagnose(exportState,subname//':ES ',rc=rc)
+      call state_diagnose(exportState, subname//':ES ', rc=rc)
       if (ChkErr(rc, __LINE__, u_FILE_u)) return
     endif
   endif ! do_advance
@@ -2279,7 +2279,7 @@ subroutine ModelSetRunClock(gcomp, rc)
   ! Advance model clock to trigger alarms then reset model clock back to currtime
   !--------------------------------
 
-  call ESMF_ClockAdvance(mclock,rc=rc)
+  call ESMF_ClockAdvance(mclock, rc=rc)
   if (ChkErr(rc, __LINE__, u_FILE_u)) return
 
   call ESMF_ClockSet(mclock, currTime=dcurrtime, timeStep=dtimestep, stopTime=mstoptime, rc=rc)

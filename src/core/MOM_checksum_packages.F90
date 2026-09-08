@@ -113,7 +113,7 @@ subroutine MOM_state_chksum_3arg(mesg, u, v, h, G, GV, US, haloshift, symmetric,
   sym = .false. ; if (present(symmetric)) sym = symmetric
   call uvchksum(mesg//" u", u, v, G%HI, haloshift=hs, symmetric=sym, &
                 omit_corners=omit_corners, unscale=US%L_T_to_m_s)
-  call hchksum(h, mesg//" h",G%HI, haloshift=hs, omit_corners=omit_corners, unscale=GV%H_to_MKS)
+  call hchksum(h, mesg//" h", G%HI, haloshift=hs, omit_corners=omit_corners, unscale=GV%H_to_MKS)
 end subroutine MOM_state_chksum_3arg
 
 ! =============================================================================
@@ -244,11 +244,11 @@ subroutine MOM_accel_chksum(mesg, CAu, CAv, PFu, PFv, diffu, diffv, G, GV, US, p
   ! and js...je as their extent.
   call uvchksum(mesg//" CA[uv]", CAu, CAv, G%HI, haloshift=0, symmetric=sym, unscale=US%L_T2_to_m_s2)
   call uvchksum(mesg//" PF[uv]", PFu, PFv, G%HI, haloshift=0, symmetric=sym, unscale=US%L_T2_to_m_s2)
-  call uvchksum(mesg//" diffu", diffu, diffv, G%HI,haloshift=0, symmetric=sym, unscale=US%L_T2_to_m_s2)
+  call uvchksum(mesg//" diffu", diffu, diffv, G%HI, haloshift=0, symmetric=sym, unscale=US%L_T2_to_m_s2)
   if (present(pbce)) &
-    call hchksum(pbce, mesg//" pbce",G%HI,haloshift=0, unscale=GV%m_to_H*US%L_T_to_m_s**2)
+    call hchksum(pbce, mesg//" pbce", G%HI, haloshift=0, unscale=GV%m_to_H*US%L_T_to_m_s**2)
   if (present(u_accel_bt) .and. present(v_accel_bt)) &
-    call uvchksum(mesg//" [uv]_accel_bt", u_accel_bt, v_accel_bt, G%HI,haloshift=0, symmetric=sym, &
+    call uvchksum(mesg//" [uv]_accel_bt", u_accel_bt, v_accel_bt, G%HI, haloshift=0, symmetric=sym, &
                   unscale=US%L_T2_to_m_s2)
 end subroutine MOM_accel_chksum
 

@@ -324,11 +324,11 @@ subroutine ocean_model_init(Ocean_sfc, OS, Time_init, Time_in, gas_fields_ocn, i
   else ; call MOM_error(FATAL, "ocean_model_init: OCEAN_SURFACE_STAGGER = "// &
                         trim(stagger)//" is invalid.") ; endif
 
-  call get_param(param_file, mdl, "RESTORE_SALINITY",OS%restore_salinity, &
+  call get_param(param_file, mdl, "RESTORE_SALINITY", OS%restore_salinity, &
                  "If true, the coupled driver will add a globally-balanced "//&
                  "fresh-water flux that drives sea-surface salinity "//&
                  "toward specified values.", default=.false.)
-  call get_param(param_file, mdl, "RESTORE_TEMPERATURE",OS%restore_temp, &
+  call get_param(param_file, mdl, "RESTORE_TEMPERATURE", OS%restore_temp, &
                  "If true, the coupled driver will add a "//&
                  "heat flux that drives sea-surface temperature "//&
                  "toward specified values.", default=.false.)
@@ -543,7 +543,7 @@ subroutine update_ocean_model(Ice_ocean_boundary, OS, Ocean_sfc, &
 
     if (do_thermo) &
       call convert_IOB_to_fluxes(Ice_ocean_boundary, OS%flux_tmp, index_bnds, OS%Time, dt_coupling, &
-                               OS%grid, OS%US, OS%forcing_CSp, OS%sfc_state, OS%restore_salinity,OS%restore_temp)
+                               OS%grid, OS%US, OS%forcing_CSp, OS%sfc_state, OS%restore_salinity, OS%restore_temp)
 
     if (OS%use_ice_shelf) then
       if (do_thermo) &
@@ -617,7 +617,7 @@ subroutine update_ocean_model(Ice_ocean_boundary, OS, Ocean_sfc, &
         if (thermo_does_span_coupling) call MOM_error(FATAL, &
             "MOM is not yet set up to have restarts that work with "//&
             "THERMO_SPANS_COUPLING and DIABATIC_FIRST.")
-        if (modulo(n-1,nts)==0) then
+        if (modulo(n-1, nts) == 0) then
           dtdia = dt_dyn*min(nts, n_max-(n-1))
           call step_MOM(OS%forces, OS%fluxes, OS%sfc_state, Time2, dtdia, OS%MOM_CSp, &
                         Waves=OS%Waves, do_dynamics=.false., do_thermodynamics=.true., &
@@ -636,7 +636,7 @@ subroutine update_ocean_model(Ice_ocean_boundary, OS, Ocean_sfc, &
         if (thermo_does_span_coupling) then
           dtdia = dt_therm
           step_thermo = MOM_state_is_synchronized(OS%MOM_CSp, adv_dyn=.true.)
-        elseif ((modulo(n,nts)==0) .or. (n==n_max)) then
+        elseif ((modulo(n, nts) == 0) .or. (n == n_max)) then
           dtdia = dt_dyn*(n - n_last_thermo)
           n_last_thermo = n
           step_thermo = .true.
@@ -706,7 +706,7 @@ subroutine ocean_model_restart(OS, timestamp, restartname)
              OS%dirs%restart_output_dir)
     endif
   else
-    if (BTEST(OS%Restart_control,1)) then
+    if (BTEST(OS%Restart_control, 1)) then
       call save_MOM_restart(OS%MOM_CSp, OS%dirs%restart_output_dir, OS%Time, &
           OS%grid, time_stamped=.true., GV=OS%GV)
       call forcing_save_restart(OS%forcing_CSp, OS%grid, OS%Time, &
@@ -715,7 +715,7 @@ subroutine ocean_model_restart(OS, timestamp, restartname)
         call ice_shelf_save_restart(OS%Ice_shelf_CSp, OS%Time, OS%dirs%restart_output_dir, .true.)
       endif
     endif
-    if (BTEST(OS%Restart_control,0)) then
+    if (BTEST(OS%Restart_control, 0)) then
       call save_MOM_restart(OS%MOM_CSp, OS%dirs%restart_output_dir, OS%Time, &
           OS%grid, GV=OS%GV)
       call forcing_save_restart(OS%forcing_CSp, OS%grid, OS%Time, &
@@ -806,12 +806,12 @@ subroutine initialize_ocean_public_type(input_domain, Ocean_sfc, diag, maskmap, 
   ! and have no halos.
   integer :: isc, iec, jsc, jec
 
-  call mpp_get_layout(input_domain,layout)
+  call mpp_get_layout(input_domain, layout)
   call mpp_get_global_domain(input_domain, xsize=xsz, ysize=ysz)
   if (PRESENT(maskmap)) then
-    call mpp_define_domains((/1,xsz,1,ysz/),layout,Ocean_sfc%Domain, maskmap=maskmap)
+    call mpp_define_domains((/1,xsz,1,ysz/), layout, Ocean_sfc%Domain, maskmap=maskmap)
   else
-    call mpp_define_domains((/1,xsz,1,ysz/),layout,Ocean_sfc%Domain)
+    call mpp_define_domains((/1,xsz,1,ysz/), layout, Ocean_sfc%Domain)
   endif
   call mpp_get_compute_domain(Ocean_sfc%Domain, isc, iec, jsc, jec)
 
@@ -868,7 +868,7 @@ subroutine convert_state_to_ocean_type(sfc_state, Ocean_sfc, G, US, patm, press_
   integer :: i, j, i0, j0, is, ie, js, je
 
   is = G%isc ; ie = G%iec ; js = G%jsc ; je = G%jec
-  call pass_vector(sfc_state%u,sfc_state%v,G%Domain)
+  call pass_vector(sfc_state%u, sfc_state%v, G%Domain)
 
   call mpp_get_compute_domain(Ocean_sfc%Domain, isc_bnd, iec_bnd, &
                               jsc_bnd, jec_bnd)

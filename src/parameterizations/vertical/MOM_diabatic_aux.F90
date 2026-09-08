@@ -1152,7 +1152,7 @@ subroutine applyBoundaryFluxesInOut(CS, G, GV, US, dt, fluxes, optics, nsw, h, t
             T2d(i,k)    = (hOld*T2d(i,k) + dTemp)*Ithickness
             tv%S(i,j,k) = (hOld*tv%S(i,j,k) + dSalt)*Ithickness
           elseif (h2d(i,k) < 0.0) then ! h2d==0 is a special limit that needs no extra handling
-            call forcing_SinglePointPrint(fluxes,G,i,j,'applyBoundaryFluxesInOut (h<0)')
+            call forcing_SinglePointPrint(fluxes, G, i, j, 'applyBoundaryFluxesInOut (h<0)')
             !TODO: remove write statements
             write(0,*) 'applyBoundaryFluxesInOut(): lon,lat=',G%geoLonT(i,j),G%geoLatT(i,j)
             write(0,*) 'applyBoundaryFluxesInOut(): netT,netS,netH=', &
@@ -1187,7 +1187,7 @@ subroutine applyBoundaryFluxesInOut(CS, G, GV, US, dt, fluxes, optics, nsw, h, t
               do k=1,nz
                 salt_before = salt_before + h2d(i,k)*tv%S(i,j,k)
               enddo
-              !DEBUG if (CS%check_salt_verbose) call MOM_error(NOTE,'Salt before brine plume: ',salt_before)
+              !DEBUG if (CS%check_salt_verbose) call MOM_error(NOTE, 'Salt before brine plume: ',salt_before)
             endif
 
             ! Set the plume strength based on the salt rejected
@@ -1225,7 +1225,7 @@ subroutine applyBoundaryFluxesInOut(CS, G, GV, US, dt, fluxes, optics, nsw, h, t
               !DEBUG if (CS%check_salt_verbose) then
               !DEBUG   write(mesg, '(A, I0, A, ES24.16, A, ES24.16)') &
               !DEBUG        'Salt to layer ', k, ' and remaining deficit: ', salt_added, ', ', salt_removed-salt_added
-              !DEBUG   call MOM_error(NOTE,trim(mesg))
+              !DEBUG   call MOM_error(NOTE, trim(mesg))
               !DEBUG endif
 
               if (CS%id_brine_input > 0.) then
@@ -1289,7 +1289,7 @@ subroutine applyBoundaryFluxesInOut(CS, G, GV, US, dt, fluxes, optics, nsw, h, t
       elseif ((abs(netHeat(i)) + abs(netSalt(i)) + abs(netMassIn(i)) + abs(netMassOut(i))) > 0.) then
 
         if (.not. CS%ignore_fluxes_over_land) then
-           call forcing_SinglePointPrint(fluxes,G,i,j,'applyBoundaryFluxesInOut (land)')
+           call forcing_SinglePointPrint(fluxes, G, i, j, 'applyBoundaryFluxesInOut (land)')
            !TODO: Remove write statements
            write(0,*) 'applyBoundaryFluxesInOut(): lon,lat=',G%geoLonT(i,j),G%geoLatT(i,j)
            write(0,*) 'applyBoundaryFluxesInOut(): netHeat,netSalt,netMassIn,netMassOut=',&
@@ -1442,7 +1442,7 @@ subroutine applyBoundaryFluxesInOut(CS, G, GV, US, dt, fluxes, optics, nsw, h, t
 ! The following check will be ignored if ignore_fluxes_over_land = true
   if ((numberOfGroundings > 0) .and. .not.CS%ignore_fluxes_over_land) then
     do i = 1, min(numberOfGroundings, maxGroundings)
-      call forcing_SinglePointPrint(fluxes,G,iGround(i),jGround(i),'applyBoundaryFluxesInOut (grounding)')
+      call forcing_SinglePointPrint(fluxes, G, iGround(i), jGround(i), 'applyBoundaryFluxesInOut (grounding)')
       write(mesg(1:45),'(3es15.3)') G%geoLonT( iGround(i), jGround(i) ), &
                              G%geoLatT( iGround(i), jGround(i)), hGrounding(i)*GV%H_to_m
       call MOM_error(WARNING, "MOM_diabatic_aux.F90, applyBoundaryFluxesInOut(): "//&
@@ -1580,13 +1580,13 @@ subroutine diabatic_aux_init(Time, G, GV, US, param_file, diag, CS, useALEalgori
 
 
   if (useALEalgorithm) then
-    CS%id_createdH = register_diag_field('ocean_model',"created_H",diag%axesT1, &
+    CS%id_createdH = register_diag_field('ocean_model', "created_H", diag%axesT1, &
         Time, "The volume flux added to stop the ocean from drying out and becoming negative in depth", &
         "m s-1", conversion=GV%H_to_m*US%s_to_T)
     if (CS%id_createdH>0) allocate(CS%createdH(isd:ied,jsd:jed))
 
     CS%id_brine_input = register_diag_field('ocean_model', 'Brine_Salt_Increment', &
-         diag%axesTL, Time, 'Salt rate of change due to brine plume','kg m-2 s-1', &
+         diag%axesTL, Time, 'Salt rate of change due to brine plume', 'kg m-2 s-1', &
          conversion=US%S_to_ppt*0.001*GV%H_to_RZ*US%RZ_T_to_kg_m2s, v_extensive=.true.)
     if (CS%id_brine_input>0) allocate(CS%brine_input(isd:ied,jsd:jed,nz), source=0.0)
 

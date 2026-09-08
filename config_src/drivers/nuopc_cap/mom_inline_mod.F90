@@ -186,7 +186,7 @@ subroutine mom_inline_run(clock, ocean_public, ocean_grid, ice_ocean_boundary, d
   ! Advance the streams
   do ns = 1,nstreams
     write(stream_name,fmt='(a,i2.2)') 'stream_', ns
-    call shr_strdata_advance(sdat(ns), ymd=mcdate, tod=sec, logunit=logunit, istr=trim(stream_name),rc=rc)
+    call shr_strdata_advance(sdat(ns), ymd=mcdate, tod=sec, logunit=logunit, istr=trim(stream_name), rc=rc)
     if (chkerr(rc, __LINE__, u_FILE_u)) return
 
     nflds = size(sdat(ns)%pstrm(1)%fldlist_model)

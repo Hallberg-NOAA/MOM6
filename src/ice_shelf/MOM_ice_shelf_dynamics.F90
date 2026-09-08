@@ -586,7 +586,7 @@ subroutine initialize_ice_shelf_dyn(param_file, Time, ISS, CS, G, US, diag, new_
 
     call get_param(param_file, mdl, "MIN_H_SHELF", CS%min_h_shelf, &
                  "min. ice thickness used during ice dynamics", &
-                  units="m", default=0.,scale=US%m_to_Z)
+                  units="m", default=0., scale=US%m_to_Z)
     call get_param(param_file, mdl, "MIN_BASAL_TRACTION", CS%min_basal_traction, &
                  "min. allowed basal traction. Input is in [Pa m-1 yr], but is converted when read in to [Pa m-1 s]", &
                  units="Pa m-1 yr", default=0., scale=365.0*86400.0*US%Pa_to_RLZ_T2*US%L_T_to_m_s)
@@ -754,11 +754,11 @@ subroutine initialize_ice_shelf_dyn(param_file, Time, ISS, CS, G, US, diag, new_
     "The time unit in seconds a number of input fields", &
     units="s", default=86400.0)
   if (CS%Timeunit < 0.0) CS%Timeunit = 86400.0
-  call get_param(param_file, mdl, "ENERGYSAVEDAYS",CS%energysavedays, &
+  call get_param(param_file, mdl, "ENERGYSAVEDAYS", CS%energysavedays, &
     "The interval in units of TIMEUNIT between saves of the "//&
     "energies of the run and other globally summed diagnostics.",&
-    default=set_time(0,days=1), timeunit=CS%Timeunit)
-  call get_param(param_file, mdl, "ENERGYSAVEDAYS_GEOMETRIC",CS%energysavedays_geometric, &
+    default=set_time(0, days=1), timeunit=CS%Timeunit)
+  call get_param(param_file, mdl, "ENERGYSAVEDAYS_GEOMETRIC", CS%energysavedays_geometric, &
     "The starting interval in units of TIMEUNIT for the first call "//&
     "to save the energies of the run and other globally summed diagnostics. "//&
     "The interval increases by a factor of 2. after each call to write_ice_shelf_energy.",&
@@ -834,7 +834,7 @@ subroutine initialize_ice_shelf_dyn(param_file, Time, ISS, CS, G, US, diag, new_
   ! Take additional initialization steps, for example of dependent variables.
   if (active_shelf_dynamics .and. .not.new_sim) then
 
-    call pass_var(CS%OD_av,G%domain, complete=.false.)
+    call pass_var(CS%OD_av, G%domain, complete=.false.)
     call pass_var(CS%ground_frac, G%domain, complete=.false.)
     call pass_var(CS%AGlen_visc, G%domain, complete=.false.)
     call pass_var(CS%bed_elev, G%domain, complete=.false.)
@@ -911,11 +911,11 @@ subroutine initialize_ice_shelf_dyn(param_file, Time, ISS, CS, G, US, diag, new_
       if (.not.file_exists(filename, G%Domain)) call MOM_error(FATAL, &
          " calving mask file: Unable to open "//trim(filename))
 
-      call MOM_read_data(filename,trim(var_name),CS%calve_mask,G%Domain)
+      call MOM_read_data(filename, trim(var_name), CS%calve_mask, G%Domain)
       do j=G%jsc,G%jec ; do i=G%isc,G%iec
         if (CS%calve_mask(i,j) > 0.0) CS%calve_mask(i,j) = 1.0
       enddo ; enddo
-      call pass_var(CS%calve_mask,G%domain)
+      call pass_var(CS%calve_mask, G%domain)
     endif
 
     ! initialize basal friction coefficients
@@ -937,7 +937,7 @@ subroutine initialize_ice_shelf_dyn(param_file, Time, ISS, CS, G, US, diag, new_
       call pass_vector(CS%u_face_mask_bdry, CS%v_face_mask_bdry, G%domain, TO_ALL, BGRID_NE, complete=.false.)
 
       !initialize ice flow characteristic (velocities, bed elevation under the grounded part, etc) from file
-      call initialize_ice_flow_from_file(CS%bed_elev,CS%u_shelf, CS%v_shelf, CS%ground_frac, &
+      call initialize_ice_flow_from_file(CS%bed_elev, CS%u_shelf, CS%v_shelf, CS%ground_frac, &
                   G, US, param_file)
       call pass_vector(CS%u_shelf, CS%v_shelf, G%domain, TO_ALL, BGRID_NE, complete=.true.)
       call pass_var(CS%ground_frac, G%domain, complete=.false.)
@@ -959,17 +959,17 @@ subroutine initialize_ice_shelf_dyn(param_file, Time, ISS, CS, G, US, diag, new_
     endif
 
   ! Register diagnostics.
-    CS%id_u_shelf = register_diag_field('ice_shelf_model','u_shelf',CS%diag%axesB1, Time, &
+    CS%id_u_shelf = register_diag_field('ice_shelf_model', 'u_shelf', CS%diag%axesB1, Time, &
        'x-velocity of ice', 'm yr-1', conversion=365.0*86400.0*US%L_T_to_m_s)
-    CS%id_v_shelf = register_diag_field('ice_shelf_model','v_shelf',CS%diag%axesB1, Time, &
+    CS%id_v_shelf = register_diag_field('ice_shelf_model', 'v_shelf', CS%diag%axesB1, Time, &
        'y-velocity of ice', 'm yr-1', conversion=365.0*86400.0*US%L_T_to_m_s)
-    CS%id_shelf_speed = register_diag_field('ice_shelf_model','shelf_speed',CS%diag%axesB1, Time, &
+    CS%id_shelf_speed = register_diag_field('ice_shelf_model', 'shelf_speed', CS%diag%axesB1, Time, &
        'speed of of ice shelf', 'm yr-1', conversion=365.0*86400.0*US%L_T_to_m_s)
-    CS%id_taudx_shelf = register_diag_field('ice_shelf_model','taudx_shelf',CS%diag%axesB1, Time, &
+    CS%id_taudx_shelf = register_diag_field('ice_shelf_model', 'taudx_shelf', CS%diag%axesB1, Time, &
        'x-driving stress of ice', 'kPa', conversion=1.e-3*US%RLZ_T2_to_Pa)
-    CS%id_taudy_shelf = register_diag_field('ice_shelf_model','taudy_shelf',CS%diag%axesB1, Time, &
+    CS%id_taudy_shelf = register_diag_field('ice_shelf_model', 'taudy_shelf', CS%diag%axesB1, Time, &
        'y-driving stress of ice', 'kPa', conversion=1.e-3*US%RLZ_T2_to_Pa)
-    CS%id_taud_shelf = register_diag_field('ice_shelf_model','taud_shelf',CS%diag%axesB1, Time, &
+    CS%id_taud_shelf = register_diag_field('ice_shelf_model', 'taud_shelf', CS%diag%axesB1, Time, &
        'magnitude of driving stress of ice', 'kPa', conversion=1.e-3*US%RLZ_T2_to_Pa)
     CS%id_sx_shelf = register_diag_field('ice_shelf_model', 'sx_shelf', CS%diag%axesT1, Time, &
        'x-surface slope of ice', 'none')
@@ -977,48 +977,48 @@ subroutine initialize_ice_shelf_dyn(param_file, Time, ISS, CS, G, US, diag, new_
        'y-surface slope of ice', 'none')
     CS%id_surf_slope_mag_shelf = register_diag_field('ice_shelf_model', 'surf_slope_mag_shelf', CS%diag%axesT1, Time, &
        'magnitude of surface slope of ice', 'none')
-    CS%id_u_mask = register_diag_field('ice_shelf_model','u_mask',CS%diag%axesB1, Time, &
+    CS%id_u_mask = register_diag_field('ice_shelf_model', 'u_mask', CS%diag%axesB1, Time, &
        'mask for u-nodes', 'none')
-    CS%id_v_mask = register_diag_field('ice_shelf_model','v_mask',CS%diag%axesB1, Time, &
+    CS%id_v_mask = register_diag_field('ice_shelf_model', 'v_mask', CS%diag%axesB1, Time, &
        'mask for v-nodes', 'none')
-    CS%id_ground_frac = register_diag_field('ice_shelf_model','ice_ground_frac',CS%diag%axesT1, Time, &
+    CS%id_ground_frac = register_diag_field('ice_shelf_model', 'ice_ground_frac', CS%diag%axesT1, Time, &
        'fraction of cell that is grounded', 'none')
-    CS%id_float_cond = register_diag_field('ice_shelf_model','float_cond',CS%diag%axesT1, Time, &
+    CS%id_float_cond = register_diag_field('ice_shelf_model', 'float_cond', CS%diag%axesT1, Time, &
        'sub-cell grounding cells', 'none')
-    CS%id_col_thick = register_diag_field('ice_shelf_model','col_thick',CS%diag%axesT1, Time, &
+    CS%id_col_thick = register_diag_field('ice_shelf_model', 'col_thick', CS%diag%axesT1, Time, &
        'ocean column thickness passed to ice model', 'm', conversion=US%Z_to_m)
-    CS%id_visc_shelf = register_diag_field('ice_shelf_model','ice_visc',CS%diag%axesT1, Time, &
+    CS%id_visc_shelf = register_diag_field('ice_shelf_model', 'ice_visc', CS%diag%axesT1, Time, &
        'vi-viscosity', 'Pa m s', conversion=US%RL2_T2_to_Pa*US%Z_to_m*US%T_to_s) !vertically integrated viscosity
-    CS%id_taub = register_diag_field('ice_shelf_model','taub_beta',CS%diag%axesT1, Time, &
+    CS%id_taub = register_diag_field('ice_shelf_model', 'taub_beta', CS%diag%axesT1, Time, &
        'taub', units='MPa yr m-1', conversion=1e-6*US%RLZ_T2_to_Pa/(365.0*86400.0*US%L_T_to_m_s))
-    CS%id_OD_av = register_diag_field('ice_shelf_model','OD_av',CS%diag%axesT1, Time, &
+    CS%id_OD_av = register_diag_field('ice_shelf_model', 'OD_av', CS%diag%axesT1, Time, &
        'intermediate ocean column thickness passed to ice model', 'm', conversion=US%Z_to_m)
 
-    CS%id_duHdx = register_diag_field('ice_shelf_model','duHdx',CS%diag%axesT1, Time, &
+    CS%id_duHdx = register_diag_field('ice_shelf_model', 'duHdx', CS%diag%axesT1, Time, &
        'x-component of ice-sheet flux divergence', 'm yr-1', conversion=365.0*86400.0*US%Z_to_m*US%s_to_T)
-    CS%id_dvHdy = register_diag_field('ice_shelf_model','dvHdy',CS%diag%axesT1, Time, &
+    CS%id_dvHdy = register_diag_field('ice_shelf_model', 'dvHdy', CS%diag%axesT1, Time, &
        'y-component of ice-sheet flux divergence', 'm yr-1', conversion=365.0*86400.0*US%Z_to_m*US%s_to_T)
-    CS%id_fluxdiv = register_diag_field('ice_shelf_model','fluxdiv',CS%diag%axesT1, Time, &
+    CS%id_fluxdiv = register_diag_field('ice_shelf_model', 'fluxdiv', CS%diag%axesT1, Time, &
        'ice-sheet flux divergence', 'm yr-1', conversion=365.0*86400.0*US%Z_to_m*US%s_to_T)
-    CS%id_strainrate_xx = register_diag_field('ice_shelf_model','strainrate_xx',CS%diag%axesT1, Time, &
+    CS%id_strainrate_xx = register_diag_field('ice_shelf_model', 'strainrate_xx', CS%diag%axesT1, Time, &
        'x-component of ice-shelf strain-rate', 'yr-1', conversion=365.0*86400.0*US%s_to_T)
-    CS%id_strainrate_yy = register_diag_field('ice_shelf_model','strainrate_yy',CS%diag%axesT1, Time, &
+    CS%id_strainrate_yy = register_diag_field('ice_shelf_model', 'strainrate_yy', CS%diag%axesT1, Time, &
        'y-component of ice-shelf strain-rate', 'yr-1', conversion=365.0*86400.0*US%s_to_T)
-    CS%id_strainrate_xy = register_diag_field('ice_shelf_model','strainrate_xy',CS%diag%axesT1, Time, &
+    CS%id_strainrate_xy = register_diag_field('ice_shelf_model', 'strainrate_xy', CS%diag%axesT1, Time, &
        'xy-component of ice-shelf strain-rate', 'yr-1', conversion=365.0*86400.0*US%s_to_T)
-    CS%id_pstrainrate_1 = register_diag_field('ice_shelf_model','pstrainrate_1',CS%diag%axesT1, Time, &
+    CS%id_pstrainrate_1 = register_diag_field('ice_shelf_model', 'pstrainrate_1', CS%diag%axesT1, Time, &
        'max principal horizontal ice-shelf strain-rate', 'yr-1', conversion=365.0*86400.0*US%s_to_T)
-    CS%id_pstrainrate_2 = register_diag_field('ice_shelf_model','pstrainrate_2',CS%diag%axesT1, Time, &
+    CS%id_pstrainrate_2 = register_diag_field('ice_shelf_model', 'pstrainrate_2', CS%diag%axesT1, Time, &
        'min principal horizontal ice-shelf strain-rate', 'yr-1', conversion=365.0*86400.0*US%s_to_T)
-    CS%id_devstress_xx = register_diag_field('ice_shelf_model','devstress_xx',CS%diag%axesT1, Time, &
+    CS%id_devstress_xx = register_diag_field('ice_shelf_model', 'devstress_xx', CS%diag%axesT1, Time, &
        'x-component of ice-shelf deviatoric stress', 'kPa', conversion=1.e-3*US%RLZ_T2_to_Pa)
-    CS%id_devstress_yy = register_diag_field('ice_shelf_model','devstress_yy',CS%diag%axesT1, Time, &
+    CS%id_devstress_yy = register_diag_field('ice_shelf_model', 'devstress_yy', CS%diag%axesT1, Time, &
        'y-component of ice-shelf deviatoric stress', 'kPa', conversion=1.e-3*US%RLZ_T2_to_Pa)
-    CS%id_devstress_xy = register_diag_field('ice_shelf_model','devstress_xy',CS%diag%axesT1, Time, &
+    CS%id_devstress_xy = register_diag_field('ice_shelf_model', 'devstress_xy', CS%diag%axesT1, Time, &
        'xy-component of ice-shelf deviatoric stress', 'kPa', conversion=1.e-3*US%RLZ_T2_to_Pa)
-    CS%id_pdevstress_1 = register_diag_field('ice_shelf_model','pdevstress_1',CS%diag%axesT1, Time, &
+    CS%id_pdevstress_1 = register_diag_field('ice_shelf_model', 'pdevstress_1', CS%diag%axesT1, Time, &
        'max principal horizontal ice-shelf deviatoric stress', 'kPa', conversion=1.e-3*US%RLZ_T2_to_Pa)
-    CS%id_pdevstress_2 = register_diag_field('ice_shelf_model','pdevstress_2',CS%diag%axesT1, Time, &
+    CS%id_pdevstress_2 = register_diag_field('ice_shelf_model', 'pdevstress_2', CS%diag%axesT1, Time, &
        'min principal ice-shelf deviatoric stress', 'kPa', conversion=1.e-3*US%RLZ_T2_to_Pa)
 
     !Update these variables so that they are nonzero in case
@@ -1048,7 +1048,7 @@ subroutine initialize_diagnostic_fields(CS, ISS, G, US, Time)
   real            :: OD  ! Depth of open water below the ice shelf [Z ~> m]
   type(time_type) :: dummy_time
 !
-  dummy_time = set_time(0,0)
+  dummy_time = set_time(0, 0)
   isd=G%isd ; ied = G%ied ; jsd = G%jsd ; jed = G%jed
 
   do j=jsd,jed
@@ -1065,7 +1065,7 @@ subroutine initialize_diagnostic_fields(CS, ISS, G, US, Time)
     enddo
   enddo
 
-  call ice_shelf_solve_outer(CS, ISS, G, US, CS%u_shelf, CS%v_shelf,CS%taudx_shelf,CS%taudy_shelf, iters, Time)
+  call ice_shelf_solve_outer(CS, ISS, G, US, CS%u_shelf, CS%v_shelf, CS%taudx_shelf, CS%taudy_shelf, iters, Time)
 end subroutine initialize_diagnostic_fields
 
 !> This function returns the global maximum advective timestep that can be taken based on the current
@@ -1130,7 +1130,7 @@ subroutine update_ice_shelf(CS, ISS, G, US, time_step, Time, calve_ice_shelf_ber
   if (CS%advect_shelf) then
     call ice_shelf_advect(CS, ISS, G, time_step, Time, calve_ice_shelf_bergs)
     if (CS%alternate_first_direction_IS) then
-      CS%first_direction_IS = modulo(CS%first_direction_IS+1,2)
+      CS%first_direction_IS = modulo(CS%first_direction_IS+1, 2)
       CS%first_dir_restart_IS = real(CS%first_direction_IS)
     endif
   endif
@@ -1145,7 +1145,7 @@ subroutine update_ice_shelf(CS, ISS, G, US, time_step, Time, calve_ice_shelf_ber
   endif
 
   if (update_ice_vel) then
-    call ice_shelf_solve_outer(CS, ISS, G, US, CS%u_shelf, CS%v_shelf,CS%taudx_shelf,CS%taudy_shelf, iters, Time)
+    call ice_shelf_solve_outer(CS, ISS, G, US, CS%u_shelf, CS%v_shelf, CS%taudx_shelf, CS%taudy_shelf, iters, Time)
     CS%elapsed_velocity_time = 0.0
   endif
 
@@ -1274,9 +1274,9 @@ subroutine IS_dynamics_post_data(time_step, Time, CS, ISS, G)
     endif
     if (CS%id_ground_frac > 0) call post_data(CS%id_ground_frac, CS%ground_frac, CS%diag)
     if (CS%id_float_cond > 0) call post_data(CS%id_float_cond, CS%float_cond, CS%diag)
-    if (CS%id_OD_av >0) call post_data(CS%id_OD_av, CS%OD_av,CS%diag)
+    if (CS%id_OD_av >0) call post_data(CS%id_OD_av, CS%OD_av, CS%diag)
     if (CS%id_visc_shelf > 0) then
-      call ice_visc_diag(CS,G,ice_visc)
+      call ice_visc_diag(CS, G, ice_visc)
       call post_data(CS%id_visc_shelf, ice_visc, CS%diag)
     endif
     if (CS%id_taub > 0) then
@@ -1501,7 +1501,7 @@ subroutine ice_shelf_advect(CS, ISS, G, time_step, Time, calve_ice_shelf_bergs)
   endif ; enddo ; enddo
 
   stencil = 2
-  if (modulo(CS%first_direction_IS,2)==0) then
+  if (modulo(CS%first_direction_IS, 2) == 0) then
     !x first
     LB%ish = G%isc ; LB%ieh = G%iec ; LB%jsh = G%jsc-stencil ; LB%jeh = G%jec+stencil
     if (LB%jsh < jsd) call MOM_error(FATAL, &
@@ -4397,7 +4397,7 @@ subroutine IS_dynamics_post_data_2(CS, ISS, G)
     if (CS%id_devstress_xx > 0 .or. CS%id_devstress_yy > 0 .or. CS%id_devstress_xy > 0 .or. &
         CS%id_pdevstress_1 > 0 .or. CS%id_pdevstress_2 > 0) then
 
-      call ice_visc_diag(CS,G,ice_visc)
+      call ice_visc_diag(CS, G, ice_visc)
 
       if (CS%id_devstress_xx > 0 .or. CS%id_devstress_yy > 0 .or. CS%id_devstress_xy > 0) then
         dev_stress(:,:,:)=0.0
@@ -4828,7 +4828,7 @@ subroutine bilinear_shape_functions (X, Y, Phi, area)
 
     do node=1,4
 
-      xnode = 2-mod(node,2) ; ynode = ceiling(REAL(node)/2)
+      xnode = 2 - mod(node, 2) ; ynode = ceiling(REAL(node)/2)
 
       if (ynode == 1) then
         yexp = 1-yquad(qpoint)
@@ -4904,7 +4904,7 @@ subroutine bilinear_shape_fn_grid(G, i, j, Phi, Jac)
     endif
 
     do node=1,4
-      xnode = 2-mod(node,2) ; ynode = ceiling(REAL(node)/2)
+      xnode = 2 - mod(node, 2) ; ynode = ceiling(REAL(node)/2)
 
       if (ynode == 1) then
         yexp = yquad_m(qpoint)
@@ -4965,7 +4965,7 @@ subroutine bilinear_shape_fn_grid_1qp(G, i, j, Phi)
     endif
 
     do node=1,4
-      xnode = 2-mod(node,2) ; ynode = ceiling(REAL(node)/2)
+      xnode = 2 - mod(node, 2) ; ynode = ceiling(REAL(node)/2)
       Phi(2*node-1) = ( (d * (2 * xnode - 3)) * yexp ) / (a*d)
       Phi(2*node)   = ( (a * (2 * ynode - 3)) * xexp ) / (a*d)
     enddo
@@ -5223,7 +5223,7 @@ subroutine interpolate_H_to_B(G, h_shelf, hmask, H_node, min_h_shelf)
     enddo
   enddo
 
-  call pass_var(H_node, G%domain,position=CORNER)
+  call pass_var(H_node, G%domain, position=CORNER)
 
 end subroutine interpolate_H_to_B
 

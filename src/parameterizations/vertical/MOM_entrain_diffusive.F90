@@ -1981,7 +1981,7 @@ subroutine find_maxF_kb(h_bl, Sref, Ent_bl, I_dSkbp1, min_ent_in, max_ent_in, &
         endif
       endif ; enddo
 
-      if (mod(it,3) == 0) then  ! Re-determine the loop bounds.
+      if (mod(it, 3) == 0) then  ! Re-determine the loop bounds.
         ie1 = is-1 ; do i=is1,ie ; if (do_i(i)) ie1 = i ; enddo
         do i=ie1,is,-1 ; if (do_i(i)) is1 = i ; enddo
       endif

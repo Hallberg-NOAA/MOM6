@@ -190,7 +190,7 @@ program Shelf_main
     call open_ASCII_file(unit, 'input.nml', action=READONLY_FILE)
     read(unit, ice_solo_nml, iostat=io_status)
     call close_file(unit)
-    ierr = check_nml_error(io_status,'ice_solo_nml')
+    ierr = check_nml_error(io_status, 'ice_solo_nml')
     if (years+months+days+hours+minutes+seconds > 0) then
       if (is_root_pe()) write(*,ice_solo_nml)
     endif
@@ -252,7 +252,7 @@ program Shelf_main
 
   if (sum(date) >= 0) then
     ! In this case, the segment starts at a time fixed by ocean_solo.res
-    segment_start_time = set_date(date(1),date(2),date(3),date(4),date(5),date(6))
+    segment_start_time = set_date(date(1), date(2), date(3), date(4), date(5), date(6))
     Time = segment_start_time
   else
     ! In this case, the segment starts at Start_time.
@@ -385,7 +385,7 @@ program Shelf_main
 
   if (cpu_steps > 0) call write_cputime(Time, 0, write_CPU_CSp)
 
-  if (((.not.BTEST(Restart_control,1)) .and. (.not.BTEST(Restart_control,0))) &
+  if (((.not.BTEST(Restart_control, 1)) .and. (.not.BTEST(Restart_control, 0))) &
       .or. (Restart_control < 0)) permit_incr_restart = .false.
 
   if (restint > real_to_time(0.0)) then
@@ -438,10 +438,10 @@ program Shelf_main
 
 !  See if it is time to write out a restart file - timestamped or not.
     if ((permit_incr_restart) .and. (Time + (Time_step_shelf/2) > restart_time)) then
-      if (BTEST(Restart_control,1)) then
+      if (BTEST(Restart_control, 1)) then
         call ice_shelf_save_restart(ice_shelf_CSp, Time, dirs%restart_output_dir, .true.)
       endif
-      if (BTEST(Restart_control,0)) then
+      if (BTEST(Restart_control, 0)) then
         call ice_shelf_save_restart(ice_shelf_CSp, Time, dirs%restart_output_dir)
       endif
       ! Write ice shelf solo restart file.

@@ -147,7 +147,7 @@ subroutine advect_tracer(h_end, uhtr, vhtr, OBC, dt, G, GV, US, CS, Reg, x_first
        "register_tracer must be called before advect_tracer.")
   if (Reg%ntr==0) return
   call cpu_clock_begin(id_clock_advect)
-  x_first = (MOD(G%first_direction,2) == 0)
+  x_first = (MOD(G%first_direction, 2) == 0)
 
   ! Choose the maximum stencil from all the local advection scheme
   do m = 1,ntr

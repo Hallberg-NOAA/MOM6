@@ -980,8 +980,8 @@ subroutine shelf_calc_flux(sfc_state_in, fluxes_in, Time, time_step_in, CS)
   if (CS%id_exch_vel_s > 0) call post_data(CS%id_exch_vel_s, exch_vel_s, CS%diag)
   if (CS%id_h_shelf > 0) call post_data(CS%id_h_shelf, ISS%h_shelf, CS%diag)
   if (CS%id_dhdt_shelf > 0) call post_data(CS%id_dhdt_shelf, ISS%dhdt_shelf, CS%diag)
-  if (CS%id_h_mask > 0) call post_data(CS%id_h_mask,ISS%hmask,CS%diag)
-  if (CS%id_frazil > 0) call post_data(CS%id_frazil,ISS%frazil,CS%diag)
+  if (CS%id_h_mask > 0) call post_data(CS%id_h_mask, ISS%hmask, CS%diag)
+  if (CS%id_frazil > 0) call post_data(CS%id_frazil, ISS%frazil, CS%diag)
   if (CS%active_shelf_dynamics) &
       call process_and_post_scalar_data(CS, vaf0, vaf0_A, vaf0_G, Itime_step, dh_adott, dh_bdott)
   call disable_averaging(CS%diag)
@@ -2055,9 +2055,9 @@ subroutine initialize_ice_shelf(param_file, ocn_grid, Time, CS, diag, Time_init,
   if (PRESENT(sfc_state_in)) then
     if (allocated(sfc_state%taux_shelf) .and. allocated(sfc_state%tauy_shelf)) then
       u_desc = var_desc("taux_shelf", "Pa", "the zonal stress on the ocean under ice shelves", &
-            hor_grid='Cu',z_grid='1')
+            hor_grid='Cu', z_grid='1')
       v_desc = var_desc("tauy_shelf", "Pa", "the meridional stress on the ocean under ice shelves", &
-            hor_grid='Cv',z_grid='1')
+            hor_grid='Cv', z_grid='1')
       call register_restart_pair(sfc_state%taux_shelf, sfc_state%tauy_shelf, u_desc, v_desc, &
             .false., CS%restart_CSp, conversion=US%RLZ_T2_to_Pa)
     endif
@@ -2065,7 +2065,7 @@ subroutine initialize_ice_shelf(param_file, ocn_grid, Time, CS, diag, Time_init,
 
   if (CS%active_shelf_dynamics) then
     call register_restart_field(ISS%hmask, "h_mask", .true., CS%restart_CSp, &
-                                "ice sheet/shelf thickness mask" ,"none")
+                                "ice sheet/shelf thickness mask", "none")
   endif
 
   if (CS%active_shelf_dynamics) then
@@ -2849,10 +2849,10 @@ subroutine solo_step_ice_shelf(CS, time_interval, nsteps, Time, min_time_step_in
   enddo ; enddo
 
   call enable_averages(full_time_step, Time, CS%diag)
-  if (CS%id_area_shelf_h > 0) call post_data(CS%id_area_shelf_h ,ISS%area_shelf_h,CS%diag)
-  if (CS%id_h_shelf > 0)      call post_data(CS%id_h_shelf      ,ISS%h_shelf     ,CS%diag)
-  if (CS%id_dhdt_shelf > 0)   call post_data(CS%id_dhdt_shelf   ,ISS%dhdt_shelf  ,CS%diag)
-  if (CS%id_h_mask > 0)       call post_data(CS%id_h_mask       ,ISS%hmask       ,CS%diag)
+  if (CS%id_area_shelf_h > 0) call post_data(CS%id_area_shelf_h, ISS%area_shelf_h, CS%diag)
+  if (CS%id_h_shelf > 0)      call post_data(CS%id_h_shelf, ISS%h_shelf, CS%diag)
+  if (CS%id_dhdt_shelf > 0)   call post_data(CS%id_dhdt_shelf, ISS%dhdt_shelf, CS%diag)
+  if (CS%id_h_mask > 0)       call post_data(CS%id_h_mask, ISS%hmask, CS%diag)
   if (CS%id_shelf_sfc_mass_flux > 0) call post_data(CS%id_shelf_sfc_mass_flux, fluxes_in%shelf_sfc_mass_flux, CS%diag)
   call process_and_post_scalar_data(CS, vaf0, vaf0_A, vaf0_G, Ifull_time_step, dh_adott, dh_adott*0.0)
   call disable_averaging(CS%diag)
@@ -2890,32 +2890,32 @@ subroutine process_and_post_scalar_data(CS, vaf0, vaf0_A, vaf0_G, Itime_step, dh
   !---ALL ICE SHEET---!
   if (CS%id_vaf > 0 .or. CS%id_dvafdt > 0) &  !calculate current volume above floatation (vaf)
     call volume_above_floatation(CS%dCS, G, ISS, vaf)
-  if (CS%id_vaf    > 0) call post_scalar_data(CS%id_vaf   ,vaf                  ,CS%diag) !current vaf
-  if (CS%id_dvafdt > 0) call post_scalar_data(CS%id_dvafdt,(vaf-vaf0)*Itime_step,CS%diag) !d(vaf)/dt
+  if (CS%id_vaf    > 0) call post_scalar_data(CS%id_vaf, vaf, CS%diag) !current vaf
+  if (CS%id_dvafdt > 0) call post_scalar_data(CS%id_dvafdt, (vaf-vaf0)*Itime_step, CS%diag) !d(vaf)/dt
   if (CS%id_adott > 0 .or. CS%id_adot > 0) then !surface accumulation - surface melt
     val = integrate_over_ice_sheet_area(G, ISS, dh_adott, unscale=US%Z_to_m)
-    if (CS%id_adott > 0) call post_scalar_data(CS%id_adott,val           ,CS%diag)
-    if (CS%id_adot  > 0) call post_scalar_data(CS%id_adot ,val*Itime_step,CS%diag)
+    if (CS%id_adott > 0) call post_scalar_data(CS%id_adott, val, CS%diag)
+    if (CS%id_adot  > 0) call post_scalar_data(CS%id_adot, val*Itime_step, CS%diag)
   endif
   if (CS%id_g_adott > 0 .or. CS%id_g_adot > 0) then !grounded only: surface accumulation - surface melt
-    call masked_var_grounded(G,CS%dCS,dh_adott,tmp)
+    call masked_var_grounded(G, CS%dCS, dh_adott, tmp)
     val = integrate_over_ice_sheet_area(G, ISS, tmp, unscale=US%Z_to_m)
-    if (CS%id_g_adott > 0) call post_scalar_data(CS%id_g_adott,val           ,CS%diag)
-    if (CS%id_g_adot  > 0) call post_scalar_data(CS%id_g_adot ,val*Itime_step,CS%diag)
+    if (CS%id_g_adott > 0) call post_scalar_data(CS%id_g_adott, val, CS%diag)
+    if (CS%id_g_adot  > 0) call post_scalar_data(CS%id_g_adot, val*Itime_step, CS%diag)
   endif
   if (CS%id_f_adott > 0 .or. CS%id_f_adot > 0) then !floating only: surface accumulation - surface melt
-    call masked_var_grounded(G,CS%dCS,dh_adott,tmp)
+    call masked_var_grounded(G, CS%dCS, dh_adott, tmp)
     do j=js,je ; do i=is,ie
       tmp(i,j) = dh_adott(i,j) - tmp(i,j)
     enddo ; enddo
     val = integrate_over_ice_sheet_area(G, ISS, tmp, unscale=US%Z_to_m)
-    if (CS%id_f_adott > 0) call post_scalar_data(CS%id_f_adott,val           ,CS%diag)
-    if (CS%id_f_adot  > 0) call post_scalar_data(CS%id_f_adot ,val*Itime_step,CS%diag)
+    if (CS%id_f_adott > 0) call post_scalar_data(CS%id_f_adott, val, CS%diag)
+    if (CS%id_f_adot  > 0) call post_scalar_data(CS%id_f_adot, val*Itime_step, CS%diag)
   endif
   if (CS%id_bdott > 0 .or. CS%id_bdot > 0) then !bottom accumulation - bottom melt
     val = integrate_over_ice_sheet_area(G, ISS, dh_bdott, unscale=US%Z_to_m)
-    if (CS%id_bdott > 0) call post_scalar_data(CS%id_bdott,val           ,CS%diag)
-    if (CS%id_bdot  > 0) call post_scalar_data(CS%id_bdot ,val*Itime_step,CS%diag)
+    if (CS%id_bdott > 0) call post_scalar_data(CS%id_bdott, val, CS%diag)
+    if (CS%id_bdot  > 0) call post_scalar_data(CS%id_bdot, val*Itime_step, CS%diag)
   endif
   if (CS%id_bdott_melt > 0 .or. CS%id_bdot_melt > 0) then !bottom melt
     tmp(:,:)=0.0
@@ -2923,8 +2923,8 @@ subroutine process_and_post_scalar_data(CS, vaf0, vaf0_A, vaf0_G, Itime_step, dh
       if (dh_bdott(i,j) < 0) tmp(i,j) = -dh_bdott(i,j)
     enddo ; enddo
     val = integrate_over_ice_sheet_area(G, ISS, tmp, unscale=US%Z_to_m)
-    if (CS%id_bdott_melt > 0) call post_scalar_data(CS%id_bdott_melt,val           ,CS%diag)
-    if (CS%id_bdot_melt  > 0) call post_scalar_data(CS%id_bdot_melt ,val*Itime_step,CS%diag)
+    if (CS%id_bdott_melt > 0) call post_scalar_data(CS%id_bdott_melt, val, CS%diag)
+    if (CS%id_bdot_melt  > 0) call post_scalar_data(CS%id_bdot_melt, val*Itime_step, CS%diag)
   endif
   if (CS%id_bdott_accum > 0 .or. CS%id_bdot_accum > 0) then !bottom accumulation
     tmp(:,:)=0.0
@@ -2932,54 +2932,54 @@ subroutine process_and_post_scalar_data(CS, vaf0, vaf0_A, vaf0_G, Itime_step, dh
       if (dh_bdott(i,j) > 0) tmp(i,j) = dh_bdott(i,j)
     enddo ; enddo
     val = integrate_over_ice_sheet_area(G, ISS, tmp, unscale=US%Z_to_m)
-    if (CS%id_bdott_accum > 0) call post_scalar_data(CS%id_bdott_accum,val           ,CS%diag)
-    if (CS%id_bdot_accum  > 0) call post_scalar_data(CS%id_bdot_accum ,val*Itime_step,CS%diag)
+    if (CS%id_bdott_accum > 0) call post_scalar_data(CS%id_bdott_accum, val, CS%diag)
+    if (CS%id_bdot_accum  > 0) call post_scalar_data(CS%id_bdot_accum, val*Itime_step, CS%diag)
   endif
   if (CS%id_t_area > 0) then !ice sheet area
     tmp(:,:) = 1.0 ; val = integrate_over_ice_sheet_area(G, ISS, tmp, unscale=1.0)
-    call post_scalar_data(CS%id_t_area,val,CS%diag)
+    call post_scalar_data(CS%id_t_area, val, CS%diag)
   endif
   if (CS%id_g_area > 0 .or. CS%id_f_area > 0) then
     ones(:,:) = 1.0 ; call masked_var_grounded(G, CS%dCS, ones, tmp)
     if (CS%id_g_area > 0) then !grounded only ice sheet area
       val = integrate_over_ice_sheet_area(G, ISS,     tmp, unscale=1.0)
-      call post_scalar_data(CS%id_g_area,val,CS%diag)
+      call post_scalar_data(CS%id_g_area, val, CS%diag)
     endif
     if (CS%id_f_area > 0) then !floating only ice sheet area (ice shelf area)
       val = integrate_over_ice_sheet_area(G, ISS, 1.0-tmp, unscale=1.0)
-      call post_scalar_data(CS%id_f_area,val,CS%diag)
+      call post_scalar_data(CS%id_f_area, val, CS%diag)
     endif
   endif
 
   !---ANTARCTICA ONLY---!
   if (CS%id_Ant_vaf > 0 .or. CS%id_Ant_dvafdt > 0) &  !calculate current volume above floatation (vaf)
     call volume_above_floatation(CS%dCS, G, ISS, vaf, hemisphere=0)
-  if (CS%id_Ant_vaf    > 0) call post_scalar_data(CS%id_Ant_vaf   ,vaf                  ,CS%diag) !current vaf
-  if (CS%id_Ant_dvafdt > 0) call post_scalar_data(CS%id_Ant_dvafdt,(vaf-vaf0_A)*Itime_step,CS%diag) !d(vaf)/dt
+  if (CS%id_Ant_vaf    > 0) call post_scalar_data(CS%id_Ant_vaf, vaf, CS%diag) !current vaf
+  if (CS%id_Ant_dvafdt > 0) call post_scalar_data(CS%id_Ant_dvafdt, (vaf-vaf0_A)*Itime_step, CS%diag) !d(vaf)/dt
   if (CS%id_Ant_adott > 0 .or. CS%id_Ant_adot > 0) then !surface accumulation - surface melt
     val = integrate_over_ice_sheet_area(G, ISS, dh_adott, unscale=US%Z_to_m, hemisphere=0)
-    if (CS%id_Ant_adott > 0) call post_scalar_data(CS%id_Ant_adott,val           ,CS%diag)
-    if (CS%id_Ant_adot  > 0) call post_scalar_data(CS%id_Ant_adot ,val*Itime_step,CS%diag)
+    if (CS%id_Ant_adott > 0) call post_scalar_data(CS%id_Ant_adott, val, CS%diag)
+    if (CS%id_Ant_adot  > 0) call post_scalar_data(CS%id_Ant_adot, val*Itime_step, CS%diag)
   endif
   if (CS%id_Ant_g_adott > 0 .or. CS%id_Ant_g_adot > 0) then !grounded only: surface accumulation - surface melt
-    call masked_var_grounded(G,CS%dCS,dh_adott,tmp)
+    call masked_var_grounded(G, CS%dCS, dh_adott, tmp)
     val = integrate_over_ice_sheet_area(G, ISS, tmp, unscale=US%Z_to_m, hemisphere=0)
-    if (CS%id_Ant_g_adott > 0) call post_scalar_data(CS%id_Ant_g_adott,val           ,CS%diag)
-    if (CS%id_Ant_g_adot  > 0) call post_scalar_data(CS%id_Ant_g_adot ,val*Itime_step,CS%diag)
+    if (CS%id_Ant_g_adott > 0) call post_scalar_data(CS%id_Ant_g_adott, val, CS%diag)
+    if (CS%id_Ant_g_adot  > 0) call post_scalar_data(CS%id_Ant_g_adot, val*Itime_step, CS%diag)
   endif
   if (CS%id_Ant_f_adott > 0 .or. CS%id_Ant_f_adot > 0) then !floating only: surface accumulation - surface melt
-    call masked_var_grounded(G,CS%dCS,dh_adott,tmp)
+    call masked_var_grounded(G, CS%dCS, dh_adott, tmp)
     do j=js,je ; do i=is,ie
       tmp(i,j) = dh_adott(i,j) - tmp(i,j)
     enddo ; enddo
     val = integrate_over_ice_sheet_area(G, ISS, tmp, unscale=US%Z_to_m, hemisphere=0)
-    if (CS%id_Ant_f_adott > 0) call post_scalar_data(CS%id_Ant_f_adott,val           ,CS%diag)
-    if (CS%id_Ant_f_adot  > 0) call post_scalar_data(CS%id_Ant_f_adot ,val*Itime_step,CS%diag)
+    if (CS%id_Ant_f_adott > 0) call post_scalar_data(CS%id_Ant_f_adott, val, CS%diag)
+    if (CS%id_Ant_f_adot  > 0) call post_scalar_data(CS%id_Ant_f_adot, val*Itime_step, CS%diag)
   endif
   if (CS%id_Ant_bdott > 0 .or. CS%id_Ant_bdot > 0) then !bottom accumulation - bottom melt
     val = integrate_over_ice_sheet_area(G, ISS, dh_bdott, unscale=US%Z_to_m, hemisphere=0)
-    if (CS%id_Ant_bdott > 0) call post_scalar_data(CS%id_Ant_bdott,val           ,CS%diag)
-    if (CS%id_Ant_bdot  > 0) call post_scalar_data(CS%id_Ant_bdot ,val*Itime_step,CS%diag)
+    if (CS%id_Ant_bdott > 0) call post_scalar_data(CS%id_Ant_bdott, val, CS%diag)
+    if (CS%id_Ant_bdot  > 0) call post_scalar_data(CS%id_Ant_bdot, val*Itime_step, CS%diag)
   endif
   if (CS%id_Ant_bdott_melt > 0 .or. CS%id_Ant_bdot_melt > 0) then !bottom melt
     tmp(:,:)=0.0
@@ -2987,8 +2987,8 @@ subroutine process_and_post_scalar_data(CS, vaf0, vaf0_A, vaf0_G, Itime_step, dh
       if (dh_bdott(i,j) < 0) tmp(i,j) = -dh_bdott(i,j)
     enddo ; enddo
     val = integrate_over_ice_sheet_area(G, ISS, tmp, unscale=US%Z_to_m, hemisphere=0)
-    if (CS%id_Ant_bdott_melt > 0) call post_scalar_data(CS%id_Ant_bdott_melt,val           ,CS%diag)
-    if (CS%id_Ant_bdot_melt  > 0) call post_scalar_data(CS%id_Ant_bdot_melt ,val*Itime_step,CS%diag)
+    if (CS%id_Ant_bdott_melt > 0) call post_scalar_data(CS%id_Ant_bdott_melt, val, CS%diag)
+    if (CS%id_Ant_bdot_melt  > 0) call post_scalar_data(CS%id_Ant_bdot_melt, val*Itime_step, CS%diag)
   endif
   if (CS%id_Ant_bdott_accum > 0 .or. CS%id_Ant_bdot_accum > 0) then !bottom accumulation
     tmp(:,:)=0.0
@@ -2996,54 +2996,54 @@ subroutine process_and_post_scalar_data(CS, vaf0, vaf0_A, vaf0_G, Itime_step, dh
       if (dh_bdott(i,j) > 0) tmp(i,j) = dh_bdott(i,j)
     enddo ; enddo
     val = integrate_over_ice_sheet_area(G, ISS, tmp, unscale=US%Z_to_m, hemisphere=0)
-    if (CS%id_Ant_bdott_accum > 0) call post_scalar_data(CS%id_Ant_bdott_accum,val           ,CS%diag)
-    if (CS%id_Ant_bdot_accum  > 0) call post_scalar_data(CS%id_Ant_bdot_accum ,val*Itime_step,CS%diag)
+    if (CS%id_Ant_bdott_accum > 0) call post_scalar_data(CS%id_Ant_bdott_accum, val, CS%diag)
+    if (CS%id_Ant_bdot_accum  > 0) call post_scalar_data(CS%id_Ant_bdot_accum, val*Itime_step, CS%diag)
   endif
   if (CS%id_Ant_t_area > 0) then !ice sheet area
     tmp(:,:) = 1.0 ; val = integrate_over_ice_sheet_area(G, ISS, tmp, unscale=1.0, hemisphere=0)
-    call post_scalar_data(CS%id_Ant_t_area,val,CS%diag)
+    call post_scalar_data(CS%id_Ant_t_area, val, CS%diag)
   endif
   if (CS%id_Ant_g_area > 0 .or. CS%id_Ant_f_area > 0) then
     ones(:,:) = 1.0 ; call masked_var_grounded(G, CS%dCS, ones, tmp)
     if (CS%id_Ant_g_area > 0) then !grounded only ice sheet area
       val = integrate_over_ice_sheet_area(G, ISS,     tmp, unscale=1.0, hemisphere=0)
-      call post_scalar_data(CS%id_Ant_g_area,val,CS%diag)
+      call post_scalar_data(CS%id_Ant_g_area, val, CS%diag)
     endif
     if (CS%id_Ant_f_area > 0) then !floating only ice sheet area (ice shelf area)
       val = integrate_over_ice_sheet_area(G, ISS, 1.0-tmp, unscale=1.0, hemisphere=0)
-      call post_scalar_data(CS%id_Ant_f_area,val,CS%diag)
+      call post_scalar_data(CS%id_Ant_f_area, val, CS%diag)
     endif
   endif
 
   !---GREENLAND ONLY---!
   if (CS%id_Gr_vaf > 0 .or. CS%id_Gr_dvafdt > 0) &  !calculate current volume above floatation (vaf)
     call volume_above_floatation(CS%dCS, G, ISS, vaf, hemisphere=1)
-  if (CS%id_Gr_vaf    > 0) call post_scalar_data(CS%id_Gr_vaf   ,vaf                  ,CS%diag) !current vaf
-  if (CS%id_Gr_dvafdt > 0) call post_scalar_data(CS%id_Gr_dvafdt,(vaf-vaf0_A)*Itime_step,CS%diag) !d(vaf)/dt
+  if (CS%id_Gr_vaf    > 0) call post_scalar_data(CS%id_Gr_vaf, vaf, CS%diag) !current vaf
+  if (CS%id_Gr_dvafdt > 0) call post_scalar_data(CS%id_Gr_dvafdt, (vaf-vaf0_A)*Itime_step, CS%diag) !d(vaf)/dt
   if (CS%id_Gr_adott > 0 .or. CS%id_Gr_adot > 0) then !surface accumulation - surface melt
     val = integrate_over_ice_sheet_area(G, ISS, dh_adott, unscale=US%Z_to_m, hemisphere=1)
-    if (CS%id_Gr_adott > 0) call post_scalar_data(CS%id_Gr_adott,val           ,CS%diag)
-    if (CS%id_Gr_adot  > 0) call post_scalar_data(CS%id_Gr_adot ,val*Itime_step,CS%diag)
+    if (CS%id_Gr_adott > 0) call post_scalar_data(CS%id_Gr_adott, val, CS%diag)
+    if (CS%id_Gr_adot  > 0) call post_scalar_data(CS%id_Gr_adot, val*Itime_step, CS%diag)
   endif
   if (CS%id_Gr_g_adott > 0 .or. CS%id_Gr_g_adot > 0) then !grounded only: surface accumulation - surface melt
-    call masked_var_grounded(G,CS%dCS,dh_adott,tmp)
+    call masked_var_grounded(G, CS%dCS, dh_adott, tmp)
     val = integrate_over_ice_sheet_area(G, ISS, tmp, unscale=US%Z_to_m, hemisphere=1)
-    if (CS%id_Gr_g_adott > 0) call post_scalar_data(CS%id_Gr_g_adott,val           ,CS%diag)
-    if (CS%id_Gr_g_adot  > 0) call post_scalar_data(CS%id_Gr_g_adot ,val*Itime_step,CS%diag)
+    if (CS%id_Gr_g_adott > 0) call post_scalar_data(CS%id_Gr_g_adott, val, CS%diag)
+    if (CS%id_Gr_g_adot  > 0) call post_scalar_data(CS%id_Gr_g_adot, val*Itime_step, CS%diag)
   endif
   if (CS%id_Gr_f_adott > 0 .or. CS%id_Gr_f_adot > 0) then !floating only: surface accumulation - surface melt
-    call masked_var_grounded(G,CS%dCS,dh_adott,tmp)
+    call masked_var_grounded(G, CS%dCS, dh_adott, tmp)
     do j=js,je ; do i=is,ie
       tmp(i,j) = dh_adott(i,j) - tmp(i,j)
     enddo ; enddo
     val = integrate_over_ice_sheet_area(G, ISS, tmp, unscale=US%Z_to_m, hemisphere=1)
-    if (CS%id_Gr_f_adott > 0) call post_scalar_data(CS%id_Gr_f_adott,val           ,CS%diag)
-    if (CS%id_Gr_f_adot  > 0) call post_scalar_data(CS%id_Gr_f_adot ,val*Itime_step,CS%diag)
+    if (CS%id_Gr_f_adott > 0) call post_scalar_data(CS%id_Gr_f_adott, val, CS%diag)
+    if (CS%id_Gr_f_adot  > 0) call post_scalar_data(CS%id_Gr_f_adot, val*Itime_step, CS%diag)
   endif
   if (CS%id_Gr_bdott > 0 .or. CS%id_Gr_bdot > 0) then !bottom accumulation - bottom melt
     val = integrate_over_ice_sheet_area(G, ISS, dh_bdott, unscale=US%Z_to_m, hemisphere=1)
-    if (CS%id_Gr_bdott > 0) call post_scalar_data(CS%id_Gr_bdott,val           ,CS%diag)
-    if (CS%id_Gr_bdot  > 0) call post_scalar_data(CS%id_Gr_bdot ,val*Itime_step,CS%diag)
+    if (CS%id_Gr_bdott > 0) call post_scalar_data(CS%id_Gr_bdott, val, CS%diag)
+    if (CS%id_Gr_bdot  > 0) call post_scalar_data(CS%id_Gr_bdot, val*Itime_step, CS%diag)
   endif
   if (CS%id_Gr_bdott_melt > 0 .or. CS%id_Gr_bdot_melt > 0) then !bottom melt
     tmp(:,:)=0.0
@@ -3051,8 +3051,8 @@ subroutine process_and_post_scalar_data(CS, vaf0, vaf0_A, vaf0_G, Itime_step, dh
       if (dh_bdott(i,j) < 0) tmp(i,j) = -dh_bdott(i,j)
     enddo ; enddo
     val = integrate_over_ice_sheet_area(G, ISS, tmp, unscale=US%Z_to_m, hemisphere=1)
-    if (CS%id_Gr_bdott_melt > 0) call post_scalar_data(CS%id_Gr_bdott_melt,val           ,CS%diag)
-    if (CS%id_Gr_bdot_melt  > 0) call post_scalar_data(CS%id_Gr_bdot_melt ,val*Itime_step,CS%diag)
+    if (CS%id_Gr_bdott_melt > 0) call post_scalar_data(CS%id_Gr_bdott_melt, val, CS%diag)
+    if (CS%id_Gr_bdot_melt  > 0) call post_scalar_data(CS%id_Gr_bdot_melt, val*Itime_step, CS%diag)
   endif
   if (CS%id_Gr_bdott_accum > 0 .or. CS%id_Gr_bdot_accum > 0) then !bottom accumulation
     tmp(:,:)=0.0
@@ -3060,22 +3060,22 @@ subroutine process_and_post_scalar_data(CS, vaf0, vaf0_A, vaf0_G, Itime_step, dh
       if (dh_bdott(i,j) > 0) tmp(i,j) = dh_bdott(i,j)
     enddo ; enddo
     val = integrate_over_ice_sheet_area(G, ISS, tmp, unscale=US%Z_to_m, hemisphere=1)
-    if (CS%id_Gr_bdott_accum > 0) call post_scalar_data(CS%id_Gr_bdott_accum,val           ,CS%diag)
-    if (CS%id_Gr_bdot_accum  > 0) call post_scalar_data(CS%id_Gr_bdot_accum ,val*Itime_step,CS%diag)
+    if (CS%id_Gr_bdott_accum > 0) call post_scalar_data(CS%id_Gr_bdott_accum, val, CS%diag)
+    if (CS%id_Gr_bdot_accum  > 0) call post_scalar_data(CS%id_Gr_bdot_accum , val*Itime_step, CS%diag)
   endif
   if (CS%id_Gr_t_area > 0) then !ice sheet area
     tmp(:,:) = 1.0 ; val = integrate_over_ice_sheet_area(G, ISS, tmp, unscale=1.0, hemisphere=1)
-    call post_scalar_data(CS%id_Gr_t_area,val,CS%diag)
+    call post_scalar_data(CS%id_Gr_t_area, val, CS%diag)
   endif
   if (CS%id_Gr_g_area > 0 .or. CS%id_Gr_f_area > 0) then
     ones(:,:) = 1.0 ; call masked_var_grounded(G, CS%dCS, ones, tmp)
     if (CS%id_Gr_g_area > 0) then !grounded only ice sheet area
       val = integrate_over_ice_sheet_area(G, ISS,     tmp, unscale=1.0, hemisphere=1)
-      call post_scalar_data(CS%id_Gr_g_area,val,CS%diag)
+      call post_scalar_data(CS%id_Gr_g_area, val, CS%diag)
     endif
     if (CS%id_Gr_f_area > 0) then !floating only ice sheet area (ice shelf area)
       val = integrate_over_ice_sheet_area(G, ISS, 1.0-tmp, unscale=1.0, hemisphere=1)
-      call post_scalar_data(CS%id_Gr_f_area,val,CS%diag)
+      call post_scalar_data(CS%id_Gr_f_area, val, CS%diag)
     endif
   endif
 end subroutine process_and_post_scalar_data
@@ -3128,10 +3128,10 @@ subroutine initialize_ice_SMB(CS, SMB, G, US, PF)
     if (.not.file_exists(filename, G%Domain)) call MOM_error(FATAL, &
        " initialize_ice_SMV_from_file: Unable to open "//trim(filename))
     if (SMB_file_has_time) then
-       CS%smb_file = init_external_field(filename, varname, MOM_domain=G%Domain,correct_leap_year_inconsistency=.true.)
+       CS%smb_file = init_external_field(filename, varname, MOM_domain=G%Domain, correct_leap_year_inconsistency=.true.)
        CS%time_varying_smb = .true.
     else
-       call MOM_read_data(filename,trim(varname), SMB, G%Domain, scale=US%kg_m2s_to_RZ_T)
+       call MOM_read_data(filename, trim(varname), SMB, G%Domain, scale=US%kg_m2s_to_RZ_T)
        CS%time_varying_smb = .false.
     endif
   endif

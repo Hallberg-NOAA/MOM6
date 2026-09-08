@@ -77,7 +77,7 @@ subroutine doc_param_none(doc, varname, desc, units)
 
   if (doc%filesAreOpen) then
     numspc = max(1, doc%commentColumn-8-len_trim(varname))
-    mesg = "#define "//trim(varname)//repeat(" ",numspc)//"!"
+    mesg = "#define "//trim(varname)//repeat(" ", numspc)//"!"
     if (len_trim(units) > 0) mesg = trim(mesg)//"   ["//trim(units)//"]"
 
     if (mesgHasBeenDocumented(doc, varName, mesg)) return ! Avoid duplicates
@@ -577,7 +577,7 @@ subroutine writeMessageAndDesc(doc, vmesg, desc, valueWasDefault, indent, &
       mesg_text(tab_ind:) = "  "//trim(mesg_text(tab_ind+len_tab:))
     enddo
 
-    mesg = repeat(" ",indnt)//"! "//repeat(" ",msg_pad)//trim(mesg_text)
+    mesg = repeat(" ", indnt)//"! "//repeat(" ", msg_pad)//trim(mesg_text)
 
     if (reset_msg_pad) then
       msg_pad = 0
@@ -628,15 +628,15 @@ function real_string(val)
 
   if ((abs(val) < 1.0e4) .and. (abs(val) >= 1.0e-3)) then
     write(real_string, '(F30.11)') val
-    if (.not.testFormattedFloatIsReal(real_string,val)) then
+    if (.not.testFormattedFloatIsReal(real_string, val)) then
       write(real_string, '(F30.12)') val
-      if (.not.testFormattedFloatIsReal(real_string,val)) then
+      if (.not.testFormattedFloatIsReal(real_string, val)) then
         write(real_string, '(F30.13)') val
-        if (.not.testFormattedFloatIsReal(real_string,val)) then
+        if (.not.testFormattedFloatIsReal(real_string, val)) then
           write(real_string, '(F30.14)') val
-          if (.not.testFormattedFloatIsReal(real_string,val)) then
+          if (.not.testFormattedFloatIsReal(real_string, val)) then
             write(real_string, '(F30.15)') val
-            if (.not.testFormattedFloatIsReal(real_string,val)) then
+            if (.not.testFormattedFloatIsReal(real_string, val)) then
               write(real_string, '(F30.16)') val
             endif
           endif
@@ -688,7 +688,7 @@ end function real_string
 !> Returns a character string of a comma-separated, compact formatted, reals
 !> e.g. "1., 2., 5*3., 5.E2", that give the list of values.
 function real_array_string(vals, sep)
-  character(len=:) ,allocatable :: real_array_string !< The output string listing vals
+  character(len=:), allocatable :: real_array_string !< The output string listing vals
   real,      intent(in)  :: vals(:) !< The array of values to record
   character(len=*), &
     optional, intent(in) :: sep     !< The separator between successive values,
@@ -820,14 +820,14 @@ function define_string(doc, varName, valString, units)
   character(len=mLen) :: define_string
 ! This function returns a string for formatted parameter assignment
   integer :: numSpaces
-  define_string = repeat(" ",mLen) ! Blank everything for safety
+  define_string = repeat(" ", mLen) ! Blank everything for safety
   if (doc%defineSyntax) then
     define_string = "#define "//trim(varName)//" "//valString
   else
     define_string = trim(varName)//" = "//valString
   endif
   numSpaces = max(1, doc%commentColumn - len_trim(define_string) )
-  define_string = trim(define_string)//repeat(" ",numSpaces)//"!"
+  define_string = trim(define_string)//repeat(" ", numSpaces)//"!"
   if (len_trim(units) > 0) define_string = trim(define_string)//"   ["//trim(units)//"]"
 end function define_string
 
@@ -840,7 +840,7 @@ function undef_string(doc, varName, units)
   character(len=mLen) :: undef_string
 ! This function returns a string for formatted false logicals
   integer :: numSpaces
-  undef_string = repeat(" ",240) ! Blank everything for safety
+  undef_string = repeat(" ", 240) ! Blank everything for safety
   undef_string = "#undef "//trim(varName)
   if (doc%defineSyntax) then
     undef_string = "#undef "//trim(varName)
@@ -848,7 +848,7 @@ function undef_string(doc, varName, units)
     undef_string = trim(varName)//" = "//STRING_FALSE
   endif
   numSpaces = max(1, doc%commentColumn - len_trim(undef_string) )
-  undef_string = trim(undef_string)//repeat(" ",numSpaces)//"!"
+  undef_string = trim(undef_string)//repeat(" ", numSpaces)//"!"
   if (len_trim(units) > 0) undef_string = trim(undef_string)//"   ["//trim(units)//"]"
 end function undef_string
 
@@ -1106,7 +1106,7 @@ end subroutine doc_end
 ! -----------------------------------------------------------------------------
 
 !> Returns true if documentation has already been written
-function mesgHasBeenDocumented(doc,varName,mesg)
+function mesgHasBeenDocumented(doc, varName, mesg)
   type(doc_type),   pointer     :: doc  !< A pointer to a structure that controls where the
                                         !! documentation occurs and its formatting
   character(len=*), intent(in)  :: varName !< The name of the parameter being documented
