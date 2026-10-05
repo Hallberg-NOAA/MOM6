@@ -79,13 +79,13 @@ type, public :: xyt
   integer :: year  !< Year of this record
   integer :: particle_num  !< Current particle number
   integer(kind=int64) :: id = -1 !< Particle Identifier
-  type(xyt), pointer :: next=>null()  !< Pointer to the next position in the list
+  type(xyt), pointer :: next => null()  !< Pointer to the next position in the list
 end type xyt
 
 !>particle types are data structures describing a tracked particle
 type, public :: particle
-  type(particle), pointer :: prev=>null() !< Previous link in list
-  type(particle), pointer :: next=>null() !< Next link in list
+  type(particle), pointer :: prev => null() !< Previous link in list
+  type(particle), pointer :: next => null() !< Next link in list
 ! State variables (specific to the particles, needed for restarts)
   real :: lon !< Longitude of particle (degree N or unit of grid coordinate)
   real :: lat !< Latitude of particle (degree E or unit of grid coordinate)
@@ -110,7 +110,7 @@ type, public :: particle
   real :: uo                                !< zonal ocean velocity
   real :: vo                                !< meridional ocean velocity
                                                 !< by the particle (m/s)
-  type(xyt), pointer :: trajectory=>null() !< Trajectory for this particle
+  type(xyt), pointer :: trajectory => null() !< Trajectory for this particle
 end type particle
 
 
@@ -122,7 +122,7 @@ end type buffer
 
 !> A wrapper for the particle linked list (since an array of pointers is not allowed)
 type, public :: linked_list
-  type(particle), pointer :: first=>null() !< Pointer to the beginning of a linked list of parts
+  type(particle), pointer :: first => null() !< Pointer to the beginning of a linked list of parts
 end type linked_list
 
 
@@ -130,7 +130,7 @@ end type linked_list
 type, public :: particles !; private
   type(particles_gridded) :: grd !< Container with all gridded data
   type(linked_list), dimension(:,:), allocatable :: list !< Linked list of particles
-  type(xyt), pointer :: trajectories=>null() !< A linked list for detached segments of trajectories
+  type(xyt), pointer :: trajectories => null() !< A linked list for detached segments of trajectories
   real :: dt !< Time-step between particle calls
   integer :: current_year !< Current year (years)
   real :: current_yearday !< Current year-day, 1.00-365.99, (days)
@@ -151,16 +151,16 @@ type, public :: particles !; private
   logical :: use_new_predictive_corrective = .False. !< Flag to use Bob's predictive corrective particle scheme
   !Added by Alon
   integer(kind=int64) :: debug_particle_with_id = -1 !< If positive, monitors a part with this id
-  type(buffer), pointer :: obuffer_n=>null() !< Buffer for outgoing parts to the north
-  type(buffer), pointer :: ibuffer_n=>null() !< Buffer for incoming parts from the north
-  type(buffer), pointer :: obuffer_s=>null() !< Buffer for outgoing parts to the south
-  type(buffer), pointer :: ibuffer_s=>null() !< Buffer for incoming parts from the south
-  type(buffer), pointer :: obuffer_e=>null() !< Buffer for outgoing parts to the east
-  type(buffer), pointer :: ibuffer_e=>null() !< Buffer for incoming parts from the east
-  type(buffer), pointer :: obuffer_w=>null() !< Buffer for outgoing parts to the west
-  type(buffer), pointer :: ibuffer_w=>null() !< Buffer for incoming parts from the west
-  type(buffer), pointer :: obuffer_io=>null() !< Buffer for outgoing parts during i/o
-  type(buffer), pointer :: ibuffer_io=>null() !< Buffer for incoming parts during i/o
+  type(buffer), pointer :: obuffer_n => null() !< Buffer for outgoing parts to the north
+  type(buffer), pointer :: ibuffer_n => null() !< Buffer for incoming parts from the north
+  type(buffer), pointer :: obuffer_s => null() !< Buffer for outgoing parts to the south
+  type(buffer), pointer :: ibuffer_s => null() !< Buffer for incoming parts from the south
+  type(buffer), pointer :: obuffer_e => null() !< Buffer for outgoing parts to the east
+  type(buffer), pointer :: ibuffer_e => null() !< Buffer for incoming parts from the east
+  type(buffer), pointer :: obuffer_w => null() !< Buffer for outgoing parts to the west
+  type(buffer), pointer :: ibuffer_w => null() !< Buffer for incoming parts from the west
+  type(buffer), pointer :: obuffer_io => null() !< Buffer for outgoing parts during i/o
+  type(buffer), pointer :: ibuffer_io => null() !< Buffer for incoming parts during i/o
 end type particles
 
 

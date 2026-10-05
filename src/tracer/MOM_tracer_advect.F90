@@ -467,7 +467,7 @@ subroutine advect_x(Tr, hprev, uhr, uh_neglect, OBC, domore_u, ntr, Idt, &
   logical :: do_i(SZI_(G),SZJ_(G))     ! If true, work on given points.
   logical :: usePLMslope
   integer :: i, j, m, n, i_up, stencil, ntr_id
-  type(OBC_segment_type), pointer :: segment=>NULL()
+  type(OBC_segment_type), pointer :: segment => NULL()
   logical, dimension(SZJ_(G),SZK_(GV)) :: domore_u_initial
 
   ! keep a local copy of the initial values of domore_u, which is to be used when computing ad2d_x
@@ -532,7 +532,7 @@ subroutine advect_x(Tr, hprev, uhr, uh_neglect, OBC, domore_u, ntr, Idt, &
     ! loop through open boundaries and recalculate flux terms
     if (associated(OBC)) then ; if (OBC%OBC_pe) then
       do n=1,OBC%number_of_segments
-        segment=>OBC%segment(n)
+        segment => OBC%segment(n)
         if (.not. associated(segment%tr_Reg)) cycle
         if (segment%is_E_or_W) then
           if (j>=segment%HI%jsd .and. j<=segment%HI%jed) then
@@ -670,7 +670,7 @@ subroutine advect_x(Tr, hprev, uhr, uh_neglect, OBC, domore_u, ntr, Idt, &
     if (associated(OBC)) then ; if (OBC%OBC_pe) then
       if (OBC%specified_u_BCs_exist_globally .or. OBC%open_u_BCs_exist_globally) then
         do n=1,OBC%number_of_segments
-          segment=>OBC%segment(n)
+          segment => OBC%segment(n)
           if (.not. associated(segment%tr_Reg)) cycle
           if (segment%is_E_or_W) then
             if (j>=segment%HI%jsd .and. j<=segment%HI%jed) then
@@ -695,7 +695,7 @@ subroutine advect_x(Tr, hprev, uhr, uh_neglect, OBC, domore_u, ntr, Idt, &
 
       if (OBC%open_u_BCs_exist_globally) then
         do n=1,OBC%number_of_segments
-          segment=>OBC%segment(n)
+          segment => OBC%segment(n)
           I = segment%HI%IsdB
           if (segment%is_E_or_W .and. (j >= segment%HI%jsd .and. j<= segment%HI%jed)) then
             if (segment%specified) cycle
@@ -883,7 +883,7 @@ subroutine advect_y(Tr, hprev, vhr, vh_neglect, OBC, domore_v, ntr, Idt, &
   logical :: do_i(SZI_(G), SZJ_(G))     ! If true, work on given points.
   logical :: usePLMslope
   integer :: i, j, j2, m, n, j_up, stencil, ntr_id
-  type(OBC_segment_type), pointer :: segment=>NULL()
+  type(OBC_segment_type), pointer :: segment => NULL()
   logical :: domore_v_initial(SZJB_(G)) ! Initial state of domore_v
 
   usePLMslope = .false.
@@ -959,7 +959,7 @@ subroutine advect_y(Tr, hprev, vhr, vh_neglect, OBC, domore_v, ntr, Idt, &
   ! loop through open boundaries and recalculate flux terms
   if (associated(OBC)) then ; if (OBC%OBC_pe) then
     do n=1,OBC%number_of_segments
-      segment=>OBC%segment(n)
+      segment => OBC%segment(n)
       if (.not. associated(segment%tr_Reg)) cycle
       do i=is,ie
         if (segment%is_N_or_S) then
@@ -1100,7 +1100,7 @@ subroutine advect_y(Tr, hprev, vhr, vh_neglect, OBC, domore_v, ntr, Idt, &
     if (associated(OBC)) then ; if (OBC%OBC_pe) then
       if (OBC%specified_v_BCs_exist_globally .or. OBC%open_v_BCs_exist_globally) then
         do n=1,OBC%number_of_segments
-          segment=>OBC%segment(n)
+          segment => OBC%segment(n)
           if (.not. segment%specified) cycle
           if (.not. associated(segment%tr_Reg)) cycle
           if (OBC%segment(n)%is_N_or_S) then
@@ -1126,7 +1126,7 @@ subroutine advect_y(Tr, hprev, vhr, vh_neglect, OBC, domore_v, ntr, Idt, &
 
       if (OBC%open_v_BCs_exist_globally) then
         do n=1,OBC%number_of_segments
-          segment=>OBC%segment(n)
+          segment => OBC%segment(n)
           if (segment%specified) cycle
           if (.not. associated(segment%tr_Reg)) cycle
           if (segment%is_N_or_S .and. (J >= segment%HI%JsdB .and. J<= segment%HI%JedB)) then

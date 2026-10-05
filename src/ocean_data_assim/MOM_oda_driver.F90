@@ -92,10 +92,10 @@ end type INC_CS
 
 !> Control structure that contains a transpose of the ocean state across ensemble members.
 type, public :: ODA_CS ; private
-  type(ocean_control_struct), pointer :: Ocean_prior=> NULL() !< ensemble ocean prior states in DA space
-  type(ocean_control_struct), pointer :: Ocean_posterior=> NULL() !< ensemble ocean posterior states
+  type(ocean_control_struct), pointer :: Ocean_prior => NULL() !< ensemble ocean prior states in DA space
+  type(ocean_control_struct), pointer :: Ocean_posterior => NULL() !< ensemble ocean posterior states
                                                                   !! or increments to prior in DA space
-  type(ocean_control_struct), pointer :: Ocean_increment=> NULL() !< A separate structure for
+  type(ocean_control_struct), pointer :: Ocean_increment => NULL() !< A separate structure for
                                                                   !! increment diagnostics
   integer :: nk !< number of vertical layers used for DA
   type(ocean_grid_type), pointer :: Grid => NULL() !< MOM6 grid type and decomposition for the DA
@@ -135,12 +135,12 @@ type, public :: ODA_CS ; private
   type(ocean_profile_type), pointer :: Profiles => NULL() !< pointer to linked list of all available profiles
   type(ocean_profile_type), pointer :: CProfiles => NULL()!< pointer to linked list of current profiles
   type(kd_root), pointer :: kdroot => NULL() !< A structure for storing nearest neighbors
-  type(ALE_CS), pointer :: ALE_CS=>NULL() !< ALE control structure for DA
+  type(ALE_CS), pointer :: ALE_CS => NULL() !< ALE control structure for DA
   logical :: use_ALE_algorithm !< true is using ALE remapping
   type(regridding_CS) :: regridCS !< ALE control structure for regridding
   type(remapping_CS) :: remapCS !< ALE control structure for remapping
   type(time_type) :: Time !< Current Analysis time
-  type(diag_ctrl), pointer :: diag_cs=> NULL() !<Pointer to diagnostics control structure
+  type(diag_ctrl), pointer :: diag_cs => NULL() !<Pointer to diagnostics control structure
   type(INC_CS) :: INC_CS !< A Structure containing integer file handles for bias adjustment
   integer :: id_inc_t !< A diagnostic handle for the temperature climatological adjustment
   integer :: id_inc_s !< A diagnostic handle for the salinity climatological adjustment
@@ -172,8 +172,8 @@ subroutine init_oda(Time, G, GV, US, diag_CS, CS)
 
 ! Local variables
   type(thermo_var_ptrs) :: tv_dummy
-  type(dyn_horgrid_type), pointer :: dG=> NULL()
-  type(hor_index_type), pointer :: HI=> NULL()
+  type(dyn_horgrid_type), pointer :: dG => NULL()
+  type(hor_index_type), pointer :: HI => NULL()
   type(directories) :: dirs
 
   type(grid_type), pointer :: T_grid !< global tracer grid
