@@ -1113,7 +1113,7 @@ subroutine ice_sheet_calving_to_ocean_sfc(CS,US,calving,calving_hflx)
   type(ocean_grid_type), pointer :: G => NULL()   !< A pointer to the ocean grid metric.
   integer :: is, ie, js, je
 
-  G=>CS%Grid
+  G => CS%Grid
   ISS => CS%ISS
   is = G%isc ; ie = G%iec ; js = G%jsc ; je = G%jec
 
@@ -1208,10 +1208,10 @@ subroutine add_shelf_forces(Ocn_grid, US, CS, forces_in, do_shelf_area, external
         (Ocn_grid%jsc /= CS%Grid%jsc) .or. (Ocn_grid%jec /= CS%Grid%jec)) &
       call MOM_error(FATAL, "add_shelf_forces: Incompatible Ocean and internal Ice shelf grids.")
 
-    forces=>forces_in
+    forces => forces_in
   endif
 
-  G=>CS%Grid
+  G => CS%Grid
 
   is = G%isc ; ie = G%iec ; js = G%jsc ; je = G%jec
   isd = G%isd ; jsd = G%jsd ; ied = G%ied ; jed = G%jed
@@ -1292,7 +1292,7 @@ subroutine add_shelf_pressure(Ocn_grid, US, CS, fluxes)
   real :: press_ice       !< The pressure of the ice shelf per unit area of ocean (not ice) [R L2 T-2 ~> Pa].
   integer :: i, j, is, ie, js, je
 
-  G=>CS%Grid
+  G => CS%Grid
   is = G%isc ; ie = G%iec ; js = G%jsc ; je = G%jec
 
   if ((CS%grid%isc /= G%isc) .or. (CS%grid%iec /= G%iec) .or. &
@@ -2470,7 +2470,7 @@ subroutine initialize_ice_shelf_forces(CS, ocn_grid, US, forces_in)
     call allocate_mech_forcing(forces_in, CS%Grid, forces)
     call rotate_mech_forcing(forces_in, CS%turns, forces)
   else
-    forces=>forces_in
+    forces => forces_in
   endif
 
   call add_shelf_forces(CS%grid, US, CS, forces, do_shelf_area=.not.CS%solo_ice_sheet, &
