@@ -920,7 +920,7 @@ subroutine KPP_calculate(CS, G, GV, US, h, tv, uStar, buoyFlux, Kt, Ks, Kv, &
                             GV%ke,             & ! (in) Number of levels to compute coeffs for
                             GV%ke,             & ! (in) Number of levels in array shape
                             Langmuir_EFactor=LangEnhK,& ! Langmuir enhancement multiplier
-                            StokesXi = CS%StokesXI(i,j), & ! Stokes forcing parameter
+                            StokesXi=CS%StokesXI(i,j), & ! Stokes forcing parameter
                             CVMix_kpp_params_user=CS%KPP_params )
 
       ! safety check, Kviscosity and Kdiffusivity must be >= 0
@@ -1542,8 +1542,8 @@ subroutine KPP_compute_BLD(CS, G, GV, US, h, Temp, Salt, u, v, tv, uStar, buoyFl
                   surf_fric=surfFricVel,  & ! (in) Turbulent friction velocity at surface [m s-1]
                   surf_buoy=surfBuoyFlux2, & ! (in) Buoyancy flux at surface [m2 s-3]
                   Coriolis=Coriolis,      & ! (in) Coriolis parameter [s-1]
-                  Xi = StokesXI_1d,       & ! (in) Stokes similarity parameter Lmob limit (1-Xi)
-                  zBottom = zBottomMinusOffset*US%Z_to_m, & ! (in) Numerical limit on OBLdepth
+                  Xi=StokesXI_1d,         & ! (in) Stokes similarity parameter Lmob limit (1-Xi)
+                  zBottom=zBottomMinusOffset*US%Z_to_m, & ! (in) Numerical limit on OBLdepth
                   CVMix_kpp_params_user=CS%KPP_params ) ! KPP parameters
 
           CS%OBLdepth(i,j) = US%m_to_Z * KPP_OBL_depth

@@ -1783,7 +1783,7 @@ subroutine ML_MEKE_init(diag, G, US, Time, param_file, dbcomms_CS, CS)
   call get_param(param_file, mdl, "EKE_BACKEND", backend, &
                  "The computational backend to use for EKE inference (CPU or GPU)", default="GPU")
   call get_param(param_file, mdl, "EKE_MODEL", model_filename, &
-                 "Filename of the a saved pyTorch model to use", fail_if_missing = .true.)
+                 "Filename of the a saved pyTorch model to use", fail_if_missing=.true.)
   call get_param(param_file, mdl, "EKE_MAX", CS%eke_max, &
                  "Maximum value of EKE allowed when inferring EKE", &
                  units="m2 s-2", default=2., scale=US%m_s_to_L_T**2)

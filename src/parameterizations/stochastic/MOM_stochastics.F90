@@ -180,7 +180,7 @@ subroutine stochastics_init(dt, grid, GV, US, CS, param_file, diag, Time)
   if (CS%do_sppt .OR. CS%pert_epbl .OR. CS%do_skeb) then
     num_procs = num_PEs()
     allocate(pelist(num_procs))
-    call Get_PElist(pelist,commID = mom_comm)
+    call Get_PElist(pelist, commID=mom_comm)
     pe_zero = root_PE()
     nxT = grid%ied - grid%isd + 1
     nyT = grid%jed - grid%jsd + 1

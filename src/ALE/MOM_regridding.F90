@@ -1916,7 +1916,7 @@ subroutine build_rho_grid( G, GV, US, h, nom_depth_H, tv, dzInterface, remapCS, 
       if (ice_shelf) then
          call build_rho_column(CS%rho_CS, nz, nominalDepth, h(i,j,:), &
               tv%T(i,j,:), tv%S(i,j,:), tv%eqn_of_state, zNew, &
-              z_rigid_top=totalThickness - nominalDepth, eta_orig = zOld(1), &
+              z_rigid_top=totalThickness - nominalDepth, eta_orig=zOld(1), &
               h_neglect=h_neglect, h_neglect_edge=h_neglect_edge)
       else
          call build_rho_column(CS%rho_CS, nz, nominalDepth, h(i,j,:), &
