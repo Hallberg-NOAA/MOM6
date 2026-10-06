@@ -1810,8 +1810,8 @@ subroutine tracer_hor_diff_init(Time, G, GV, US, param_file, diag, EOS, diabatic
   CS%id_KhTr_h = register_diag_field('ocean_model', 'KHTR_h', diag%axesTi, Time, &
       'Epipycnal tracer diffusivity at tracer cell center', 'm2 s-1', conversion=US%L_to_m**2*US%s_to_T, &
       cmor_field_name='diftrelo',                                                &
-      cmor_standard_name= 'ocean_tracer_epineutral_laplacian_diffusivity',       &
-      cmor_long_name = 'Ocean Tracer Epineutral Laplacian Diffusivity')
+      cmor_standard_name='ocean_tracer_epineutral_laplacian_diffusivity',       &
+      cmor_long_name='Ocean Tracer Epineutral Laplacian Diffusivity')
 
   CS%id_khdt_x = register_diag_field('ocean_model', 'KHDT_x', diag%axesCu1, Time, &
       'Epipycnal tracer diffusivity operator at zonal faces of tracer cell', 'm2', conversion=US%L_to_m**2)

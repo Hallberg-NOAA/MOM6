@@ -3789,7 +3789,7 @@ subroutine diabatic_driver_init(Time, G, GV, US, param_file, useALEalgorithm, di
         'boundary_forcing_salt_tendency', diag%axesTL, Time,             &
         'Boundary forcing salt tendency', &
         'kg m-2 s-1', conversion=US%S_to_ppt*0.001*GV%H_to_RZ*US%RZ_T_to_kg_m2s, &
-        v_extensive = .true.)
+        v_extensive=.true.)
     if (CS%id_boundary_forcing_salt_tend > 0) then
       CS%boundary_forcing_tendency_diag = .true.
     endif

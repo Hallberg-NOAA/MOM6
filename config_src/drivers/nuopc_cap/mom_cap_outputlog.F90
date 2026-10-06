@@ -236,13 +236,13 @@ subroutine outputlog_init(gcomp, mclock, rc)
       alarmoffset = 0*tincrement
     endif
 
-    call AlarmInit(mclock,                  &
-         alarm     = olog(n)%alarm,         &
-         option    = 'nhours',              &
-         opt_n     = olog(n)%opt_n,         &
-         opt_ymd   = -999,                  &
-         RefTime   = mcurrTime+alarmoffset, &
-         alarmname = olog(n)%alarm_name, rc=rc)
+    call AlarmInit(mclock, &
+         alarm=olog(n)%alarm, &
+         option='nhours', &
+         opt_n=olog(n)%opt_n, &
+         opt_ymd=-999, &
+         RefTime=mcurrTime+alarmoffset, &
+         alarmname=olog(n)%alarm_name, rc=rc)
     if (ChkErr(rc, __LINE__, u_FILE_u)) return
 
     call ESMF_AlarmSet(olog(n)%alarm, clock=mclock, rc=rc)

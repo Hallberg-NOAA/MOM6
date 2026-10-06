@@ -1454,8 +1454,8 @@ subroutine InitializeRealize(gcomp, importState, exportState, clock, rc)
 
     gridIn = ESMF_GridCreate(distgrid=distgrid, &
          gridEdgeLWidth=(/0,0/), gridEdgeUWidth=(/0,1/), &
-         coordSys = ESMF_COORDSYS_SPH_DEG, &
-         rc = rc)
+         coordSys=ESMF_COORDSYS_SPH_DEG, &
+         rc=rc)
     if (ChkErr(rc, __LINE__, u_FILE_u)) return
 
     call ESMF_GridAddCoord(gridIn, staggerLoc=ESMF_STAGGERLOC_CENTER, rc=rc)
@@ -2239,12 +2239,12 @@ subroutine ModelSetRunClock(gcomp, rc)
 
     if (restart_mode == 'alarms') then
       call AlarmInit(mclock, &
-           alarm   = restart_alarm,         &
-           option  = trim(restart_option),  &
-           opt_n   = restart_n,             &
-           opt_ymd = restart_ymd,           &
-           RefTime = mcurrTime,             &
-           alarmname = 'restart_alarm', rc=rc)
+           alarm=restart_alarm, &
+           option=trim(restart_option), &
+           opt_n=restart_n, &
+           opt_ymd=restart_ymd, &
+           RefTime=mcurrTime, &
+           alarmname='restart_alarm', rc=rc)
       if (ChkErr(rc, __LINE__, u_FILE_u)) return
 
       call ESMF_AlarmSet(restart_alarm, clock=mclock, rc=rc)
@@ -2254,14 +2254,14 @@ subroutine ModelSetRunClock(gcomp, rc)
 
     ! create a 1-shot alarm at the driver stop time
     if (cesm_coupled) then
-      stop_alarm = ESMF_AlarmCreate(mclock, ringtime=mstoptime_prev, name = "stop_alarm", rc=rc)
+      stop_alarm = ESMF_AlarmCreate(mclock, ringtime=mstoptime_prev, name="stop_alarm", rc=rc)
       call ESMF_LogWrite(subname//" Create Stop alarm", ESMF_LOGMSG_INFO)
       if (ChkErr(rc, __LINE__, u_FILE_u)) return
 
       call ESMF_TimeGet(mstoptime_prev, timestring=timestr, rc=rc)
       call ESMF_LogWrite("Stop Alarm will ring at : "//trim(timestr), ESMF_LOGMSG_INFO)
     else
-      stop_alarm = ESMF_AlarmCreate(mclock, ringtime=dstopTime, name = "stop_alarm", rc=rc)
+      stop_alarm = ESMF_AlarmCreate(mclock, ringtime=dstopTime, name="stop_alarm", rc=rc)
       call ESMF_LogWrite(subname//" Create Stop alarm", ESMF_LOGMSG_INFO)
       if (ChkErr(rc, __LINE__, u_FILE_u)) return
 

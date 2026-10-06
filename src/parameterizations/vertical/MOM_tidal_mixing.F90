@@ -597,13 +597,13 @@ logical function tidal_mixing_init(Time, G, GV, US, param_file, int_tide_CSp, di
     CVMix_tidal_scheme_str = lowercase(CVMix_tidal_scheme_str)
 
     ! Set up CVMix
-    call CVMix_init_tidal(CVmix_tidal_params_user = CS%CVMix_tidal_params,    &
-                          mix_scheme              = CVMix_tidal_scheme_str,   &
-                          efficiency              = CS%Mu_itides,             &
-                          vertical_decay_scale    = CS%int_tide_decay_scale*US%Z_to_m,  &
-                          max_coefficient         = CS%tidal_max_coef*US%Z2_T_to_m2_s,  &
-                          local_mixing_frac       = CS%Gamma_itides,          &
-                          depth_cutoff            = CS%min_zbot_itides*US%Z_to_m)
+    call CVMix_init_tidal(CVmix_tidal_params_user=CS%CVMix_tidal_params, &
+                          mix_scheme=CVMix_tidal_scheme_str, &
+                          efficiency=CS%Mu_itides, &
+                          vertical_decay_scale=CS%int_tide_decay_scale*US%Z_to_m, &
+                          max_coefficient=CS%tidal_max_coef*US%Z2_T_to_m2_s, &
+                          local_mixing_frac=CS%Gamma_itides, &
+                          depth_cutoff=CS%min_zbot_itides*US%Z_to_m)
 
     call read_tidal_energy(G, GV, US, tidal_energy_type, param_file, CS)
 
@@ -810,14 +810,14 @@ subroutine calculate_CVMix_tidal(dz, j, N2_int, G, GV, US, CS, Kv, Kd_lay, Kd_in
         iFaceHeight(k+1) = iFaceHeight(k) - US%Z_to_m*dh
       enddo
 
-      call CVMix_compute_Simmons_invariant( nlev                    = GV%ke,               &
-                                            energy_flux             = US%RZ3_T3_to_W_m2*CS%tidal_qe_2d(i,j), &
-                                            rho                     = rho_fw,              &
-                                            SimmonsCoeff            = Simmons_coeff,       &
-                                            VertDep                 = vert_dep,            &
-                                            zw                      = iFaceHeight,         &
-                                            zt                      = cellHeight,          &
-                                            CVMix_tidal_params_user = CS%CVMix_tidal_params)
+      call CVMix_compute_Simmons_invariant( nlev=GV%ke, &
+                                            energy_flux=US%RZ3_T3_to_W_m2*CS%tidal_qe_2d(i,j), &
+                                            rho=rho_fw, &
+                                            SimmonsCoeff=Simmons_coeff, &
+                                            VertDep=vert_dep, &
+                                            zw=iFaceHeight, &
+                                            zt=cellHeight, &
+                                            CVMix_tidal_params_user=CS%CVMix_tidal_params)
 
       ! Since we pass tidal_qe_2d=(CS%Gamma_itides)*tidal_energy_flux_2d, and not tidal_energy_flux_2d in
       ! above subroutine call, we divide Simmons_coeff by CS%Gamma_itides as a corrective step:
@@ -830,16 +830,16 @@ subroutine calculate_CVMix_tidal(dz, j, N2_int, G, GV, US, CS, Kv, Kd_lay, Kd_in
         N2_int_i(K) = US%s_to_T**2 * N2_int(i,K)
       enddo
 
-      call CVMix_coeffs_tidal( Mdiff_out               = Kv_tidal,             &
-                               Tdiff_out               = Kd_tidal,             &
-                               Nsqr                    = N2_int_i,             &
-                               OceanDepth              = -iFaceHeight(GV%ke+1),&
-                               SimmonsCoeff            = Simmons_coeff,        &
-                               vert_dep                = vert_dep,             &
-                               nlev                    = GV%ke,                &
-                               max_nlev                = GV%ke,                &
-                               CVMix_params            = CS%CVMix_glb_params,  &
-                               CVMix_tidal_params_user = CS%CVMix_tidal_params)
+      call CVMix_coeffs_tidal( Mdiff_out=Kv_tidal, &
+                               Tdiff_out=Kd_tidal, &
+                               Nsqr=N2_int_i, &
+                               OceanDepth=-iFaceHeight(GV%ke+1), &
+                               SimmonsCoeff=Simmons_coeff, &
+                               vert_dep=vert_dep, &
+                               nlev=GV%ke, &
+                               max_nlev=GV%ke, &
+                               CVMix_params=CS%CVMix_glb_params, &
+                               CVMix_tidal_params_user=CS%CVMix_tidal_params)
 
       ! Update diffusivity
       if (present(Kd_lay)) then
@@ -902,13 +902,13 @@ subroutine calculate_CVMix_tidal(dz, j, N2_int, G, GV, US, CS, Kv, Kd_lay, Kd_in
       SchmittnerSocn = 0.0 ! TODO: compute this
 
       ! form the time-invariant part of Schmittner coefficient term
-      call CVMix_compute_Schmittner_invariant(nlev                    = GV%ke,          &
-                                              VertDep                 = vert_dep,       &
-                                              efficiency              = CS%Mu_itides,   &
-                                              rho                     = rho_fw,         &
-                                              exp_hab_zetar           = exp_hab_zetar,  &
-                                              zw                      = iFaceHeight,    &
-                                              CVmix_tidal_params_user = CS%CVMix_tidal_params)
+      call CVMix_compute_Schmittner_invariant(nlev=GV%ke, &
+                                              VertDep=vert_dep, &
+                                              efficiency=CS%Mu_itides, &
+                                              rho=rho_fw, &
+                                              exp_hab_zetar=exp_hab_zetar, &
+                                              zw=iFaceHeight, &
+                                              CVmix_tidal_params_user=CS%CVMix_tidal_params)
                   !TODO: in above call, there is no need to pass efficiency, since it gets
                   ! passed via CVMix_init_tidal and stored in CVMix_tidal_params. Change
                   ! CVMix API to prevent this redundancy.
@@ -920,27 +920,27 @@ subroutine calculate_CVMix_tidal(dz, j, N2_int, G, GV, US, CS, Kv, Kd_lay, Kd_in
 
       ! form the Schmittner coefficient that is based on 3D q*E, which is formed from
       ! summing q_i*TidalConstituent_i over the number of constituents.
-      call CVMix_compute_SchmittnerCoeff( nlev                    = GV%ke,              &
-                                          energy_flux             = US%RZ3_T3_to_W_m2*tidal_qe_md(:), &
-                                          SchmittnerCoeff         = Schmittner_coeff,   &
-                                          exp_hab_zetar           = exp_hab_zetar,      &
-                                          CVmix_tidal_params_user = CS%CVMix_tidal_params)
+      call CVMix_compute_SchmittnerCoeff( nlev=GV%ke, &
+                                          energy_flux=US%RZ3_T3_to_W_m2*tidal_qe_md(:), &
+                                          SchmittnerCoeff=Schmittner_coeff, &
+                                          exp_hab_zetar=exp_hab_zetar, &
+                                          CVmix_tidal_params_user=CS%CVMix_tidal_params)
 
       ! XXX: Temporary de-scaling of N2_int(i,:) into a temporary variable
       do k=1,GV%ke+1
         N2_int_i(k) = US%s_to_T**2 * N2_int(i,k)
       enddo
 
-      call CVMix_coeffs_tidal_schmittner( Mdiff_out               = Kv_tidal,             &
-                                          Tdiff_out               = Kd_tidal,             &
-                                          Nsqr                    = N2_int_i,             &
-                                          OceanDepth              = -iFaceHeight(GV%ke+1), &
-                                          nlev                    = GV%ke,                &
-                                          max_nlev                = GV%ke,                &
-                                          SchmittnerCoeff         = Schmittner_coeff,     &
-                                          SchmittnerSouthernOcean = SchmittnerSocn,       &
-                                          CVmix_params            = CS%CVMix_glb_params,  &
-                                          CVmix_tidal_params_user = CS%CVMix_tidal_params)
+      call CVMix_coeffs_tidal_schmittner( Mdiff_out=Kv_tidal, &
+                                          Tdiff_out=Kd_tidal, &
+                                          Nsqr=N2_int_i, &
+                                          OceanDepth=-iFaceHeight(GV%ke+1), &
+                                          nlev=GV%ke, &
+                                          max_nlev=GV%ke, &
+                                          SchmittnerCoeff=Schmittner_coeff, &
+                                          SchmittnerSouthernOcean=SchmittnerSocn, &
+                                          CVmix_params=CS%CVMix_glb_params, &
+                                          CVmix_tidal_params_user=CS%CVMix_tidal_params)
 
       ! Update diffusivity
       if (present(Kd_lay)) then

@@ -838,7 +838,7 @@ subroutine initialize_ocean_public_type(input_domain, Ocean_sfc, diag, gas_field
 
   if (present(gas_fields_ocn)) then
     call coupler_type_spawn(gas_fields_ocn, Ocean_sfc%fields, (/isc,isc,iec,iec/), &
-                              (/jsc,jsc,jec,jec/), suffix = '_ocn', as_needed=.true.)
+                            (/jsc,jsc,jec,jec/), suffix='_ocn', as_needed=.true.)
   endif
 
 end subroutine initialize_ocean_public_type

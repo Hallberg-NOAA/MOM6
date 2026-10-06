@@ -340,7 +340,7 @@ subroutine ocean_model_init(Ocean_sfc, OS, Time_init, Time_in, gas_fields_ocn, i
                  units="kg m-3", default=1035.0)
   call get_param(param_file, mdl, "G_EARTH", G_Earth, &
                  "The gravitational acceleration of the Earth.", &
-                 units="m s-2", default = 9.80)
+                 units="m s-2", default=9.80)
 
   call get_param(param_file, mdl, "ICE_SHELF",  OS%use_ice_shelf, &
                  "If true, enables the ice shelf model.", default=.false.)
@@ -838,7 +838,7 @@ subroutine initialize_ocean_public_type(input_domain, Ocean_sfc, diag, maskmap, 
 
   if (present(gas_fields_ocn)) then
     call coupler_type_spawn(gas_fields_ocn, Ocean_sfc%fields, (/isc,isc,iec,iec/), &
-                              (/jsc,jsc,jec,jec/), suffix = '_ocn', as_needed=.true.)
+                              (/jsc,jsc,jec,jec/), suffix='_ocn', as_needed=.true.)
   endif
 
 end subroutine initialize_ocean_public_type

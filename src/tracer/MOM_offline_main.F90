@@ -838,7 +838,7 @@ subroutine offline_fw_fluxes_out_ocean(G, GV, CS, fluxes, h, out_flux_optional)
     ! Layer thicknesses should only be updated after the last tracer is finished
     update_h = ( m == CS%tracer_reg%ntr )
     call applyTracerBoundaryFluxesInOut(G, GV, CS%tracer_reg%tr(m)%t, CS%dt_offline, fluxes, h, &
-                                        CS%evap_CFL_limit, CS%minimum_forcing_depth, update_h_opt = update_h)
+                                        CS%evap_CFL_limit, CS%minimum_forcing_depth, update_h_opt=update_h)
   enddo
   if (CS%debug) then
     call hchksum(h, "h after fluxes out of ocean", G%HI, unscale=GV%H_to_MKS)

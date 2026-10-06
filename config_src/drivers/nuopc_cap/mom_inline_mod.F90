@@ -111,29 +111,29 @@ subroutine mom_inline_init(gcomp, model_clock, model_mesh, mytask, rc)
     enddo
 
     write(stream_name,fmt='(a,i2.2)') 'stream_', ns
-    call shr_strdata_init_from_inline(sdat(ns),                         &
-         my_task             = mytask,                                  &
-         logunit             = logunit,                                 &
-         compname            = 'OCN',                                   &
-         model_clock         = sdat(ns)%model_clock,                    &
-         model_mesh          = sdat(ns)%model_mesh,                     &
-         stream_name         = trim(stream_name),                       &
-         stream_meshfile     = trim(sdatconfig%stream(ns)%meshfile),    &
-         stream_filenames    = filelist,                                &
-         stream_yearFirst    = sdatconfig%stream(ns)%yearFirst,         &
-         stream_yearLast     = sdatconfig%stream(ns)%yearLast,          &
-         stream_yearAlign    = sdatconfig%stream(ns)%yearAlign,         &
-         stream_fldlistFile  = filevars(:,1),                           &
-         stream_fldListModel = filevars(:,2),                           &
-         stream_lev_dimname  = trim(sdatconfig%stream(ns)%lev_dimname), &
-         stream_mapalgo      = trim(sdatconfig%stream(ns)%mapalgo),     &
-         stream_offset       = sdatconfig%stream(ns)%offset,            &
-         stream_taxmode      = trim(sdatconfig%stream(ns)%taxmode),     &
-         stream_dtlimit      = sdatconfig%stream(ns)%dtlimit,           &
-         stream_tintalgo     = trim(sdatconfig%stream(ns)%tInterpAlgo), &
-         stream_src_mask     = sdatconfig%stream(ns)%src_mask_val,      &
-         stream_dst_mask     = sdatconfig%stream(ns)%dst_mask_val,      &
-         rc                  = rc)
+    call shr_strdata_init_from_inline(sdat(ns), &
+         my_task=mytask, &
+         logunit=logunit, &
+         compname='OCN', &
+         model_clock=sdat(ns)%model_clock, &
+         model_mesh=sdat(ns)%model_mesh, &
+         stream_name=trim(stream_name), &
+         stream_meshfile=trim(sdatconfig%stream(ns)%meshfile), &
+         stream_filenames=filelist, &
+         stream_yearFirst=sdatconfig%stream(ns)%yearFirst, &
+         stream_yearLast=sdatconfig%stream(ns)%yearLast, &
+         stream_yearAlign=sdatconfig%stream(ns)%yearAlign, &
+         stream_fldlistFile=filevars(:,1), &
+         stream_fldListModel=filevars(:,2), &
+         stream_lev_dimname=trim(sdatconfig%stream(ns)%lev_dimname), &
+         stream_mapalgo=trim(sdatconfig%stream(ns)%mapalgo), &
+         stream_offset=sdatconfig%stream(ns)%offset, &
+         stream_taxmode=trim(sdatconfig%stream(ns)%taxmode), &
+         stream_dtlimit=sdatconfig%stream(ns)%dtlimit, &
+         stream_tintalgo=trim(sdatconfig%stream(ns)%tInterpAlgo), &
+         stream_src_mask=sdatconfig%stream(ns)%src_mask_val, &
+         stream_dst_mask=sdatconfig%stream(ns)%dst_mask_val, &
+         rc=rc)
     if (chkerr(rc, __LINE__, u_FILE_u)) return
 
     deallocate(filelist)
