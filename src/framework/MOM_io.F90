@@ -294,7 +294,7 @@ subroutine create_MOM_file(IO_handle, filename, vars, novars, fields, &
   integer        :: position, numaxes, pack, thread, k, n, m
   integer        :: num_extra_dims ! The number of extra possible dimensions from extra_axes
   integer        :: isg, ieg, jsg, jeg, IsgB, IegB, JsgB, JegB
-  integer        :: var_periods, num_periods=0
+  integer        :: var_periods, num_periods = 0
   real, dimension(:), allocatable :: axis_val ! Axis label values [various]
   real, pointer, dimension(:) :: &
     gridLatT => NULL(), & ! The latitude of T or B points for the purpose of labeling

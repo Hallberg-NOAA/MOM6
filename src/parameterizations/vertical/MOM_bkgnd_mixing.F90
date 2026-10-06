@@ -367,12 +367,12 @@ subroutine calculate_bkgnd_mixing(h, tv, N2_lay, Kd_lay, Kd_int, Kv_bkgnd, j, G,
       enddo
 
       call CVMix_init_bkgnd(max_nlev=nz, &
-                            zw = depth_int(:), &  !< interface depths relative to the surface in m, must be positive.
-                            bl1 = US%Z2_T_to_m2_s*CS%Bryan_Lewis_c1, &
-                            bl2 = US%Z2_T_to_m2_s*CS%Bryan_Lewis_c2, &
-                            bl3 = US%m_to_Z*CS%Bryan_Lewis_c3, &
-                            bl4 = US%Z_to_m*CS%Bryan_Lewis_c4, &
-                            prandtl = CS%prandtl_bkgnd)
+                            zw=depth_int(:), &  !< interface depths relative to the surface in m, must be positive.
+                            bl1=US%Z2_T_to_m2_s*CS%Bryan_Lewis_c1, &
+                            bl2=US%Z2_T_to_m2_s*CS%Bryan_Lewis_c2, &
+                            bl3=US%m_to_Z*CS%Bryan_Lewis_c3, &
+                            bl4=US%Z_to_m*CS%Bryan_Lewis_c4, &
+                            prandtl=CS%prandtl_bkgnd)
 
       Kd_col(:) = 0.0 ; Kv_col(:) = 0.0  ! Is this line necessary?
       call CVMix_coeffs_bkgnd(Mdiff_out=Kv_col, Tdiff_out=Kd_col, nlev=nz, max_nlev=nz)

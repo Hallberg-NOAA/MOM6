@@ -358,9 +358,9 @@ type, public :: forcing_diags ; private
   integer :: id_total_seaice_melt  = -1
 
   ! global area averaged mass flux diagnostic handles
-  integer :: id_prcme_ga  = -1, id_evap_ga = -1
-  integer :: id_lprec_ga  = -1, id_fprec_ga= -1
-  integer :: id_precip_ga = -1, id_vprec_ga= -1
+  integer :: id_prcme_ga  = -1, id_evap_ga  = -1
+  integer :: id_lprec_ga  = -1, id_fprec_ga = -1
+  integer :: id_precip_ga = -1, id_vprec_ga = -1
 
   ! heat flux diagnostic handles
   integer :: id_net_heat_coupler        = -1, id_net_heat_surface        = -1
@@ -371,7 +371,7 @@ type, public :: forcing_diags ; private
   integer :: id_lat_frunoff_glc         = -1
   integer :: id_lat                     = -1, id_lat_fprec               = -1
   integer :: id_heat_content_lrunoff    = -1, id_heat_content_frunoff    = -1
-  integer :: id_heat_content_lrunoff_glc= -1, id_heat_content_frunoff_glc= -1
+  integer :: id_heat_content_lrunoff_glc = -1, id_heat_content_frunoff_glc = -1
   integer :: id_heat_content_lprec      = -1, id_heat_content_fprec      = -1
   integer :: id_heat_content_cond       = -1, id_heat_content_surfwater  = -1
   integer :: id_heat_content_evap       = -1
@@ -389,7 +389,7 @@ type, public :: forcing_diags ; private
   integer :: id_total_lat_frunoff_glc         = -1
   integer :: id_total_lat                     = -1, id_total_lat_fprec               = -1
   integer :: id_total_heat_content_lrunoff    = -1, id_total_heat_content_frunoff    = -1
-  integer :: id_total_heat_content_lrunoff_glc= -1, id_total_heat_content_frunoff_glc=-1
+  integer :: id_total_heat_content_lrunoff_glc = -1, id_total_heat_content_frunoff_glc = -1
   integer :: id_total_heat_content_lprec      = -1, id_total_heat_content_fprec      = -1
   integer :: id_total_heat_content_cond       = -1, id_total_heat_content_surfwater  = -1
   integer :: id_total_heat_content_evap       = -1
@@ -1582,7 +1582,7 @@ subroutine register_forcing_type_diags(Time, diag, US, use_temperature, &
     use_cfcs_or_MARBL_tracers = use_cfcs_or_MARBL_tracers .or. use_MARBL_tracers
 
   ! Clock for forcing diagnostics
-  handles%id_clock_forcing=cpu_clock_id('(Ocean forcing diagnostics)', grain=CLOCK_ROUTINE)
+  handles%id_clock_forcing = cpu_clock_id('(Ocean forcing diagnostics)', grain=CLOCK_ROUTINE)
 
 
   handles%id_taux = register_diag_field('ocean_model', 'taux', diag%axesCu1, Time,  &

@@ -398,10 +398,10 @@ subroutine configure_MARBL_tracers(GV, US, param_file, CS)
   ! (3a) call marbl%init()
   ! TODO: We want to strip gcm_delta_z, gcm_zw, and gcm_zt values out of
   !       init because MOM updates them every time step / every column
-  call MARBL_instances%init(gcm_num_levels = nz, gcm_num_PAR_subcols = CS%ice_ncat + 1, &
-      gcm_num_elements_surface_flux = 1, & ! FIXME: change to number of grid cells on MPI task
-      gcm_delta_z = GV%sInterface(2:nz+1) - GV%sInterface(1:nz), gcm_zw = GV%sInterface(2:nz+1), &
-      gcm_zt = GV%sLayer, unit_system_opt = "mks", lgcm_has_global_ops = .false.) ! FIXME: add global ops
+  call MARBL_instances%init(gcm_num_levels=nz, gcm_num_PAR_subcols=CS%ice_ncat + 1, &
+      gcm_num_elements_surface_flux=1, & ! FIXME: change to number of grid cells on MPI task
+      gcm_delta_z=GV%sInterface(2:nz+1) - GV%sInterface(1:nz), gcm_zw=GV%sInterface(2:nz+1), &
+      gcm_zt=GV%sLayer, unit_system_opt="mks", lgcm_has_global_ops=.false.) ! FIXME: add global ops
   ! Regardless of vertical grid, MOM6 will always use GV%ke levels in all columns
   MARBL_instances%domain%kmt = GV%ke
   if (MARBL_instances%StatusLog%labort_marbl) &
@@ -822,7 +822,7 @@ function register_MARBL_tracers(HI, GV, US, param_file, CS, tr_Reg, restart_CS, 
     call query_vardesc(CS%tr_desc(m), name=var_name, &
                        caller="register_MARBL_tracers")
     ! Register the tracer for horizontal advection, diffusion, and restarts.
-    call register_tracer(tr_ptr, tr_Reg, param_file, HI, GV, units = units, &
+    call register_tracer(tr_ptr, tr_Reg, param_file, HI, GV, units=units, &
                          tr_desc=CS%tr_desc(m), registry_diags=.true., &
                          restart_CS=restart_CS, mandatory=.not.CS%tracers_may_reinit, &
                          Tr_out=CS%tracer_data(m)%tr_ptr)

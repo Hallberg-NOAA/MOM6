@@ -2333,8 +2333,8 @@ subroutine register_surface_diags(Time, G, US, IDs, diag, tv)
       long_name='Total volume of liquid ocean', units='m3', conversion=US%Z_to_m*US%L_to_m**2, &
       standard_name='sea_water_volume')
   IDs%id_zos = register_diag_field('ocean_model', 'zos', diag%axesT1, Time, &
-      standard_name = 'sea_surface_height_above_geoid', &
-      long_name= 'Sea surface height above geoid', units='m', conversion=US%Z_to_m)
+      standard_name='sea_surface_height_above_geoid', &
+      long_name='Sea surface height above geoid', units='m', conversion=US%Z_to_m)
   IDs%id_zossq = register_diag_field('ocean_model', 'zossq', diag%axesT1, Time, &
       standard_name='square_of_sea_surface_height_above_geoid', &
       long_name='Square of sea surface height above geoid', units='m2', conversion=US%Z_to_m**2)
