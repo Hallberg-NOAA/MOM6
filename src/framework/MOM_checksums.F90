@@ -110,11 +110,11 @@ interface field_checksum
 end interface field_checksum
 
 integer, parameter :: bc_modulus = 1000000000 !< Modulus of checksum bitcount
-integer, parameter :: default_shift=0 !< The default array shift
-logical :: calculateStatistics=.true. !< If true, report min, max and mean.
-logical :: writeChksums=.true. !< If true, report the bitcount checksum
-logical :: checkForNaNs=.true. !< If true, checks array for NaNs and cause
-                               !! FATAL error if any are found
+integer, parameter :: default_shift = 0 !< The default array shift
+logical :: calculateStatistics = .true. !< If true, report min, max and mean.
+logical :: writeChksums = .true. !< If true, report the bitcount checksum
+logical :: checkForNaNs = .true. !< If true, checks array for NaNs and cause
+                                 !! FATAL error if any are found
 logical :: writeHash = .false. !< If true, report the murmur hash
   !! NOTE: writeHash is currently disabled due to non-compliant diagnostics.
 
@@ -243,7 +243,7 @@ subroutine zchksum(array, mesg, scale, logunit, unscale)
       bc = bitcount(abs(unscale * array(k)))
       subchk = subchk + bc
     enddo
-    subchk=mod(subchk, bc_modulus)
+    subchk = mod(subchk, bc_modulus)
   end function subchk
 
   subroutine subStats(array, aMean, aMin, aMax)
@@ -527,7 +527,7 @@ subroutine chksum_h_2d(array_m, mesg, HI_m, haloshift, omit_corners, scale, logu
       subchk = subchk + bc
     enddo ; enddo
     call sum_across_PEs(subchk)
-    subchk=mod(subchk, bc_modulus)
+    subchk = mod(subchk, bc_modulus)
   end function subchk
 
   subroutine subStats(HI, array, aMean, aMin, aMax)
@@ -844,7 +844,7 @@ subroutine chksum_B_2d(array_m, mesg, HI_m, haloshift, symmetric, omit_corners, 
       subchk = subchk + bc
     enddo ; enddo
     call sum_across_PEs(subchk)
-    subchk=mod(subchk, bc_modulus)
+    subchk = mod(subchk, bc_modulus)
   end function subchk
 
   subroutine subStats(HI, array, sym_stats, aMean, aMin, aMax)
@@ -1175,7 +1175,7 @@ subroutine chksum_u_2d(array_m, mesg, HI_m, haloshift, symmetric, omit_corners, 
       subchk = subchk + bc
     enddo ; enddo
     call sum_across_PEs(subchk)
-    subchk=mod(subchk, bc_modulus)
+    subchk = mod(subchk, bc_modulus)
   end function subchk
 
   subroutine subStats(HI, array, sym_stats, aMean, aMin, aMax)
@@ -1379,7 +1379,7 @@ subroutine chksum_v_2d(array_m, mesg, HI_m, haloshift, symmetric, omit_corners, 
       subchk = subchk + bc
     enddo ; enddo
     call sum_across_PEs(subchk)
-    subchk=mod(subchk, bc_modulus)
+    subchk = mod(subchk, bc_modulus)
   end function subchk
 
   subroutine subStats(HI, array, sym_stats, aMean, aMin, aMax)
@@ -1555,7 +1555,7 @@ subroutine chksum_h_3d(array_m, mesg, HI_m, haloshift, omit_corners, scale, logu
       subchk = subchk + bc
     enddo ; enddo ; enddo
     call sum_across_PEs(subchk)
-    subchk=mod(subchk, bc_modulus)
+    subchk = mod(subchk, bc_modulus)
   end function subchk
 
   subroutine subStats(HI, array, aMean, aMin, aMax)
@@ -1748,7 +1748,7 @@ subroutine chksum_B_3d(array_m, mesg, HI_m, haloshift, symmetric, omit_corners, 
       subchk = subchk + bc
     enddo ; enddo ; enddo
     call sum_across_PEs(subchk)
-    subchk=mod(subchk, bc_modulus)
+    subchk = mod(subchk, bc_modulus)
   end function subchk
 
   subroutine subStats(HI, array, sym_stats, aMean, aMin, aMax)
@@ -1952,7 +1952,7 @@ subroutine chksum_u_3d(array_m, mesg, HI_m, haloshift, symmetric, omit_corners, 
       subchk = subchk + bc
     enddo ; enddo ; enddo
     call sum_across_PEs(subchk)
-    subchk=mod(subchk, bc_modulus)
+    subchk = mod(subchk, bc_modulus)
   end function subchk
 
   subroutine subStats(HI, array, sym_stats, aMean, aMin, aMax)
@@ -2156,7 +2156,7 @@ subroutine chksum_v_3d(array_m, mesg, HI_m, haloshift, symmetric, omit_corners, 
       subchk = subchk + bc
     enddo ; enddo ; enddo
     call sum_across_PEs(subchk)
-    subchk=mod(subchk, bc_modulus)
+    subchk = mod(subchk, bc_modulus)
   end function subchk
 
   !subroutine subStats(HI, array, mesg, sym_stats)

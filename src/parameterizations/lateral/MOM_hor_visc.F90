@@ -3203,7 +3203,7 @@ subroutine hor_visc_init(Time, G, GV, US, param_file, diag, CS, ADp)
   call get_param(param_file, mdl, "KILL_SWITCH_TIMESCALE", CS%KS_timescale, &
                  "A timescale for computing the CFL limit for viscosity "// &
                  "that determines when backscatter is shut off. Default is DT.", &
-                 default= dt ,  units="s", scale=US%s_to_T, do_not_log=.not.(CS%EY24_EBT_BS))
+                 default=dt,  units="s", scale=US%s_to_T, do_not_log=.not.(CS%EY24_EBT_BS))
 
   if (CS%no_slip .and. CS%biharmonic) &
     call MOM_error(FATAL,"ERROR: NOSLIP and BIHARMONIC cannot be defined "// &

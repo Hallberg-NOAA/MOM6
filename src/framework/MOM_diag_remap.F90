@@ -78,7 +78,7 @@ type :: diag_remap_ctrl
   logical :: initialized = .false.  !< Whether remappping initialized
   logical :: used = .false.  !< Whether this coordinate actually gets used.
   integer :: vertical_coord = 0 !< The vertical coordinate that we remap to
-  character(len=10) :: vertical_coord_name ='' !< The coordinate name as understood by ALE
+  character(len=10) :: vertical_coord_name = '' !< The coordinate name as understood by ALE
   logical :: Z_based_coord = .false.  !< If true, this coordinate is based on remapping of
                                       !! geometric distances across layers (in [Z ~> m]) rather
                                       !! than layer thicknesses (in [H ~> m or kg m-2]).  This

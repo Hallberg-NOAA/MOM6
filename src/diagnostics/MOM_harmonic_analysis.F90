@@ -94,7 +94,7 @@ subroutine HA_init(Time, US, param_file, nc, CS)
   real :: HA_start_time                             !< Start time of harmonic analysis [T ~> s]
   real :: HA_end_time                               !< End time of harmonic analysis [T ~> s]
   logical :: HA_ssh, HA_bsl, HA_ubt, HA_vbt
-  character(len=40)  :: mdl="MOM_harmonic_analysis" !< This module's name
+  character(len=40)  :: mdl = "MOM_harmonic_analysis" !< This module's name
   character(len=255) :: mesg
   integer :: year, month, day, hour, minute, second
 

@@ -1783,7 +1783,7 @@ subroutine ML_MEKE_init(diag, G, US, Time, param_file, dbcomms_CS, CS)
   call get_param(param_file, mdl, "EKE_BACKEND", backend, &
                  "The computational backend to use for EKE inference (CPU or GPU)", default="GPU")
   call get_param(param_file, mdl, "EKE_MODEL", model_filename, &
-                 "Filename of the a saved pyTorch model to use", fail_if_missing = .true.)
+                 "Filename of the a saved pyTorch model to use", fail_if_missing=.true.)
   call get_param(param_file, mdl, "EKE_MAX", CS%eke_max, &
                  "Maximum value of EKE allowed when inferring EKE", &
                  units="m2 s-2", default=2., scale=US%m_s_to_L_T**2)
@@ -1816,11 +1816,11 @@ subroutine ML_MEKE_init(diag, G, US, Time, param_file, dbcomms_CS, CS)
   ! Diagnostics for ML_MEKE
   CS%id_mke = register_diag_field('ocean_model', 'MEKE_MKE', diag%axesT1, Time, &
      'Surface mean (resolved) kinetic energy used in MEKE', 'm2 s-2', conversion=US%L_T_to_m_s**2)
-  CS%id_slope_z= register_diag_field('ocean_model', 'MEKE_slope_z', diag%axesT1, Time, &
+  CS%id_slope_z = register_diag_field('ocean_model', 'MEKE_slope_z', diag%axesT1, Time, &
      'Vertically averaged isopyncal slope magnitude used in MEKE', 'nondim', conversion=US%Z_to_L)
-  CS%id_slope_x= register_diag_field('ocean_model', 'MEKE_slope_x', diag%axesCui, Time, &
+  CS%id_slope_x = register_diag_field('ocean_model', 'MEKE_slope_x', diag%axesCui, Time, &
      'Isopycnal slope in the x-direction used in MEKE', 'nondim', conversion=US%Z_to_L)
-  CS%id_slope_y= register_diag_field('ocean_model', 'MEKE_slope_y', diag%axesCvi, Time, &
+  CS%id_slope_y = register_diag_field('ocean_model', 'MEKE_slope_y', diag%axesCvi, Time, &
      'Isopycnal slope in the y-direction used in MEKE', 'nondim', conversion=US%Z_to_L)
   CS%id_rv = register_diag_field('ocean_model', 'MEKE_RV', diag%axesT1, Time, &
      'Surface relative vorticity used in MEKE', 's-1', conversion=US%s_to_T)

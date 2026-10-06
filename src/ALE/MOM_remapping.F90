@@ -90,17 +90,17 @@ public remapping_unit_tests, build_reconstructions_1d, average_value_ppoly
 public interpolate_column, reintegrate_column, dzFromH1H2
 
 ! The following are private parameter constants
-integer, parameter  :: REMAPPING_PCM        = 0 !< O(h^1) remapping scheme
-integer, parameter  :: REMAPPING_PLM        = 2 !< O(h^2) remapping scheme
-integer, parameter  :: REMAPPING_PLM_HYBGEN = 3 !< O(h^2) remapping scheme
-integer, parameter  :: REMAPPING_PPM_CW     =10 !< O(h^3) remapping scheme
-integer, parameter  :: REMAPPING_PPM_H4     = 4 !< O(h^3) remapping scheme
-integer, parameter  :: REMAPPING_PPM_IH4    = 5 !< O(h^3) remapping scheme
-integer, parameter  :: REMAPPING_PPM_HYBGEN = 6 !< O(h^3) remapping scheme
-integer, parameter  :: REMAPPING_WENO_HYBGEN= 7 !< O(h^3) remapping scheme
-integer, parameter  :: REMAPPING_PQM_IH4IH3 = 8 !< O(h^4) remapping scheme
-integer, parameter  :: REMAPPING_PQM_IH6IH5 = 9 !< O(h^5) remapping scheme
-integer, parameter  :: REMAPPING_VIA_CLASS  =99 !< Scheme is controlled by Recon1d class
+integer, parameter :: REMAPPING_PCM         =  0 !< O(h^1) remapping scheme
+integer, parameter :: REMAPPING_PLM         =  2 !< O(h^2) remapping scheme
+integer, parameter :: REMAPPING_PLM_HYBGEN  =  3 !< O(h^2) remapping scheme
+integer, parameter :: REMAPPING_PPM_CW      = 10 !< O(h^3) remapping scheme
+integer, parameter :: REMAPPING_PPM_H4      =  4 !< O(h^3) remapping scheme
+integer, parameter :: REMAPPING_PPM_IH4     =  5 !< O(h^3) remapping scheme
+integer, parameter :: REMAPPING_PPM_HYBGEN  =  6 !< O(h^3) remapping scheme
+integer, parameter :: REMAPPING_WENO_HYBGEN =  7 !< O(h^3) remapping scheme
+integer, parameter :: REMAPPING_PQM_IH4IH3  =  8 !< O(h^4) remapping scheme
+integer, parameter :: REMAPPING_PQM_IH6IH5  =  9 !< O(h^5) remapping scheme
+integer, parameter :: REMAPPING_VIA_CLASS   = 99 !< Scheme is controlled by Recon1d class
 
 integer, parameter  :: INTEGRATION_PCM = 0  !< Piecewise Constant Method
 integer, parameter  :: INTEGRATION_PLM = 1  !< Piecewise Linear Method

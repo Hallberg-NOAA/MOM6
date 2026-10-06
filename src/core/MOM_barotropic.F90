@@ -445,9 +445,9 @@ type, private :: memory_size_type
 end type memory_size_type
 
 !>@{ CPU time clock IDs
-integer :: id_clock_sync=-1, id_clock_calc=-1
-integer :: id_clock_calc_pre=-1, id_clock_calc_post=-1
-integer :: id_clock_pass_step=-1, id_clock_pass_pre=-1, id_clock_pass_post=-1
+integer :: id_clock_sync = -1, id_clock_calc = -1
+integer :: id_clock_calc_pre = -1, id_clock_calc_post = -1
+integer :: id_clock_pass_step = -1, id_clock_pass_pre = -1, id_clock_pass_post = -1
 !>@}
 
 !>@{ Enumeration values for various schemes

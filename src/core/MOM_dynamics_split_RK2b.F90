@@ -1214,8 +1214,8 @@ subroutine register_restarts_dyn_split_RK2b(HI, GV, US, param_file, CS, restart_
   ALLOC_(CS%du_av_inst(IsdB:IedB,jsd:jed)) ; CS%du_av_inst(:,:) = 0.0
   ALLOC_(CS%dv_av_inst(isd:ied,JsdB:JedB)) ; CS%dv_av_inst(:,:) = 0.0
 
-  allocate(CS%taux_bot(IsdB:IedB,jsd:jed), source = 0.0)
-  allocate(CS%tauy_bot(isd:ied,JsdB:JedB), source = 0.0)
+  allocate(CS%taux_bot(IsdB:IedB,jsd:jed), source=0.0)
+  allocate(CS%tauy_bot(isd:ied,JsdB:JedB), source=0.0)
 
   ALLOC_(CS%eta(isd:ied,jsd:jed))       ; CS%eta(:,:)    = 0.0
 
