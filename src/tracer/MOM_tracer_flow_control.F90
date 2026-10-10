@@ -90,7 +90,7 @@ type, public :: tracer_flow_control_CS ; private
   logical :: use_USER_tracer_example = .false.     !< If true, use the USER_tracer_example package
   logical :: use_DOME_tracer = .false.             !< If true, use the DOME_tracer package
   logical :: use_ISOMIP_tracer = .false.           !< If true, use the ISOMPE_tracer package
-  logical :: use_RGC_tracer =.false.               !< If true, use the RGC_tracer package
+  logical :: use_RGC_tracer = .false.              !< If true, use the RGC_tracer package
   logical :: use_ideal_age = .false.               !< If true, use the ideal age tracer package
   logical :: use_MARBL_tracers = .false.           !< If true, use the MARBL tracer package
   logical :: use_regional_dyes = .false.           !< If true, use the regional dyes tracer package

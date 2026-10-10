@@ -2593,7 +2593,7 @@ subroutine MOM_temp_salt_initialize_from_Z(h, tv, depth_tot, G, GV, US, PF, just
                          ! correct_thickness is false [Z ~> m]
   character(len=40) :: potemp_var, salin_var
 
-  integer, parameter :: niter=10   ! number of iterations for t/s adjustment to layer density
+  integer, parameter :: niter = 10 ! number of iterations for t/s adjustment to layer density
   logical            :: adjust_temperature = .true.  ! fit t/s to target densities
   real    :: temp_land_fill  ! A temperature value to use for land points [C ~> degC]
   real    :: salt_land_fill  ! A salinity value to use for land points [C ~> degC]
@@ -3206,7 +3206,7 @@ subroutine MOM_state_init_tests(G, GV, US, tv)
   type(thermo_var_ptrs),     intent(in)    :: tv   !< Thermodynamics structure.
 
   ! Local variables
-  integer, parameter :: nk=5
+  integer, parameter :: nk = 5
   real, dimension(nk) :: T, T_t, T_b ! Temperatures [C ~> degC]
   real, dimension(nk) :: S, S_t, S_b ! Salinities [S ~> ppt]
   real, dimension(nk) :: rho ! Layer density [R ~> kg m-3]

@@ -4947,7 +4947,7 @@ subroutine bilinear_shape_fn_grid_1qp(G, i, j, Phi)
 ! Phi_i is equal to 1 at vertex i, and 0 at vertex k /= i, and bilinear
 
   real :: a, d       ! Interpolated grid spacings [L ~> m]
-  real :: xexp=0.5, yexp=0.5 ! [nondim]
+  real :: xexp = 0.5, yexp = 0.5 ! [nondim]
   integer :: node, qpoint, xnode, ynode
 
     ! d(x)/d(x*)

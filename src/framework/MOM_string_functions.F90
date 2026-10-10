@@ -32,7 +32,7 @@ function lowercase(input_string)
 !   This function returns a string in which all uppercase letters have been
 ! replaced by their lowercase counterparts.  It is loosely based on the
 ! lowercase function in mpp_util.F90.
-  integer, parameter :: co=iachar('a')-iachar('A') ! case offset
+  integer, parameter :: co = iachar('a')-iachar('A') ! case offset
   integer :: k
 
   lowercase = input_string
@@ -50,7 +50,7 @@ function uppercase(input_string)
 !   This function returns a string in which all lowercase letters have been
 ! replaced by their uppercase counterparts.  It is loosely based on the
 ! uppercase function in mpp_util.F90.
-  integer, parameter :: co=iachar('A')-iachar('a') ! case offset
+  integer, parameter :: co = iachar('A')-iachar('a') ! case offset
   integer :: k
 
   uppercase = input_string

@@ -167,23 +167,23 @@ end type diag_grid_storage
 
 ! Integers to encode the total cell methods
 ! Note that vorticity points (the PPP and PPM methods) are not fully dealt with for downsampling.
-integer :: PPP=111  !< x:point,y:point,z:point
-!integer :: PPS=112 ! x:point,y:point,z:sum  , this kind of diagnostic is not currently present in diag_table.MOM6
-integer :: PPM=113  !< x:point,y:point,z:mean
-integer :: PSP=121  !< x:point,y:sum,z:point
-integer :: PSS=122  !< x:point,y:sum,z:point
-integer :: PSM=123  !< x:point,y:sum,z:mean
-integer :: PMP=131  !< x:point,y:mean,z:point
-integer :: PMM=133  !< x:point,y:mean,z:mean
-integer :: SPP=211  !< x:sum,y:point,z:point
-integer :: SPS=212  !< x:sum,y:point,z:sum
-integer :: SSP=221  !< x:sum,y:sum,z:point
-integer :: MPP=311  !< x:mean,y:point,z:point
-integer :: MPM=313  !< x:mean,y:point,z:mean
-integer :: MMP=331  !< x:mean,y:mean,z:point
-integer :: MMS=332  !< x:mean,y:mean,z:sum
-integer :: SSS=222  !< x:sum,y:sum,z:sum
-integer :: MMM=333  !< x:mean,y:mean,z:mean
+integer :: PPP = 111  !< x:point,y:point,z:point
+!integer :: PPS = 112 ! x:point,y:point,z:sum  , this kind of diagnostic is not currently present in diag_table.MOM6
+integer :: PPM = 113  !< x:point,y:point,z:mean
+integer :: PSP = 121  !< x:point,y:sum,z:point
+integer :: PSS = 122  !< x:point,y:sum,z:point
+integer :: PSM = 123  !< x:point,y:sum,z:mean
+integer :: PMP = 131  !< x:point,y:mean,z:point
+integer :: PMM = 133  !< x:point,y:mean,z:mean
+integer :: SPP = 211  !< x:sum,y:point,z:point
+integer :: SPS = 212  !< x:sum,y:point,z:sum
+integer :: SSP = 221  !< x:sum,y:sum,z:point
+integer :: MPP = 311  !< x:mean,y:point,z:point
+integer :: MPM = 313  !< x:mean,y:point,z:mean
+integer :: MMP = 331  !< x:mean,y:mean,z:point
+integer :: MMS = 332  !< x:mean,y:mean,z:sum
+integer :: SSS = 222  !< x:sum,y:sum,z:sum
+integer :: MMM = 333  !< x:mean,y:mean,z:mean
 
 !> This type is used to represent a diagnostic at the diag_mediator level.
 !!

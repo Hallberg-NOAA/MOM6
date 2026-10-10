@@ -150,7 +150,7 @@ type, public :: OBC_segment_data_type
   real              :: resrv_lfac_in = 1.   !< The reservoir inverse length scale factor for the inward
                                             !! direction per field [nondim].  The general 1/Lscale_in is
                                             !! multiplied by this factor for a specific tracer or thickness.
-  real              :: resrv_lfac_out= 1.   !< The reservoir inverse length scale factor for the outward
+  real              :: resrv_lfac_out = 1.  !< The reservoir inverse length scale factor for the outward
                                             !! direction per field [nondim].  The general 1/Lscale_out is
                                             !! multiplied by this factor for a specific tracer or thickness.
 end type OBC_segment_data_type

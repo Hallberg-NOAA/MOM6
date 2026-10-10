@@ -46,8 +46,8 @@ type, public :: oil_tracer_CS ; private
   logical :: Z_IC_file         !< If true, the IC_file is in Z-space.  The default is false.
   real :: oil_source_longitude !< Latitude of source location (geographic) [degrees_N]
   real :: oil_source_latitude  !< Longitude of source location (geographic) [degrees_E]
-  integer :: oil_source_i=-999 !< Local i of source location (computational index location)
-  integer :: oil_source_j=-999 !< Local j of source location (computational index location)
+  integer :: oil_source_i = -999 !< Local i of source location (computational index location)
+  integer :: oil_source_j = -999 !< Local j of source location (computational index location)
   real :: oil_source_rate     !< Rate of oil injection [kg T-1 ~> kg s-1]
   real :: oil_start_year      !< The time at which the oil source starts [years]
   real :: oil_end_year        !< The time at which the oil source ends [years]
