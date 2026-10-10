@@ -473,7 +473,7 @@ subroutine InitializeAdvertise(gcomp, importState, exportState, clock, rc)
   type(time_type)                        :: DT
   integer                                :: DT_OCEAN
   integer                                :: isc, iec, jsc, jec
-  integer                                :: year=0, month=0, day=0, hour=0, minute=0, second=0
+  integer                                :: year = 0, month = 0, day = 0, hour = 0, minute = 0, second = 0
   integer                                :: mpi_comm_mom
   integer                                :: i, n
   character(len=256)                     :: stdname, shortname
@@ -494,13 +494,13 @@ subroutine InitializeAdvertise(gcomp, importState, exportState, clock, rc)
   character(len=512)                     :: restartfile          ! Path/Name of restart file
   character(len=2048)                    :: restartfiles         ! Path/Name of restart files
                                                                  ! (same as restartfile if single restart file)
-  character(len=*), parameter            :: subname='(MOM_cap:InitializeAdvertise)'
+  character(len=*), parameter            :: subname = '(MOM_cap:InitializeAdvertise)'
   character(len=32)                      :: calendar
   character(len=17)                      :: timestamp
   character(len=:), allocatable          :: rpointer_filename
   integer                                :: inst_index
   logical                                :: i2o_per_cat
-  logical                                :: found=.false.       ! rpointer inquiry
+  logical                                :: found = .false.     ! rpointer inquiry
   real(8)                                :: MPI_Wtime, timeiads
 !--------------------------------
 
@@ -1033,7 +1033,7 @@ subroutine InitializeRealize(gcomp, importState, exportState, clock, rc)
   real(ESMF_KIND_R8)                         :: max_areacor(2)
   real(ESMF_KIND_R8)                         :: min_areacor_glob(2)
   real(ESMF_KIND_R8)                         :: max_areacor_glob(2)
-  character(len=*), parameter                :: subname='(MOM_cap:InitializeRealize)'
+  character(len=*), parameter                :: subname = '(MOM_cap:InitializeRealize)'
   integer                                    :: niproc, njproc
   integer                                    :: ip, jp, pe_ix
   integer                                    :: num_elim_blocks ! number of blocks to be eliminated
@@ -2374,7 +2374,7 @@ subroutine State_SetScalar(value, scalar_id, State, mytask, scalar_name, scalar_
   ! local variables
   type(ESMF_Field)                :: field
   real(ESMF_KIND_R8), pointer     :: farrayptr(:,:)
-  character(len=*), parameter     :: subname='(MOM_cap:State_SetScalar)'
+  character(len=*), parameter     :: subname = '(MOM_cap:State_SetScalar)'
   !--------------------------------------------------------
 
   rc = ESMF_SUCCESS
@@ -2519,7 +2519,7 @@ contains  !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     ! local variables
     type(ESMF_Distgrid) :: distgrid
     type(ESMF_Grid)     :: grid
-    character(len=*), parameter :: subname='(MOM_cap:SetScalarField)'
+    character(len=*), parameter :: subname = '(MOM_cap:SetScalarField)'
 
     rc = ESMF_SUCCESS
 
@@ -2558,7 +2558,7 @@ subroutine fld_list_add(num, fldlist, stdname, transferOffer, shortname, ungridd
 
   ! local variables
   integer :: rc
-  character(len=*), parameter :: subname='(MOM_cap:fld_list_add)'
+  character(len=*), parameter :: subname = '(MOM_cap:fld_list_add)'
 
   ! fill in the new entry
   num = num + 1

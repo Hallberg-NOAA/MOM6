@@ -176,7 +176,7 @@ type, public :: vertvisc_CS ; private
   integer :: id_uE_h  = -1, id_vE_h  = -1
   integer :: id_uStk  = -1, id_vStk  = -1
   integer :: id_uStk0 = -1, id_vStk0 = -1
-  integer :: id_uInc_h= -1, id_vInc_h= -1
+  integer :: id_uInc_h = -1, id_vInc_h = -1
   integer :: id_taux_bot = -1, id_tauy_bot = -1
   integer :: id_Kv_slow = -1, id_Kv_u = -1, id_Kv_v = -1
   integer :: id_Kv_gl90_u = -1, id_Kv_gl90_v = -1

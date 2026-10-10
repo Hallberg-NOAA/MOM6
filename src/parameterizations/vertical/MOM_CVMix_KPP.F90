@@ -263,8 +263,8 @@ logical function KPP_init(paramFile, G, GV, US, diag, Time, CS, passive)
   character(len=20) :: langmuir_entrainment_opt = 'NONE' !< Langmuir entrainment option to be
                                        !! passed to CVMix, e.g., LWF16
   integer :: default_answer_date       ! The default setting for the various ANSWER_DATE flags.
-  logical :: CS_IS_ONE=.false.         !< Logical for setting Cs based on Non-local
-  logical :: lnoDGat1=.false.          !< True => G'(1) = 0 (shape function)
+  logical :: CS_IS_ONE = .false.       !< Logical for setting Cs based on Non-local
+  logical :: lnoDGat1 = .false.        !< True => G'(1) = 0 (shape function)
                                        !! False => compute G'(1) as in LMD94
   ! Read parameters
   call get_param(paramFile, mdl, "USE_KPP", KPP_init, default=.false., do_not_log=.true.)

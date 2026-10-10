@@ -27,8 +27,8 @@ type, public :: particles_gridded
   integer :: ieg !< End i-index of global domain
   integer :: jsg !< Start j-index of global domain
   integer :: jeg !< End j-index of global domain
-  integer :: is_offset=0 !< add to i to recover global i-index
-  integer :: js_offset=0 !< add to j to recover global j-index
+  integer :: is_offset = 0 !< add to i to recover global i-index
+  integer :: js_offset = 0 !< add to j to recover global j-index
   integer :: my_pe !< MPI PE index
   integer :: pe_N !< MPI PE index of PE to the north
   integer :: pe_S !< MPI PE index of PE to the south
@@ -58,8 +58,8 @@ type, public :: particles_gridded
   integer, dimension(:,:), allocatable :: particle_counter_grd !< Counts particles created for naming purposes
   !>@{
   !! Diagnostic handle
-  integer :: id_uo=-1, id_vo=-1, id_unused=-1
-  integer :: id_count=-1, id_chksum=-1
+  integer :: id_uo = -1, id_vo = -1, id_unused = -1
+  integer :: id_count = -1, id_chksum = -1
   !>@}
 
 end type particles_gridded
@@ -116,7 +116,7 @@ end type particle
 
 !>A buffer structure for message passing
 type, public :: buffer
-  integer :: size=0 !< Size of buffer
+  integer :: size = 0 !< Size of buffer
   real, dimension(:,:), pointer :: data !< Buffer memory
 end type buffer
 
@@ -142,13 +142,13 @@ type, public :: particles !; private
   integer :: clock, clock_mom, clock_the, clock_int, clock_cal, clock_com, clock_ini, clock_ior, clock_iow, clock_dia
   integer :: clock_trw, clock_trp
   !>@}
-  logical :: restarted=.false. !< Indicate whether we read state from a restart or not
-  logical :: Runge_not_Verlet=.True. !< True=Runge-Kutta, False=Verlet.
-  logical :: ignore_missing_restart_parts=.False. !< True allows the model to ignore particles missing in the restart.
-  logical :: halo_debugging=.False. !< Use for debugging halos (remove when its working)
-  logical :: save_short_traj=.false. !< True saves only lon,lat,time,id in particle_trajectory.nc
-  logical :: ignore_traj=.False. !< If true, then model does not write trajectory data at all
-  logical :: use_new_predictive_corrective =.False. !< Flag to use Bob's predictive corrective particle scheme
+  logical :: restarted = .false. !< Indicate whether we read state from a restart or not
+  logical :: Runge_not_Verlet = .True. !< True=Runge-Kutta, False=Verlet.
+  logical :: ignore_missing_restart_parts = .False. !< True allows the model to ignore particles missing in the restart.
+  logical :: halo_debugging = .False. !< Use for debugging halos (remove when its working)
+  logical :: save_short_traj = .false. !< True saves only lon,lat,time,id in particle_trajectory.nc
+  logical :: ignore_traj = .False. !< If true, then model does not write trajectory data at all
+  logical :: use_new_predictive_corrective = .False. !< Flag to use Bob's predictive corrective particle scheme
   !Added by Alon
   integer(kind=int64) :: debug_particle_with_id = -1 !< If positive, monitors a part with this id
   type(buffer), pointer :: obuffer_n=>null() !< Buffer for outgoing parts to the north

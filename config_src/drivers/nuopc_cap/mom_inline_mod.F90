@@ -48,7 +48,7 @@ subroutine mom_inline_init(gcomp, model_clock, model_mesh, mytask, rc)
   character(len=ESMF_MAXSTR), allocatable :: filelist(:)
   character(len=ESMF_MAXSTR), allocatable :: filevars(:,:)
 
-  character(len=*), parameter  :: subname='(mom_inline_init)'
+  character(len=*), parameter  :: subname = '(mom_inline_init)'
   !----------------------------------------------------------------------
 
   rc = ESMF_SUCCESS
@@ -167,7 +167,7 @@ subroutine mom_inline_run(clock, ocean_public, ocean_grid, ice_ocean_boundary, d
   integer                     :: mcdate  ! Current model date (yyyymmdd)
   character(len=ESMF_MAXSTR)  :: fldname
   real(ESMF_KIND_R8), pointer :: dataPtr1d(:)
-  character(len=*), parameter :: subname='(mom_inline_run)'
+  character(len=*), parameter :: subname = '(mom_inline_run)'
   !-----------------------------------------------------------------------
 
   rc = ESMF_SUCCESS

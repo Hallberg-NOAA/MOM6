@@ -157,8 +157,8 @@ type, public :: ice_shelf_CS ; private
                             !! will be called (note: GL_regularize and GL_couple
                             !! should be exclusive)
   logical :: calve_to_mask  !< If true, calve any ice that passes outside of a masked area
-  logical :: calve_ice_shelf_bergs=.false. !< If true, flux through a static ice front is converted
-                                           !! to point bergs
+  logical :: calve_ice_shelf_bergs = .false. !< If true, flux through a static ice front is converted
+                            !! to point bergs
   real :: min_thickness_simple_calve !< min. ice shelf thickness criteria for calving [Z ~> m].
   real :: T0                !< temperature at ocean surface in the restoring region [C ~> degC]
   real :: S0                !< Salinity at ocean surface in the restoring region [S ~> ppt].
@@ -253,8 +253,8 @@ type, public :: ice_shelf_CS ; private
 end type ice_shelf_CS
 
 !>@{ CPU time clock IDs
-integer :: id_clock_shelf=-1 !< CPU Clock for the ice shelf code
-integer :: id_clock_pass=-1  !< CPU Clock for ice shelf group pass calls
+integer :: id_clock_shelf = -1 !< CPU Clock for the ice shelf code
+integer :: id_clock_pass = -1  !< CPU Clock for ice shelf group pass calls
 !>@}
 
 contains

@@ -573,7 +573,7 @@ function simplifyWhiteSpace(string)
   ! Local variables
   integer :: i, j
   logical :: nonBlank = .false., insideString = .false.
-  character(len=1) :: quoteChar=" "
+  character(len=1) :: quoteChar = " "
 
   nonBlank  = .false. ; insideString = .false. ! NOTE: For some reason this line is needed??
   i = 0

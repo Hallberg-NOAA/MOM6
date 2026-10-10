@@ -509,7 +509,7 @@ logical function symmetric_sum_unit_tests(verbose)
   logical, intent(in) :: verbose !< If true, write results to stdout
   ! Local variables
   character(len=120) :: fail_message !< Blank or a description of the first failed test.
-  integer, parameter :: sz=13 ! The maximum size of the test arrays
+  integer, parameter :: sz = 13 ! The maximum size of the test arrays
   real :: array(sz,sz)  ! An array of inexact real values for testing in arbitrary units [A]
   real :: ar_90(sz,sz)  ! Array rotated by 90 degrees in arbitrary units [A]
   real :: ar_180(sz,sz) ! Array rotated by 180 degrees in arbitrary units [A]

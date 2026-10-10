@@ -351,7 +351,7 @@ subroutine horiz_interp_and_extrap_tracer_record(filename, varnam, recnum, G, tr
   integer :: isg, ieg, jsg, jeg ! global extent
   integer :: isd, ied, jsd, jed ! data domain indices
   integer :: id_clock_read
-  logical :: debug=.false.
+  logical :: debug = .false.
   real :: I_scale               ! The inverse of the scale factor for diagnostic output [a A-1 ~> 1]
   real :: dtr_iter_stop         ! The tolerance for changes in tracer concentrations between smoothing
                                 ! iterations that determines when to stop iterating [A ~> a]
@@ -697,7 +697,7 @@ subroutine horiz_interp_and_extrap_tracer_fms_id(field, Time, G, tr_z, mask_z, &
   integer :: isd, ied, jsd, jed ! data domain indices
   integer :: id_clock_read
   integer, dimension(4) :: fld_sz
-  logical :: debug=.false.
+  logical :: debug = .false.
   logical :: is_ongrid
   integer :: ans_date           ! The vintage of the expressions and order of arithmetic to use
   real :: I_scale               ! The inverse of the scale factor for diagnostic output [a A-1 ~> 1]

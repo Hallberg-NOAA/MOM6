@@ -141,7 +141,7 @@ subroutine outputlog_init(gcomp, mclock, rc)
   character(len=3)        :: chour
   character(len=256)      :: msgString
   character(len=256)      :: value
-  character(len=256)      :: subname='MOM_cap:(outputlog_init)'
+  character(len=256)      :: subname = 'MOM_cap:(outputlog_init)'
   !----------------------------------------------------------------------------
 
   rc = ESMF_SUCCESS
@@ -275,7 +275,7 @@ subroutine outputlog_run(mclock, atStopTime, rc)
   character(len=40)  :: importexport
   character(len=16)  :: timestr
   character(len=256) :: fname
-  character(len=256) :: subname='MOM_cap:(outputlog_run)'
+  character(len=256) :: subname = 'MOM_cap:(outputlog_run)'
   !----------------------------------------------------------------------------
 
   rc = ESMF_SUCCESS
@@ -406,7 +406,7 @@ subroutine outputlog_restart(mclock, num_rest_files, rc)
   character(len=40)    :: importexport
   logical, allocatable :: allDone(:)
   character(len=8)     :: suffix
-  character(len=256)   :: subname='MOM_cap:(outputlog_restart)'
+  character(len=256)   :: subname = 'MOM_cap:(outputlog_restart)'
   !----------------------------------------------------------------------------
 
   rc = ESMF_SUCCESS

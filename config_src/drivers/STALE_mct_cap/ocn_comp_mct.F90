@@ -77,7 +77,7 @@ private :: get_runtype
 private :: ocean_model_init_sfc
 
 ! Flag for debugging
-logical, parameter :: debug=.true.
+logical, parameter :: debug = .true.
 
 !> Control structure for this module
 type MCT_MOM_Data
@@ -161,7 +161,7 @@ subroutine ocn_init_mct( EClock, cdata_o, x2o_o, o2x_o, NLFilename )
   character(len=16)   :: inst_suffix
 
   ! TODO: Change the following vars with the corresponding MOM6 vars
-  integer :: km=1                   !< Number of vertical levels
+  integer :: km = 1                 !< Number of vertical levels
   !logical :: lsend_precip_fact     !< If T, send precip_fact to cpl for use in fw balance
                                     !! (partially-coupled option)
   character(len=128) :: err_msg     !< Error message
@@ -429,7 +429,7 @@ subroutine ocn_run_mct( EClock, cdata_o, x2o_o, o2x_o)
   type(ESMF_timeInterval) :: ocn_cpl_interval !< The length of one ocean coupling interval
   integer :: year, month, day, hour, minute, seconds, seconds_n, seconds_d, rc
   logical :: write_restart_at_eod      !< Controls if restart files must be written
-  logical :: debug=.false.
+  logical :: debug = .false.
   type(time_type) :: time_start        !< Start of coupled time interval to pass to MOM6
   type(time_type) :: coupling_timestep !< Coupled time interval to pass to MOM6
   character(len=128) :: err_msg        !< Error message

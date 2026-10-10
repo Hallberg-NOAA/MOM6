@@ -153,7 +153,7 @@ end type ODA_CS
 
 
 !>@{  DA parameters
-integer, parameter :: NO_ASSIM = 0, OI_ASSIM=1, EAKF_ASSIM=2
+integer, parameter :: NO_ASSIM = 0, OI_ASSIM = 1, EAKF_ASSIM = 2
 !>@}
 character(len=40)  :: mdl = "MOM_oda_driver" !< This module's name.
 

@@ -859,7 +859,7 @@ subroutine State_GetFldPtr_1d(State, fldname, fldptr, rc)
   ! local variables
   type(ESMF_Field) :: lfield
   integer :: lrc
-  character(len=*), parameter :: subname='(MOM_cap:State_GetFldPtr)'
+  character(len=*), parameter :: subname = '(MOM_cap:State_GetFldPtr)'
 
   call ESMF_StateGet(State, itemName=trim(fldname), field=lfield, rc=lrc)
   if (ChkErr(rc,__LINE__,u_FILE_u)) return
@@ -880,7 +880,7 @@ subroutine State_GetFldPtr_2d(State, fldname, fldptr, rc)
   ! local variables
   type(ESMF_Field) :: lfield
   integer :: lrc
-  character(len=*), parameter :: subname='(MOM_cap:State_GetFldPtr)'
+  character(len=*), parameter :: subname = '(MOM_cap:State_GetFldPtr)'
 
   call ESMF_StateGet(State, itemName=trim(fldname), field=lfield, rc=lrc)
   if (ChkErr(rc,__LINE__,u_FILE_u)) return
@@ -917,7 +917,7 @@ subroutine State_GetImport_2d(state, fldname, isc, iec, jsc, jec, output, do_sum
   logical                       :: do_sum_loc
   real(ESMF_KIND_R8), pointer   :: dataPtr1d(:)
   real(ESMF_KIND_R8), pointer   :: dataPtr2d(:,:)
-  character(len=*)  , parameter :: subname='(MOM_cap_methods:state_getimport_2d)'
+  character(len=*),   parameter :: subname = '(MOM_cap_methods:state_getimport_2d)'
   ! ----------------------------------------------
 
   rc = ESMF_SUCCESS
@@ -1014,7 +1014,7 @@ subroutine State_GetImport_3d(state, fldname, isc, iec, jsc, jec, lbd, ubd, outp
   integer                       :: lbnd1, lbnd2
   logical                       :: do_sum_loc
   real(ESMF_KIND_R8), pointer   :: dataPtr2d(:,:)
-  character(len=*)  , parameter :: subname='(MOM_cap_methods:state_getimport_3d)'
+  character(len=*),   parameter :: subname = '(MOM_cap_methods:state_getimport_3d)'
   ! ----------------------------------------------
 
   rc = ESMF_SUCCESS
@@ -1091,7 +1091,7 @@ subroutine State_SetExport(state, fldname, isc, iec, jsc, jec, input, ocean_grid
   integer                       :: lbnd1, lbnd2
   real(ESMF_KIND_R8), pointer   :: dataPtr1d(:)
   real(ESMF_KIND_R8), pointer   :: dataPtr2d(:,:)
-  character(len=*)  , parameter :: subname='(MOM_cap_methods:state_setexport)'
+  character(len=*),   parameter :: subname = '(MOM_cap_methods:state_setexport)'
   ! ----------------------------------------------
 
   rc = ESMF_SUCCESS
@@ -1174,7 +1174,7 @@ subroutine state_diagnose(State, string, rc)
   character(ESMF_MAXSTR), pointer :: lfieldnamelist(:)
   real(ESMF_KIND_R8), pointer     :: dataPtr1d(:)
   real(ESMF_KIND_R8), pointer     :: dataPtr2d(:,:)
-  character(len=*), parameter     :: subname='(state_diagnose)'
+  character(len=*), parameter     :: subname = '(state_diagnose)'
   character(len=ESMF_MAXSTR)      :: msgString
   ! ----------------------------------------------
 
@@ -1238,7 +1238,7 @@ subroutine field_getfldptr(field, fldptr1, fldptr2, rank, abort, rc)
   type(ESMF_Mesh)             :: lmesh
   integer                     :: lrank, nnodes, nelements
   logical                     :: labort
-  character(len=*), parameter :: subname='(field_getfldptr)'
+  character(len=*), parameter :: subname = '(field_getfldptr)'
   ! ----------------------------------------------
 
   if (.not.present(rc)) then

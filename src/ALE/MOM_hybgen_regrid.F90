@@ -685,9 +685,9 @@ real function cushn(delp, dp0)
   real, intent(in) :: dp0   ! A non-negative reference thickness [H ~> m or kg m-2]
 
   ! These are the nondimensional parameters that define the cushion function.
-  real, parameter :: qqmn=-4.0, qqmx=2.0  ! shifted range for cushn [nondim]
-! real, parameter :: qqmn=-2.0, qqmx=4.0  ! traditional range for cushn [nondim]
-! real, parameter :: qqmn=-4.0, qqmx=6.0  ! somewhat wider range for cushn [nondim]
+  real, parameter :: qqmn = -4.0, qqmx = 2.0  ! shifted range for cushn [nondim]
+! real, parameter :: qqmn = -2.0, qqmx = 4.0  ! traditional range for cushn [nondim]
+! real, parameter :: qqmn = -4.0, qqmx = 6.0  ! somewhat wider range for cushn [nondim]
   ! These are derivative nondimensional parameters.
   ! real, parameter :: cusha = qqmn**2 * (qqmx-1.0) / (qqmx-qqmn)**2
   ! real, parameter :: I_qqmn = 1.0 / qqmn
@@ -749,9 +749,9 @@ subroutine hybgen_column_regrid(CS, nk, thkbot, Rcv_tgt, &
   character(len=256) :: mesg  ! A string for output messages
 
   ! This line needs to be consistent with the parameters set in cushn().
-  real, parameter :: qqmn=-4.0, qqmx=2.0  ! shifted range for cushn [nondim]
-! real, parameter :: qqmn=-2.0, qqmx=4.0  ! traditional range for cushn [nondim]
-! real, parameter :: qqmn=-4.0, qqmx=6.0  ! somewhat wider range for cushn [nondim]
+  real, parameter :: qqmn = -4.0, qqmx = 2.0  ! shifted range for cushn [nondim]
+! real, parameter :: qqmn = -2.0, qqmx = 4.0  ! traditional range for cushn [nondim]
+! real, parameter :: qqmn = -4.0, qqmx = 6.0  ! somewhat wider range for cushn [nondim]
 
   trap_errors = .true.
 

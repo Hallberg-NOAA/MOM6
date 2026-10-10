@@ -232,7 +232,7 @@ logical function CVMix_shear_init(Time, G, GV, US, param_file, diag, CS)
   type(diag_ctrl), target, intent(inout) :: diag !< Diagnostics control structure.
   type(CVMix_shear_cs),    pointer       :: CS !< This module's control structure.
   ! Local variables
-  integer :: NumberTrue=0
+  integer :: NumberTrue = 0
   logical :: use_JHL
   logical :: use_LMD94
   logical :: use_PP81
