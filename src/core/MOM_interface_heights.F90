@@ -929,7 +929,7 @@ end subroutine thickness_to_dz_3d
 subroutine thickness_to_dz_jslice(h, tv, dz, j, G, GV, halo_size)
   type(ocean_grid_type),   intent(in)    :: G  !< The ocean's grid structure
   type(verticalGrid_type), intent(in)    :: GV !< The ocean's vertical grid structure
-   real, dimension(SZI_(G),SZJ_(G),SZK_(GV)), &
+  real, dimension(SZI_(G),SZJ_(G),SZK_(GV)), &
                            intent(in)    :: h  !< Input thicknesses in thickness units [H ~> m or kg m-2].
   type(thermo_var_ptrs),   intent(in)    :: tv !< A structure pointing to various
                                                !! thermodynamic variables

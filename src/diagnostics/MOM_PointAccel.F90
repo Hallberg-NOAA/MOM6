@@ -332,11 +332,11 @@ subroutine write_u_accel(I, j, um, hin, ADp, CDp, dt, G, GV, US, CS, vel_rpt, st
     do k=ks,ke ; if (do_k(k)) write(file,'(ES10.3," ")', advance='no') &
                           (uh_scale*CDp%vh(i+1,J,k)*G%IdxCv(i+1,J)) ; enddo
     write(file,'(/," vhC++:")', advance='no')
-         do k=ks,ke ; if (do_k(k)) write(file,'(ES10.3," ")', advance='no') &
+    do k=ks,ke ; if (do_k(k)) write(file,'(ES10.3," ")', advance='no') &
                      (0.5*CS%v_av(i+1,J,k)*uh_scale*(hin(i+1,j,k) + hin(i+1,j+1,k))) ; enddo
     if (prev_avail) then
       write(file,'(/," vhCp++:")', advance='no')
-           do k=ks,ke ; if (do_k(k)) write(file,'(ES10.3," ")', advance='no') &
+      do k=ks,ke ; if (do_k(k)) write(file,'(ES10.3," ")', advance='no') &
                        (0.5*CS%v_av(i+1,J,k)*uh_scale*(hin(i+1,j,k) + hin(i+1,j+1,k))) ; enddo
     endif
 

@@ -3988,9 +3988,9 @@ subroutine energetic_PBL_init(Time, G, GV, US, param_file, diag, CS)
                  "mixed layer depth.  Otherwise use the false position after a maximum and minimum "//&
                  "bound have been evaluated and the returned value or bisection before this.", &
                  default=.false., do_not_log=.not.CS%Use_MLD_iteration)
-   call get_param(param_file, mdl, "ENABLE_BUGS_BY_DEFAULT", enable_bugs, &
+  call get_param(param_file, mdl, "ENABLE_BUGS_BY_DEFAULT", enable_bugs, &
                  default=.true., do_not_log=.true.)  ! This is logged from MOM.F90.
-   call get_param(param_file, mdl, "EPBL_MLD_ITER_BUG", CS%MLD_iter_bug, &
+  call get_param(param_file, mdl, "EPBL_MLD_ITER_BUG", CS%MLD_iter_bug, &
                  "If true, use buggy logic that gives the wrong bounds for the next iteration "//&
                  "when successive guesses increase by exactly EPBL_MLD_TOLERANCE.", &
                  default=enable_bugs, do_not_log=.not.CS%Use_MLD_iteration)

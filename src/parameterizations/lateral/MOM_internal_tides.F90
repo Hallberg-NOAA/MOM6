@@ -1640,39 +1640,39 @@ subroutine get_lowmode_diffusivity(G, GV, h, tv, US, h_bot, k_bot, j, N2_lay, N2
     ! verif integrals
     if (CS%debug) then
       if (G%mask2dT(i,j) > 0.0) then
-         verif_N = 0.0
-         verif_N2 = 0.0
-         verif_bbl = 0.0
-         verif_stl1 = 0.0
-         verif_stl2 = 0.0
-         do k=1,nz
-           verif_N = verif_N + (profile_N(k) * h(i,j,k))
-           verif_N2 = verif_N2 + (profile_N2(k) * h(i,j,k))
-           verif_bbl = verif_bbl + (profile_BBL(k) * h(i,j,k))
-           verif_stl1 = verif_stl1 + (profile_StLaurent(k) * h(i,j,k))
-           verif_stl2 = verif_stl2 + (profile_StLaurent_slope(k) * h(i,j,k))
-         enddo
+        verif_N = 0.0
+        verif_N2 = 0.0
+        verif_bbl = 0.0
+        verif_stl1 = 0.0
+        verif_stl2 = 0.0
+        do k=1,nz
+          verif_N = verif_N + (profile_N(k) * h(i,j,k))
+          verif_N2 = verif_N2 + (profile_N2(k) * h(i,j,k))
+          verif_bbl = verif_bbl + (profile_BBL(k) * h(i,j,k))
+          verif_stl1 = verif_stl1 + (profile_StLaurent(k) * h(i,j,k))
+          verif_stl2 = verif_stl2 + (profile_StLaurent_slope(k) * h(i,j,k))
+        enddo
 
-         if (abs(verif_N -1.0) > threshold_verif) then
-           write(stdout,'(I0,", ",I0,F18.10)') i, j, verif_N
-           call MOM_error(FATAL, "mismatch integral for N profile")
-         endif
-         if (abs(verif_N2 -1.0) > threshold_verif) then
-           write(stdout,'(I0,", ",I0,F18.10)') i, j, verif_N2
-           call MOM_error(FATAL, "mismatch integral for N2 profile")
-         endif
-         if (abs(verif_bbl -1.0) > threshold_verif) then
-           write(stdout,'(I0,", ",I0,F18.10)') i, j, verif_bbl
-           call MOM_error(FATAL, "mismatch integral for bbl profile")
-         endif
-         if (abs(verif_stl1 -1.0) > threshold_verif) then
-           write(stdout,'(I0,", ",I0,F18.10)') i, j, verif_stl1
-           call MOM_error(FATAL, "mismatch integral for stl1 profile")
-         endif
-         if (abs(verif_stl2 -1.0) > threshold_verif) then
-           write(stdout,'(I0,", ",I0,F18.10)') i, j, verif_stl2
-           call MOM_error(FATAL, "mismatch integral for stl2 profile")
-         endif
+        if (abs(verif_N -1.0) > threshold_verif) then
+          write(stdout,'(I0,", ",I0,F18.10)') i, j, verif_N
+          call MOM_error(FATAL, "mismatch integral for N profile")
+        endif
+        if (abs(verif_N2 -1.0) > threshold_verif) then
+          write(stdout,'(I0,", ",I0,F18.10)') i, j, verif_N2
+          call MOM_error(FATAL, "mismatch integral for N2 profile")
+        endif
+        if (abs(verif_bbl -1.0) > threshold_verif) then
+          write(stdout,'(I0,", ",I0,F18.10)') i, j, verif_bbl
+          call MOM_error(FATAL, "mismatch integral for bbl profile")
+        endif
+        if (abs(verif_stl1 -1.0) > threshold_verif) then
+          write(stdout,'(I0,", ",I0,F18.10)') i, j, verif_stl1
+          call MOM_error(FATAL, "mismatch integral for stl1 profile")
+        endif
+        if (abs(verif_stl2 -1.0) > threshold_verif) then
+          write(stdout,'(I0,", ",I0,F18.10)') i, j, verif_stl2
+          call MOM_error(FATAL, "mismatch integral for stl2 profile")
+        endif
 
       endif
     endif

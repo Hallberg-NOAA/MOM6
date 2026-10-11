@@ -104,8 +104,8 @@ type, public :: opacity_CS ; private
 end type opacity_CS
 
 !>@{ Coded integers to specify the opacity scheme
-integer, parameter :: NO_SCHEME = 0, MANIZZA_05 = 1, MOREL_88 = 2, SINGLE_EXP = 3, DOUBLE_EXP = 4,&
-     &                OHLMANN_03 = 5
+integer, parameter :: NO_SCHEME = 0, MANIZZA_05 = 1, MOREL_88 = 2, SINGLE_EXP = 3, DOUBLE_EXP = 4, &
+                    & OHLMANN_03 = 5
 !>@}
 
 character*(10), parameter :: MANIZZA_05_STRING = "MANIZZA_05" !< String to specify the opacity scheme
@@ -392,7 +392,7 @@ subroutine opacity_from_chl(optics, sw_total, sw_vis_dir, sw_vis_dif, sw_nir_dir
         do n=1,nbands
           optics%sw_pen_band(n,i,j) = Inv_nbands*sw_pen_tot
         enddo
-     enddo ; enddo
+      enddo ; enddo
     case (OHLMANN_03)
       ! want exactly two penetrating bands. If not, throw an error.
       if ( nbands /= 2 ) then
@@ -1310,8 +1310,8 @@ subroutine opacity_init(Time, G, GV, US, param_file, diag, CS, optics)
   enddo
 
   if (CS%opacity_scheme == OHLMANN_03) then
-     ! Set up the lookup table
-     call init_ohlmann_table(optics)
+    ! Set up the lookup table
+    call init_ohlmann_table(optics)
   endif
 
 end subroutine opacity_init
@@ -1396,7 +1396,7 @@ subroutine init_ohlmann_table(optics)
        &   optics%a2_lut(nval_lut), optics%b2_lut(nval_lut), &
        &   stat=err)
   if ( err /= 0 ) then
-     call MOM_error(FATAL, "init_ohlmann: Cannot allocate lookup table")
+    call MOM_error(FATAL, "init_ohlmann: Cannot allocate lookup table")
   endif
 
   optics%chl_min = chl_tab1a(1)
@@ -1407,25 +1407,25 @@ subroutine init_ohlmann_table(optics)
   ! step through the lookup table
   m = 2
   do n=1,nval_lut
-     log10chl_lut = optics%log10chl_min + (n-1)*optics%dlog10chl
-     chl = 10.0**log10chl_lut
-     chl = max(chl_tab1a(1),min(chl,chl_tab1a(nval_tab1a)))
+    log10chl_lut = optics%log10chl_min + (n-1)*optics%dlog10chl
+    chl = 10.0**log10chl_lut
+    chl = max(chl_tab1a(1),min(chl,chl_tab1a(nval_tab1a)))
 
-     ! find interval in Table 1a (m-1,m]
-     do while (chl > chl_tab1a(m))
-        m = m + 1
-     enddo
-     mm1 = m-1
+    ! find interval in Table 1a (m-1,m]
+    do while (chl > chl_tab1a(m))
+      m = m + 1
+    enddo
+    mm1 = m-1
 
-     ! interpolation weights
-     w2 = (chl - chl_tab1a(mm1))/(chl_tab1a(m) - chl_tab1a(mm1))
-     w1 = 1. - w2
+    ! interpolation weights
+    w2 = (chl - chl_tab1a(mm1))/(chl_tab1a(m) - chl_tab1a(mm1))
+    w1 = 1. - w2
 
-     ! fill in the tables
-     optics%a1_lut(n) = w1*a1_tab1a(mm1) + w2*a1_tab1a(m)
-     optics%a2_lut(n) = w1*a2_tab1a(mm1) + w2*a2_tab1a(m)
-     optics%b1_lut(n) = w1*b1_tab1a(mm1) + w2*b1_tab1a(m)
-     optics%b2_lut(n) = w1*b2_tab1a(mm1) + w2*b2_tab1a(m)
+    ! fill in the tables
+    optics%a1_lut(n) = w1*a1_tab1a(mm1) + w2*a1_tab1a(m)
+    optics%a2_lut(n) = w1*a2_tab1a(mm1) + w2*a2_tab1a(m)
+    optics%b1_lut(n) = w1*b1_tab1a(mm1) + w2*b1_tab1a(m)
+    optics%b2_lut(n) = w1*b2_tab1a(mm1) + w2*b2_tab1a(m)
   enddo
 
   return
@@ -1505,7 +1505,7 @@ subroutine opacity_end(CS, optics)
   if (allocated(optics%max_wavelength_band)) &
     deallocate(optics%max_wavelength_band)
   if (allocated(optics%min_wavelength_band)) &
-       deallocate(optics%min_wavelength_band)
+    deallocate(optics%min_wavelength_band)
   if (allocated(optics%a1_lut)) deallocate(optics%a1_lut)
   if (allocated(optics%a2_lut)) deallocate(optics%a2_lut)
   if (allocated(optics%b1_lut)) deallocate(optics%b1_lut)

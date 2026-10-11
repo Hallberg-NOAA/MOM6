@@ -1935,8 +1935,8 @@ subroutine weno_seven_weight_0(q4, w0)
 
   ! Coefficients from Balsara and Shu (2000). The division by 1000 will be normalized out by fac_fn
   w0 = ((q4(1) * ((2.107 * q4(1) - 9.402 * q4(2)) + (7.042 * q4(3) - 1.854 * q4(4)))) + &
-     (q4(2) * ((11.003 * q4(2) - 17.246 * q4(3)) + 4.642 * q4(4)))) + &
-     ((q4(3) * (7.043 * q4(3) - 3.882 * q4(4))) + 0.547 * (q4(4) * q4(4)))
+      (q4(2) * ((11.003 * q4(2) - 17.246 * q4(3)) + 4.642 * q4(4)))) + &
+      ((q4(3) * (7.043 * q4(3) - 3.882 * q4(4))) + 0.547 * (q4(4) * q4(4)))
 
 end subroutine weno_seven_weight_0
 
@@ -1947,8 +1947,8 @@ subroutine weno_seven_weight_1(q4, w1)
 
   ! Coefficients from Balsara and Shu (2000). The division by 1000 will be normalized out by fac_fn
   w1 = ((q4(1) * ((0.547 * q4(1) - 2.522 * q4(2)) + (1.922 * q4(3) - 0.494 * q4(4)))) + &
-     (q4(2) * ((3.443 * q4(2) - 5.966 * q4(3)) + 1.602 * q4(4)))) + &
-     ((q4(3) * (2.843 * q4(3) - 1.642 * q4(4))) + 0.267 * (q4(4) * q4(4)))
+      (q4(2) * ((3.443 * q4(2) - 5.966 * q4(3)) + 1.602 * q4(4)))) + &
+      ((q4(3) * (2.843 * q4(3) - 1.642 * q4(4))) + 0.267 * (q4(4) * q4(4)))
 
 end subroutine weno_seven_weight_1
 
@@ -1959,8 +1959,8 @@ subroutine weno_seven_weight_2(q4, w2)
 
   ! Coefficients from Balsara and Shu (2000). The division by 1000 will be normalized out by fac_fn
   w2 = ((q4(1) * ((0.267 * q4(1) - 1.642 * q4(2)) + (1.602 * q4(3) - 0.494 * q4(4)))) + &
-     (q4(2) * ((2.843 * q4(2) - 5.966 * q4(3)) + 1.922 * q4(4)))) + &
-     ((q4(3) * (3.443 * q4(3) - 2.522 * q4(4))) + 0.547 * (q4(4) * q4(4)))
+      (q4(2) * ((2.843 * q4(2) - 5.966 * q4(3)) + 1.922 * q4(4)))) + &
+      ((q4(3) * (3.443 * q4(3) - 2.522 * q4(4))) + 0.547 * (q4(4) * q4(4)))
 
 end subroutine weno_seven_weight_2
 
@@ -1971,8 +1971,8 @@ subroutine weno_seven_weight_3(q4, w3)
 
   ! Coefficients from Balsara and Shu (2000). The division by 1000 will be normalized out by fac_fn
   w3 = ((q4(1) * ((0.547  * q4(1) - 3.882 * q4(2)) + (4.642 * q4(3) - 1.854 * q4(4)))) + &
-     (q4(2) * ((7.043 * q4(2) - 17.246 * q4(3)) + 7.042 * q4(4)))) + &
-     ((q4(3) * (11.003 * q4(3) - 9.402 * q4(4))) + 2.107 * (q4(4) * q4(4)))
+      (q4(2) * ((7.043 * q4(2) - 17.246 * q4(3)) + 7.042 * q4(4)))) + &
+      ((q4(3) * (11.003 * q4(3) - 9.402 * q4(4))) + 2.107 * (q4(4) * q4(4)))
 
 end subroutine weno_seven_weight_3
 
@@ -2208,86 +2208,86 @@ subroutine CoriolisAdv_init(Time, G, GV, US, param_file, diag, AD, CS)
   end select
 
   CS%id_rv = register_diag_field('ocean_model', 'RV', diag%axesBL, Time, &
-     'Relative Vorticity', 's-1', conversion=US%s_to_T)
+      'Relative Vorticity', 's-1', conversion=US%s_to_T)
 
   CS%id_PV = register_diag_field('ocean_model', 'PV', diag%axesBL, Time, &
-     'Potential Vorticity', 'm-1 s-1', conversion=GV%m_to_H*US%s_to_T)
+      'Potential Vorticity', 'm-1 s-1', conversion=GV%m_to_H*US%s_to_T)
 
   CS%id_gKEu = register_diag_field('ocean_model', 'gKEu', diag%axesCuL, Time, &
-     'Zonal Acceleration from Grad. Kinetic Energy', 'm s-2', conversion=US%L_T2_to_m_s2)
+      'Zonal Acceleration from Grad. Kinetic Energy', 'm s-2', conversion=US%L_T2_to_m_s2)
 
   CS%id_gKEv = register_diag_field('ocean_model', 'gKEv', diag%axesCvL, Time, &
-     'Meridional Acceleration from Grad. Kinetic Energy', 'm s-2', conversion=US%L_T2_to_m_s2)
+      'Meridional Acceleration from Grad. Kinetic Energy', 'm s-2', conversion=US%L_T2_to_m_s2)
 
   CS%id_rvxu = register_diag_field('ocean_model', 'rvxu', diag%axesCvL, Time, &
-     'Meridional Acceleration from Relative Vorticity', 'm s-2', conversion=US%L_T2_to_m_s2)
+      'Meridional Acceleration from Relative Vorticity', 'm s-2', conversion=US%L_T2_to_m_s2)
 
   CS%id_rvxv = register_diag_field('ocean_model', 'rvxv', diag%axesCuL, Time, &
-     'Zonal Acceleration from Relative Vorticity', 'm s-2', conversion=US%L_T2_to_m_s2)
+      'Zonal Acceleration from Relative Vorticity', 'm s-2', conversion=US%L_T2_to_m_s2)
 
   CS%id_CAuS = register_diag_field('ocean_model', 'CAu_Stokes', diag%axesCuL, Time, &
-     'Zonal Acceleration from Stokes Vorticity', 'm s-2', conversion=US%L_T2_to_m_s2)
+      'Zonal Acceleration from Stokes Vorticity', 'm s-2', conversion=US%L_T2_to_m_s2)
   ! add to AD
 
   CS%id_CAvS = register_diag_field('ocean_model', 'CAv_Stokes', diag%axesCvL, Time, &
-     'Meridional Acceleration from Stokes Vorticity', 'm s-2', conversion=US%L_T2_to_m_s2)
+      'Meridional Acceleration from Stokes Vorticity', 'm s-2', conversion=US%L_T2_to_m_s2)
   ! add to AD
 
   !CS%id_hf_gKEu = register_diag_field('ocean_model', 'hf_gKEu', diag%axesCuL, Time, &
   !   'Fractional Thickness-weighted Zonal Acceleration from Grad. Kinetic Energy', &
   !   'm s-2', v_extensive=.true., conversion=US%L_T2_to_m_s2)
   CS%id_hf_gKEu_2d = register_diag_field('ocean_model', 'hf_gKEu_2d', diag%axesCu1, Time, &
-     'Depth-sum Fractional Thickness-weighted Zonal Acceleration from Grad. Kinetic Energy', &
-     'm s-2', conversion=US%L_T2_to_m_s2)
+      'Depth-sum Fractional Thickness-weighted Zonal Acceleration from Grad. Kinetic Energy', &
+      'm s-2', conversion=US%L_T2_to_m_s2)
 
   !CS%id_hf_gKEv = register_diag_field('ocean_model', 'hf_gKEv', diag%axesCvL, Time, &
   !   'Fractional Thickness-weighted Meridional Acceleration from Grad. Kinetic Energy', &
   !   'm s-2', v_extensive=.true., conversion=US%L_T2_to_m_s2)
   CS%id_hf_gKEv_2d = register_diag_field('ocean_model', 'hf_gKEv_2d', diag%axesCv1, Time, &
-     'Depth-sum Fractional Thickness-weighted Meridional Acceleration from Grad. Kinetic Energy', &
-     'm s-2', conversion=US%L_T2_to_m_s2)
+      'Depth-sum Fractional Thickness-weighted Meridional Acceleration from Grad. Kinetic Energy', &
+      'm s-2', conversion=US%L_T2_to_m_s2)
 
   CS%id_h_gKEu = register_diag_field('ocean_model', 'h_gKEu', diag%axesCuL, Time, &
-     'Thickness Multiplied Zonal Acceleration from Grad. Kinetic Energy', &
-     'm2 s-2', conversion=GV%H_to_m*US%L_T2_to_m_s2)
+      'Thickness Multiplied Zonal Acceleration from Grad. Kinetic Energy', &
+      'm2 s-2', conversion=GV%H_to_m*US%L_T2_to_m_s2)
   CS%id_intz_gKEu_2d = register_diag_field('ocean_model', 'intz_gKEu_2d', diag%axesCu1, Time, &
-     'Depth-integral of Zonal Acceleration from Grad. Kinetic Energy', &
-     'm2 s-2', conversion=GV%H_to_m*US%L_T2_to_m_s2)
+      'Depth-integral of Zonal Acceleration from Grad. Kinetic Energy', &
+      'm2 s-2', conversion=GV%H_to_m*US%L_T2_to_m_s2)
 
   CS%id_h_gKEv = register_diag_field('ocean_model', 'h_gKEv', diag%axesCvL, Time, &
-     'Thickness Multiplied Meridional Acceleration from Grad. Kinetic Energy', &
-     'm2 s-2', conversion=GV%H_to_m*US%L_T2_to_m_s2)
+      'Thickness Multiplied Meridional Acceleration from Grad. Kinetic Energy', &
+      'm2 s-2', conversion=GV%H_to_m*US%L_T2_to_m_s2)
   CS%id_intz_gKEv_2d = register_diag_field('ocean_model', 'intz_gKEv_2d', diag%axesCv1, Time, &
-     'Depth-integral of Meridional Acceleration from Grad. Kinetic Energy', &
-     'm2 s-2', conversion=GV%H_to_m*US%L_T2_to_m_s2)
+      'Depth-integral of Meridional Acceleration from Grad. Kinetic Energy', &
+      'm2 s-2', conversion=GV%H_to_m*US%L_T2_to_m_s2)
 
   !CS%id_hf_rvxu = register_diag_field('ocean_model', 'hf_rvxu', diag%axesCvL, Time, &
   !   'Fractional Thickness-weighted Meridional Acceleration from Relative Vorticity', &
   !   'm s-2', v_extensive=.true., conversion=US%L_T2_to_m_s2)
   CS%id_hf_rvxu_2d = register_diag_field('ocean_model', 'hf_rvxu_2d', diag%axesCv1, Time, &
-     'Depth-sum Fractional Thickness-weighted Meridional Acceleration from Relative Vorticity', &
-     'm s-2', conversion=US%L_T2_to_m_s2)
+      'Depth-sum Fractional Thickness-weighted Meridional Acceleration from Relative Vorticity', &
+      'm s-2', conversion=US%L_T2_to_m_s2)
 
   !CS%id_hf_rvxv = register_diag_field('ocean_model', 'hf_rvxv', diag%axesCuL, Time, &
   !   'Fractional Thickness-weighted Zonal Acceleration from Relative Vorticity', &
   !   'm s-2', v_extensive=.true., conversion=US%L_T2_to_m_s2)
   CS%id_hf_rvxv_2d = register_diag_field('ocean_model', 'hf_rvxv_2d', diag%axesCu1, Time, &
-     'Depth-sum Fractional Thickness-weighted Zonal Acceleration from Relative Vorticity', &
-     'm s-2', conversion=US%L_T2_to_m_s2)
+      'Depth-sum Fractional Thickness-weighted Zonal Acceleration from Relative Vorticity', &
+      'm s-2', conversion=US%L_T2_to_m_s2)
 
   CS%id_h_rvxu = register_diag_field('ocean_model', 'h_rvxu', diag%axesCvL, Time, &
-     'Thickness Multiplied Meridional Acceleration from Relative Vorticity', &
-     'm2 s-2', conversion=GV%H_to_m*US%L_T2_to_m_s2)
+      'Thickness Multiplied Meridional Acceleration from Relative Vorticity', &
+      'm2 s-2', conversion=GV%H_to_m*US%L_T2_to_m_s2)
   CS%id_intz_rvxu_2d = register_diag_field('ocean_model', 'intz_rvxu_2d', diag%axesCv1, Time, &
-     'Depth-integral of Meridional Acceleration from Relative Vorticity', &
-     'm2 s-2', conversion=GV%H_to_m*US%L_T2_to_m_s2)
+      'Depth-integral of Meridional Acceleration from Relative Vorticity', &
+      'm2 s-2', conversion=GV%H_to_m*US%L_T2_to_m_s2)
 
   CS%id_h_rvxv = register_diag_field('ocean_model', 'h_rvxv', diag%axesCuL, Time, &
-     'Thickness Multiplied Zonal Acceleration from Relative Vorticity', &
-     'm2 s-2', conversion=GV%H_to_m*US%L_T2_to_m_s2)
+      'Thickness Multiplied Zonal Acceleration from Relative Vorticity', &
+      'm2 s-2', conversion=GV%H_to_m*US%L_T2_to_m_s2)
   CS%id_intz_rvxv_2d = register_diag_field('ocean_model', 'intz_rvxv_2d', diag%axesCu1, Time, &
-     'Depth-integral of Fractional Thickness-weighted Zonal Acceleration from Relative Vorticity', &
-     'm2 s-2', conversion=GV%H_to_m*US%L_T2_to_m_s2)
+      'Depth-integral of Fractional Thickness-weighted Zonal Acceleration from Relative Vorticity', &
+      'm2 s-2', conversion=GV%H_to_m*US%L_T2_to_m_s2)
 
   ! Allocate memory needed for the diagnostics that have been enabled.
   if ((CS%id_gKEu > 0) .or. (CS%id_hf_gKEu_2d > 0) .or. &

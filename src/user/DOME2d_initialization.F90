@@ -425,9 +425,9 @@ subroutine DOME2d_initialize_sponges(G, GV, US, tv, depth_tot, param_file, use_A
   if (dome2d_west_sponge_time_scale <= 0. .and. dome2d_east_sponge_time_scale <= 0.) return
 
   if (associated(CSp)) call MOM_error(FATAL, &
-     "DOME2d_initialize_sponges called with an associated control structure.")
+      "DOME2d_initialize_sponges called with an associated control structure.")
   if (associated(ACSp)) call MOM_error(FATAL, &
-     "DOME2d_initialize_sponges called with an associated ALE-sponge control structure.")
+      "DOME2d_initialize_sponges called with an associated ALE-sponge control structure.")
 
   call get_param(param_file, mdl, "DOME2D_SHELF_WIDTH", dome2d_width_bay, &
                  units="nondim", default=0.1, do_not_log=.true.)

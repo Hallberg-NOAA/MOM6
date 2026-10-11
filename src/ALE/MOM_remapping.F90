@@ -334,7 +334,7 @@ subroutine remapping_core_h(CS, n0, h0, u0, n1, h1, u1, net_err, PCM_cell)
 
   endif
 
- if (present(net_err)) net_err = uh_err
+  if (present(net_err)) net_err = uh_err
 
 end subroutine remapping_core_h
 

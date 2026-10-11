@@ -2400,7 +2400,7 @@ subroutine fluxes_accumulate(flux_tmp, fluxes, G, wt2, forces)
 
 
   if (fluxes%dt_buoy_accum < 0) call MOM_error(FATAL, "fluxes_accumulate: "//&
-     "fluxes must be initialzed before it can be augmented.")
+      "fluxes must be initialzed before it can be augmented.")
 
   ! wt1 is the relative weight of the previous fluxes.
   wt1 = fluxes%dt_buoy_accum / (fluxes%dt_buoy_accum + flux_tmp%dt_buoy_accum)

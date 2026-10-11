@@ -53,7 +53,7 @@ subroutine MOM_shared_init_init(PF)
 ! This include declares and sets the variable "version".
 #include "version_variable.h"
   call log_version(PF, mdl, version, &
-   "Sharable code to initialize time-invariant fields, like bathymetry and Coriolis parameters.")
+      "Sharable code to initialize time-invariant fields, like bathymetry and Coriolis parameters.")
 
 end subroutine MOM_shared_init_init
 ! -----------------------------------------------------------------------------

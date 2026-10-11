@@ -355,13 +355,13 @@ subroutine configure_MARBL_tracers(GV, US, param_file, CS)
   ! (2) Read marbl settings file and call put_setting()
   ! (2a) only master task opens file
   if (is_root_PE()) then
-     ! read the marbl_in into buffer
-     open(unit=marbl_settings_in, file=CS%marbl_settings_file, iostat=read_error)
-     if (read_error .ne. 0) then
-        write(log_message, '(A, I0, 2A)') "IO ERROR ", read_error, " opening namelist file : ", &
-            trim(CS%marbl_settings_file)
-        call MOM_error(FATAL, log_message)
-     endif
+    ! read the marbl_in into buffer
+    open(unit=marbl_settings_in, file=CS%marbl_settings_file, iostat=read_error)
+    if (read_error .ne. 0) then
+      write(log_message, '(A, I0, 2A)') "IO ERROR ", read_error, " opening namelist file : ", &
+          trim(CS%marbl_settings_file)
+      call MOM_error(FATAL, log_message)
+    endif
   endif
 
   ! (2b) master task reads file and broadcasts line-by-line
@@ -382,14 +382,14 @@ subroutine configure_MARBL_tracers(GV, US, param_file, CS)
 
   ! (2c) we should always reach the EOF to capture the entire file...
   if (.not. is_iostat_end(read_error)) then
-     write(log_message, '(3A, I0)') "IO ERROR reading ", trim(CS%marbl_settings_file), ": ", &
+    write(log_message, '(3A, I0)') "IO ERROR reading ", trim(CS%marbl_settings_file), ": ", &
         read_error
-     call MOM_error(FATAL, log_message)
+    call MOM_error(FATAL, log_message)
   else
-     if (is_root_PE()) then
-       write(log_message, '(3A)') "Read '", trim(CS%marbl_settings_file), "' until EOF."
-       call MOM_error(NOTE, log_message)
-     endif
+    if (is_root_PE()) then
+      write(log_message, '(3A)') "Read '", trim(CS%marbl_settings_file), "' until EOF."
+      call MOM_error(NOTE, log_message)
+    endif
   endif
   if (is_root_PE()) close(marbl_settings_in)
 
@@ -798,7 +798,7 @@ function register_MARBL_tracers(HI, GV, US, param_file, CS, tr_Reg, restart_CS, 
           write(log_message, "(3A)") "'", trim(CS%restoring_I_tau_source), &
               "' is not a valid option for MARBL_TRACER_RESTORING_I_TAU_SOURCE"
           call MOM_error(FATAL, log_message)
-     end select
+      end select
     case DEFAULT
       write(log_message, "(3A)") "'", trim(CS%restoring_source), &
           "' is not a valid option for MARBL_TRACER_RESTORING_SOURCE"

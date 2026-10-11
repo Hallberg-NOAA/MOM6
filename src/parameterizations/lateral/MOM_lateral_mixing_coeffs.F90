@@ -273,7 +273,7 @@ subroutine calc_resoln_function(h, tv, G, GV, US, CS, MEKE, OBC, dt)
     if (.not. allocated(CS%cg1)) call MOM_error(FATAL, &
       "calc_resoln_function: %cg1 is not associated with Resoln_scaled_Kh.")
     if (CS%khth_use_ebt_struct .or. CS%kdgl90_use_ebt_struct &
-     .or. CS%khtr_use_ebt_struct .or. CS%BS_EBT_power>0.) then
+        .or. CS%khtr_use_ebt_struct .or. CS%BS_EBT_power>0.) then
       if (.not. allocated(CS%ebt_struct)) call MOM_error(FATAL, &
         "calc_resoln_function: %ebt_struct is not associated with RESOLN_USE_EBT.")
       if (CS%Resoln_use_ebt) then
@@ -614,7 +614,7 @@ subroutine calc_sqg_struct(h, tv, G, GV, US, CS, dt, MEKE, OBC)
   type(unit_scale_type),                     intent(in)    :: US !< A dimensional unit scaling type
   real, dimension(SZI_(G),SZJ_(G),SZK_(GV)), intent(in)    :: h  !< Layer thickness [H ~> m or kg m-2]
   type(thermo_var_ptrs),                     intent(in)    :: tv !<Thermodynamic variables
-   real,                                     intent(in)    :: dt !< Time increment [T ~> s]
+  real,                                      intent(in)    :: dt !< Time increment [T ~> s]
   type(VarMix_CS),                           intent(inout) :: CS !< Variable mixing control struct
   type(MEKE_type),                           intent(in)    :: MEKE !< MEKE struct
   type(ocean_OBC_type),                      pointer       :: OBC !< Open boundaries control structure

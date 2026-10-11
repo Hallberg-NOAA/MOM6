@@ -140,7 +140,7 @@ subroutine KdWork_Diagnostics(G, GV, US, diag, VBF, N2_Salt, N2_Temp, dz)
     ! Do Temp
     if (VBF%id_Bdif_temp_dz>0 .or. VBF%id_Bdif_dz>0 .or. VBF%id_Bdif_temp>0 .or. VBF%id_Bdif>0 .or. &
         VBF%id_Bdif_idz>0 .or. VBF%id_Bdif_temp_idz>0 .or. VBF%id_Bdif_idV>0 .or. VBF%id_Bdif_temp_idV>0) &
-       call diagnoseKdWork(G, GV, N2_temp, VBF%Kd_temp, VBF%Bflx_temp, dz=dz, Bdif_flx_dz=VBF%Bflx_temp_dz)
+      call diagnoseKdWork(G, GV, N2_temp, VBF%Kd_temp, VBF%Bflx_temp, dz=dz, Bdif_flx_dz=VBF%Bflx_temp_dz)
     if (VBF%id_Bdif_temp_idz>0 .or. VBF%id_Bdif_idz>0) then
       work2d_temp(:,:) = 0.0
       do k = 1,nz ; do j = jsc,jec ; do i = isc,iec
@@ -779,11 +779,11 @@ subroutine Allocate_VBF_CS(G, GV, VBF)
   if (VBF%do_bflx_salt) &
     allocate(VBF%Bflx_salt(isd:ied,jsd:jed,nz+1), source=0.0)
   if (VBF%do_bflx_salt_dz) &
-     allocate(VBF%Bflx_salt_dz(isd:ied,jsd:jed,nz), source=0.0)
+    allocate(VBF%Bflx_salt_dz(isd:ied,jsd:jed,nz), source=0.0)
   if (VBF%do_bflx_temp) &
-     allocate(VBF%Bflx_temp(isd:ied,jsd:jed,nz+1), source=0.0)
+    allocate(VBF%Bflx_temp(isd:ied,jsd:jed,nz+1), source=0.0)
   if (VBF%do_bflx_temp_dz) &
-     allocate(VBF%Bflx_temp_dz(isd:ied,jsd:jed,nz), source=0.0)
+    allocate(VBF%Bflx_temp_dz(isd:ied,jsd:jed,nz), source=0.0)
 
   if (VBF%id_Bdif_salt_dz>0 .or. VBF%id_Bdif_dz>0 .or. VBF%id_Bdif_salt>0 .or. VBF%id_Bdif>0 .or. &
       VBF%id_Bdif_idz>0 .or. VBF%id_Bdif_salt_idz>0 .or. VBF%id_Bdif_idV>0 .or. VBF%id_Bdif_salt_idV>0) &

@@ -1177,7 +1177,7 @@ subroutine diabatic_ALE_legacy(u, v, h, tv, BLD, fluxes, visc, ADp, CDp, dt, Tim
     if (CS%id_N2_temp_dd>0) call post_data(CS%id_N2_temp_dd, N2_temp, CS%diag)
 
     if (CS%Use_KdWork_diag) then
-       call KdWork_diagnostics(G, GV, US, CS%diag, CS%VBF, N2_salt, N2_temp, dz)
+      call KdWork_diagnostics(G, GV, US, CS%diag, CS%VBF, N2_salt, N2_temp, dz)
     endif
 
     call deallocate_VBF_CS(CS%VBF)
@@ -1850,7 +1850,7 @@ subroutine diabatic_ALE(u, v, h, tv, BLD, fluxes, visc, ADp, CDp, dt, Time_end, 
     if (CS%id_N2_temp_dd>0) call post_data(CS%id_N2_temp_dd, N2_temp, CS%diag)
 
     if (CS%Use_KdWork_diag) then
-       call KdWork_diagnostics(G, GV, US, CS%diag, CS%VBF, N2_salt, N2_temp, dz)
+      call KdWork_diagnostics(G, GV, US, CS%diag, CS%VBF, N2_salt, N2_temp, dz)
     endif
 
     call deallocate_VBF_CS(CS%VBF)
@@ -3597,7 +3597,7 @@ subroutine diabatic_driver_init(Time, G, GV, US, param_file, useALEalgorithm, di
          units='m', conversion=US%Z_to_m)
     if ((CS%id_MLD_EN1>0).or. (CS%id_MLD_EN2>0).or. (CS%id_MLD_EN3>0).or. &
          (CS%id_BMLD_EN1>0).or.(CS%id_BMLD_EN2>0).or.(CS%id_BMLD_EN3>0)) then
-       call get_param(param_file, mdl, "USE_OM4_MLD_EN_ITER", CS%use_OM4_MLD_En_iter, &
+      call get_param(param_file, mdl, "USE_OM4_MLD_EN_ITER", CS%use_OM4_MLD_En_iter, &
             "If true, uses an older set of iteration coefficients in computing the PE based "//&
             "surface MLD to reproduce OM4 era models.  False uses an updated (general) method.",&
             default=.true.)

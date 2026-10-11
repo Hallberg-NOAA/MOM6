@@ -535,7 +535,7 @@ subroutine distribute_residual_vh_upwards(G, GV, hvol, vh)
         endif
 
         if (abs(vh_remain) > 0.0) then
-         if (k<nz) then
+          if (k<nz) then
             vh2d(J,k+1) = vh2d(J,k+1) + vh_remain
           else
             vh2d(J,k) = vh2d(J,k) + vh_remain

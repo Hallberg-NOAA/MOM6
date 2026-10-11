@@ -1801,7 +1801,7 @@ subroutine initialize_temp_salt_from_file(T, S, G, GV, US, param_file, just_read
   if (just_read) return ! All run-time parameters have been read, so return.
 
   if (.not.file_exists(filename, G%Domain)) call MOM_error(FATAL, &
-     " initialize_temp_salt_from_file: Unable to open "//trim(filename))
+      " initialize_temp_salt_from_file: Unable to open "//trim(filename))
 
   ! Read the temperatures and salinities from netcdf files.
   call MOM_read_data(filename, temp_var, T(:,:,:), G%Domain, scale=US%degC_to_C)
@@ -1811,7 +1811,7 @@ subroutine initialize_temp_salt_from_file(T, S, G, GV, US, param_file, just_read
     salt_filename = trim(inputdir)//trim(salt_file)
   endif
   if (.not.file_exists(salt_filename, G%Domain)) call MOM_error(FATAL, &
-     " initialize_temp_salt_from_file: Unable to open "//trim(salt_filename))
+      " initialize_temp_salt_from_file: Unable to open "//trim(salt_filename))
 
   call MOM_read_data(salt_filename, salt_var, S(:,:,:), G%Domain, scale=US%ppt_to_S)
 
@@ -1856,8 +1856,8 @@ subroutine initialize_temp_salt_from_profile(T, S, G, GV, US, param_file, just_r
   inputdir = slasher(inputdir)
   filename = trim(inputdir)//trim(ts_file)
   call log_param(param_file, mdl, "INPUTDIR/TS_FILE", filename)
-   if (.not.file_exists(filename)) call MOM_error(FATAL, &
-     " initialize_temp_salt_from_profile: Unable to open "//trim(filename))
+  if (.not.file_exists(filename)) call MOM_error(FATAL, &
+      " initialize_temp_salt_from_profile: Unable to open "//trim(filename))
 
   ! Read the temperatures and salinities from a netcdf file.
   call MOM_read_data(filename, temp_var, T0(:), scale=US%degC_to_C)
@@ -2447,7 +2447,7 @@ subroutine initialize_oda_incupd_file(G, GV, US, use_temperature, tv, h, u, v, p
 
   call field_size(filename, h_var, siz, no_domain=.true.)
   if (siz(1) /= G%ieg-G%isg+1 .or. siz(2) /= G%jeg-G%jsg+1) &
-         call MOM_error(FATAL, "initialize_oda_incupd_file: Array size mismatch for oda data.")
+    call MOM_error(FATAL, "initialize_oda_incupd_file: Array size mismatch for oda data.")
   nz_data = siz(3)
   ! get h increments
   allocate(hoda(isd:ied,jsd:jed,nz_data))

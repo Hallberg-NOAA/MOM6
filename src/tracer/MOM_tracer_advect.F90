@@ -152,21 +152,21 @@ subroutine advect_tracer(h_end, uhtr, vhtr, OBC, dt, G, GV, US, CS, Reg, x_first
   ! Choose the maximum stencil from all the local advection scheme
   do m = 1,ntr
 
-     local_advect_scheme(m) = Reg%Tr(m)%advect_scheme
-     if (local_advect_scheme(m) < 0) local_advect_scheme(m) = CS%default_advect_scheme
+    local_advect_scheme(m) = Reg%Tr(m)%advect_scheme
+    if (local_advect_scheme(m) < 0) local_advect_scheme(m) = CS%default_advect_scheme
 
-     if (local_advect_scheme(m) == ADVECT_PLM) then
-       stencil_local = 2
-     elseif (local_advect_scheme(m) == ADVECT_PPM) then
-       stencil_local = 3
-     elseif (local_advect_scheme(m) == ADVECT_PPMH3) then
-       if (CS%useHuynhStencilBug) then
-         stencil_local = 2
-       else
-         stencil_local = 3
-       endif
-     endif
-     stencil = max(stencil, stencil_local)
+    if (local_advect_scheme(m) == ADVECT_PLM) then
+      stencil_local = 2
+    elseif (local_advect_scheme(m) == ADVECT_PPM) then
+      stencil_local = 3
+    elseif (local_advect_scheme(m) == ADVECT_PPMH3) then
+      if (CS%useHuynhStencilBug) then
+        stencil_local = 2
+      else
+        stencil_local = 3
+      endif
+    endif
+    stencil = max(stencil, stencil_local)
   enddo
 
   if (min(is-isd,ied-ie,js-jsd,jed-je) < stencil) then

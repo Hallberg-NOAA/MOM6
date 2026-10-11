@@ -1289,14 +1289,14 @@ subroutine applyBoundaryFluxesInOut(CS, G, GV, US, dt, fluxes, optics, nsw, h, t
       elseif ((abs(netHeat(i)) + abs(netSalt(i)) + abs(netMassIn(i)) + abs(netMassOut(i))) > 0.) then
 
         if (.not. CS%ignore_fluxes_over_land) then
-           call forcing_SinglePointPrint(fluxes, G, i, j, 'applyBoundaryFluxesInOut (land)')
-           !TODO: Remove write statements
-           write(0,*) 'applyBoundaryFluxesInOut(): lon,lat=',G%geoLonT(i,j),G%geoLatT(i,j)
-           write(0,*) 'applyBoundaryFluxesInOut(): netHeat,netSalt,netMassIn,netMassOut=',&
-               US%C_to_degC*netHeat(i), US%S_to_ppt*netSalt(i), netMassIn(i), netMassOut(i)
+          call forcing_SinglePointPrint(fluxes, G, i, j, 'applyBoundaryFluxesInOut (land)')
+          !TODO: Remove write statements
+          write(0,*) 'applyBoundaryFluxesInOut(): lon,lat=',G%geoLonT(i,j),G%geoLatT(i,j)
+          write(0,*) 'applyBoundaryFluxesInOut(): netHeat,netSalt,netMassIn,netMassOut=',&
+              US%C_to_degC*netHeat(i), US%S_to_ppt*netSalt(i), netMassIn(i), netMassOut(i)
 
-           call MOM_error(FATAL, "MOM_diabatic_aux.F90, applyBoundaryFluxesInOut(): "//&
-                                 "Mass loss over land?")
+          call MOM_error(FATAL, "MOM_diabatic_aux.F90, applyBoundaryFluxesInOut(): "//&
+                                "Mass loss over land?")
         endif
 
       endif

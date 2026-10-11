@@ -3064,28 +3064,28 @@ subroutine vertvisc_init(MIS, Time, G, GV, US, param_file, diag, ADp, dirs, &
       'Mixed Layer Thickness at Meridional Velocity Points for Viscosity', &
       thickness_units, conversion=US%Z_to_m)
 
- if (lfpmix) then
-  CS%id_uE_h = register_diag_field('ocean_model', 'uE_h', CS%diag%axesTL, &
-      Time, 'x-zonal Eulerian', 'm s-1', conversion=US%L_T_to_m_s)
-  CS%id_vE_h = register_diag_field('ocean_model', 'vE_h', CS%diag%axesTL, &
-      Time, 'y-merid Eulerian', 'm s-1', conversion=US%L_T_to_m_s)
-  CS%id_uInc_h = register_diag_field('ocean_model', 'uInc_h', CS%diag%axesTL, &
-      Time, 'x-zonal Eulerian', 'm s-1', conversion=US%L_T_to_m_s)
-  CS%id_vInc_h = register_diag_field('ocean_model', 'vInc_h', CS%diag%axesTL, &
-      Time, 'x-zonal Eulerian', 'm s-1', conversion=US%L_T_to_m_s)
-  CS%id_uStk = register_diag_field('ocean_model', 'uStk', CS%diag%axesTL, &
-      Time, 'x-FP du increment', 'm s-1', conversion=US%L_T_to_m_s)
-  CS%id_vStk = register_diag_field('ocean_model', 'vStk', CS%diag%axesTL, &
-      Time, 'y-FP dv increment', 'm s-1', conversion=US%L_T_to_m_s)
+  if (lfpmix) then
+    CS%id_uE_h = register_diag_field('ocean_model', 'uE_h', CS%diag%axesTL, &
+        Time, 'x-zonal Eulerian', 'm s-1', conversion=US%L_T_to_m_s)
+    CS%id_vE_h = register_diag_field('ocean_model', 'vE_h', CS%diag%axesTL, &
+        Time, 'y-merid Eulerian', 'm s-1', conversion=US%L_T_to_m_s)
+    CS%id_uInc_h = register_diag_field('ocean_model', 'uInc_h', CS%diag%axesTL, &
+        Time, 'x-zonal Eulerian', 'm s-1', conversion=US%L_T_to_m_s)
+    CS%id_vInc_h = register_diag_field('ocean_model', 'vInc_h', CS%diag%axesTL, &
+        Time, 'x-zonal Eulerian', 'm s-1', conversion=US%L_T_to_m_s)
+    CS%id_uStk = register_diag_field('ocean_model', 'uStk', CS%diag%axesTL, &
+        Time, 'x-FP du increment', 'm s-1', conversion=US%L_T_to_m_s)
+    CS%id_vStk = register_diag_field('ocean_model', 'vStk', CS%diag%axesTL, &
+        Time, 'y-FP dv increment', 'm s-1', conversion=US%L_T_to_m_s)
 
-  CS%id_FPtau2s = register_diag_field('ocean_model', 'Omega_tau2s', CS%diag%axesTi, &
-      Time, 'Stress direction from shear', 'radians')
-  CS%id_FPtau2w = register_diag_field('ocean_model', 'Omega_tau2w', CS%diag%axesTi, &
-      Time, 'Stress direction from wind', 'radians')
-  CS%id_uStk0 = register_diag_field('ocean_model', 'uStk0', diag%axesT1, &
-      Time, 'Zonal Surface Stokes', 'm s-1', conversion=US%L_T_to_m_s)
-  CS%id_vStk0 = register_diag_field('ocean_model', 'vStk0', diag%axesT1, &
-      Time, 'Merid Surface Stokes', 'm s-1', conversion=US%L_T_to_m_s)
+    CS%id_FPtau2s = register_diag_field('ocean_model', 'Omega_tau2s', CS%diag%axesTi, &
+        Time, 'Stress direction from shear', 'radians')
+    CS%id_FPtau2w = register_diag_field('ocean_model', 'Omega_tau2w', CS%diag%axesTi, &
+        Time, 'Stress direction from wind', 'radians')
+    CS%id_uStk0 = register_diag_field('ocean_model', 'uStk0', diag%axesT1, &
+        Time, 'Zonal Surface Stokes', 'm s-1', conversion=US%L_T_to_m_s)
+    CS%id_vStk0 = register_diag_field('ocean_model', 'vStk0', diag%axesT1, &
+        Time, 'Merid Surface Stokes', 'm s-1', conversion=US%L_T_to_m_s)
   endif
 
   CS%id_du_dt_visc = register_diag_field('ocean_model', 'du_dt_visc', diag%axesCuL, Time, &

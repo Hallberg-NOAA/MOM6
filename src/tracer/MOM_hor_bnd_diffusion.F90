@@ -253,10 +253,10 @@ subroutine hor_bnd_diffusion(G, GV, US, h, Coef_x, Coef_y, dt, Reg, visc, CS)
     do j=G%jsc,G%jec
       do i=G%isc-1,G%iec
         if (G%mask2dCu(I,j)>0.) then
-           call fluxes_layer_method(SURFACE, GV%ke, hbl(I,j), hbl(I+1,j),  &
-            h(I,j,:), h(I+1,j,:), tracer%t(I,j,:), tracer%t(I+1,j,:), &
-            Coef_x(I,j,:), uFlx(I,j,:), G%areaT(I,j), G%areaT(I+1,j), CS%hbd_u_kmax(I,j), &
-            CS%hbd_grd_u(I,j,:), CS)
+          call fluxes_layer_method(SURFACE, GV%ke, hbl(I,j), hbl(I+1,j),  &
+              h(I,j,:), h(I+1,j,:), tracer%t(I,j,:), tracer%t(I+1,j,:), &
+              Coef_x(I,j,:), uFlx(I,j,:), G%areaT(I,j), G%areaT(I+1,j), CS%hbd_u_kmax(I,j), &
+              CS%hbd_grd_u(I,j,:), CS)
         endif
       enddo
     enddo
@@ -264,9 +264,9 @@ subroutine hor_bnd_diffusion(G, GV, US, h, Coef_x, Coef_y, dt, Reg, visc, CS)
       do i=G%isc,G%iec
         if (G%mask2dCv(i,J)>0.) then
           call fluxes_layer_method(SURFACE, GV%ke, hbl(i,J), hbl(i,J+1),  &
-            h(i,J,:), h(i,J+1,:), tracer%t(i,J,:), tracer%t(i,J+1,:), &
-            Coef_y(i,J,:), vFlx(i,J,:), G%areaT(i,J), G%areaT(i,J+1), CS%hbd_v_kmax(i,J), &
-            CS%hbd_grd_v(i,J,:), CS)
+              h(i,J,:), h(i,J+1,:), tracer%t(i,J,:), tracer%t(i,J+1,:), &
+              Coef_y(i,J,:), vFlx(i,J,:), G%areaT(i,J), G%areaT(i,J+1), CS%hbd_v_kmax(i,J), &
+              CS%hbd_grd_v(i,J,:), CS)
         endif
       enddo
     enddo
@@ -816,7 +816,7 @@ subroutine fluxes_layer_method(boundary, ke, hbl_L, hbl_R, h_L, h_R, phi_L, phi_
   do k = 1,ke
     ! apply flux_limiter
     if (CS%limiter .and. F_layer(k) /= 0.) then
-       call flux_limiter(F_layer(k), area_L, area_R, phi_L(k), phi_R(k), h_L(k), h_R(k))
+      call flux_limiter(F_layer(k), area_L, area_R, phi_L(k), phi_R(k), h_L(k), h_R(k))
     endif
 
     ! if tracer point is below htot_max, set flux to zero

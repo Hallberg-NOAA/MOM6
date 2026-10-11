@@ -2438,8 +2438,8 @@ subroutine ice_shelf_solve_inner_MINRES(CS, G, US, u_shlf, v_shlf, RHSu, RHSv, A
   u_curr(:,:) = u_shlf(:,:) ; v_curr(:,:) = v_shlf(:,:)
 
   do J=Jscq,Jecq ; do I=Iscq,Iecq
-     if (CS%umask(I,J) == 1) Z_curr_u(I,J) = V_curr_u(I,J) * IDIAGu(I,J)
-     if (CS%vmask(I,J) == 1) Z_curr_v(I,J) = V_curr_v(I,J) * IDIAGv(I,J)
+    if (CS%umask(I,J) == 1) Z_curr_u(I,J) = V_curr_u(I,J) * IDIAGu(I,J)
+    if (CS%vmask(I,J) == 1) Z_curr_v(I,J) = V_curr_v(I,J) * IDIAGv(I,J)
   enddo ; enddo
 
   sum_vec_3d(:,:) = 0.0
@@ -2452,23 +2452,23 @@ subroutine ice_shelf_solve_inner_MINRES(CS, G, US, u_shlf, v_shlf, RHSu, RHSv, A
   beta1 = sqrt(abs(sv3dsum))
 
   if (beta1 == 0.0) then
-     conv_flag = 1
-     iters = 0
-     return
+    conv_flag = 1
+    iters = 0
+    return
   endif
 
   Ibeta1 = 1.0/beta1
 
   ! Normalize initial Lanczos vectors
   do J=Jscq,Jecq ; do I=Iscq,Iecq
-     if (CS%umask(I,J) == 1) then
-         V_curr_u(I,J) = V_curr_u(I,J) * Ibeta1
-         Z_curr_u(I,J) = Z_curr_u(I,J) * Ibeta1
-     endif
-     if (CS%vmask(I,J) == 1) then
-         V_curr_v(I,J) = V_curr_v(I,J) * Ibeta1
-         Z_curr_v(I,J) = Z_curr_v(I,J) * Ibeta1
-     endif
+    if (CS%umask(I,J) == 1) then
+      V_curr_u(I,J) = V_curr_u(I,J) * Ibeta1
+      Z_curr_u(I,J) = Z_curr_u(I,J) * Ibeta1
+    endif
+    if (CS%vmask(I,J) == 1) then
+      V_curr_v(I,J) = V_curr_v(I,J) * Ibeta1
+      Z_curr_v(I,J) = Z_curr_v(I,J) * Ibeta1
+    endif
   enddo ; enddo
 
   ! Sync Z_curr prior to entering the loop
@@ -2496,29 +2496,29 @@ subroutine ice_shelf_solve_inner_MINRES(CS, G, US, u_shlf, v_shlf, RHSu, RHSv, A
     ! --- STEP 2: alpha = q dot z_curr ---
     sum_vec_3d(:,:) = 0.0
     do J=Jscq_sv,Jecq ; do I=Iscq_sv,Iecq
-       if (CS%umask(I,J) == 1) sum_vec_3d(I,J) = resid_scale * (Qu(I,J) * Z_curr_u(I,J))
-       if (CS%vmask(I,J) == 1) sum_vec_3d(I,J) = sum_vec_3d(I,J) + resid_scale * (Qv(I,J) * Z_curr_v(I,J))
+      if (CS%umask(I,J) == 1) sum_vec_3d(I,J) = resid_scale * (Qu(I,J) * Z_curr_u(I,J))
+      if (CS%vmask(I,J) == 1) sum_vec_3d(I,J) = sum_vec_3d(I,J) + resid_scale * (Qv(I,J) * Z_curr_v(I,J))
     enddo ; enddo
     sv3dsum = reproducing_sum( sum_vec_3d(:,:), Is_sum, Ie_sum, Js_sum, Je_sum )
     alpha = sv3dsum
 
     ! --- FUSED STEPS 3 & 4: Update V_new and Precondition to Z_new ---
     do J=Jscq,Jecq ; do I=Iscq,Iecq
-       if (CS%umask(I,J) == 1) then
-           V_new_u(I,J) = Qu(I,J) - alpha * V_curr_u(I,J) - beta1 * V_old_u(I,J)
-           Z_new_u(I,J) = V_new_u(I,J) * IDIAGu(I,J)
-       endif
-       if (CS%vmask(I,J) == 1) then
-           V_new_v(I,J) = Qv(I,J) - alpha * V_curr_v(I,J) - beta1 * V_old_v(I,J)
-           Z_new_v(I,J) = V_new_v(I,J) * IDIAGv(I,J)
-       endif
+      if (CS%umask(I,J) == 1) then
+        V_new_u(I,J) = Qu(I,J) - alpha * V_curr_u(I,J) - beta1 * V_old_u(I,J)
+        Z_new_u(I,J) = V_new_u(I,J) * IDIAGu(I,J)
+      endif
+      if (CS%vmask(I,J) == 1) then
+        V_new_v(I,J) = Qv(I,J) - alpha * V_curr_v(I,J) - beta1 * V_old_v(I,J)
+        Z_new_v(I,J) = V_new_v(I,J) * IDIAGv(I,J)
+      endif
     enddo ; enddo
 
     ! --- STEP 5: beta2 = sqrt(v_new dot z_new) ---
     sum_vec_3d(:,:) = 0.0
     do J=Jscq_sv,Jecq ; do I=Iscq_sv,Iecq
-       if (CS%umask(I,J) == 1) sum_vec_3d(I,J) = resid_scale * (V_new_u(I,J) * Z_new_u(I,J))
-       if (CS%vmask(I,J) == 1) sum_vec_3d(I,J) = sum_vec_3d(I,J) + resid_scale * (V_new_v(I,J) * Z_new_v(I,J))
+      if (CS%umask(I,J) == 1) sum_vec_3d(I,J) = resid_scale * (V_new_u(I,J) * Z_new_u(I,J))
+      if (CS%vmask(I,J) == 1) sum_vec_3d(I,J) = sum_vec_3d(I,J) + resid_scale * (V_new_v(I,J) * Z_new_v(I,J))
     enddo ; enddo
     sv3dsum = reproducing_sum( sum_vec_3d(:,:), Is_sum, Ie_sum, Js_sum, Je_sum )
     beta2 = sqrt(abs(sv3dsum))
@@ -2546,28 +2546,28 @@ subroutine ice_shelf_solve_inner_MINRES(CS, G, US, u_shlf, v_shlf, RHSu, RHSv, A
 
     ! --- FUSED STEPS 7 & 9: Update u/v, Check Convergence, and Shift Vectors ---
     do J=Jscq,Jecq ; do I=Iscq,Iecq
-       if (CS%umask(I,J) == 1) then
-           W_new_u(I,J) = (Z_curr_u(I,J) - (d2 * W_curr_u(I,J) + beta1 * s0 * W_old_u(I,J))) * Id1
-           u_shlf(I,J) = u_shlf(I,J) + eta_curr * W_new_u(I,J)
-           if (beta2 > 0.0) then
-               V_old_u(I,J) = V_curr_u(I,J)
-               V_curr_u(I,J) = V_new_u(I,J) * Ibeta2
-               Z_curr_u(I,J) = Z_new_u(I,J) * Ibeta2
-               W_old_u(I,J) = W_curr_u(I,J)
-               W_curr_u(I,J) = W_new_u(I,J)
-           endif
-       endif
-       if (CS%vmask(I,J) == 1) then
-           W_new_v(I,J) = (Z_curr_v(I,J) - (d2 * W_curr_v(I,J) + beta1 * s0 * W_old_v(I,J))) * Id1
-           v_shlf(I,J) = v_shlf(I,J) + eta_curr * W_new_v(I,J)
-           if (beta2 > 0.0) then
-               V_old_v(I,J) = V_curr_v(I,J)
-               V_curr_v(I,J) = V_new_v(I,J) * Ibeta2
-               Z_curr_v(I,J) = Z_new_v(I,J) * Ibeta2
-               W_old_v(I,J) = W_curr_v(I,J)
-               W_curr_v(I,J) = W_new_v(I,J)
-           endif
-       endif
+      if (CS%umask(I,J) == 1) then
+        W_new_u(I,J) = (Z_curr_u(I,J) - (d2 * W_curr_u(I,J) + beta1 * s0 * W_old_u(I,J))) * Id1
+        u_shlf(I,J) = u_shlf(I,J) + eta_curr * W_new_u(I,J)
+        if (beta2 > 0.0) then
+          V_old_u(I,J) = V_curr_u(I,J)
+          V_curr_u(I,J) = V_new_u(I,J) * Ibeta2
+          Z_curr_u(I,J) = Z_new_u(I,J) * Ibeta2
+          W_old_u(I,J) = W_curr_u(I,J)
+          W_curr_u(I,J) = W_new_u(I,J)
+        endif
+      endif
+      if (CS%vmask(I,J) == 1) then
+        W_new_v(I,J) = (Z_curr_v(I,J) - (d2 * W_curr_v(I,J) + beta1 * s0 * W_old_v(I,J))) * Id1
+        v_shlf(I,J) = v_shlf(I,J) + eta_curr * W_new_v(I,J)
+        if (beta2 > 0.0) then
+          V_old_v(I,J) = V_curr_v(I,J)
+          V_curr_v(I,J) = V_new_v(I,J) * Ibeta2
+          Z_curr_v(I,J) = Z_new_v(I,J) * Ibeta2
+          W_old_v(I,J) = W_curr_v(I,J)
+          W_curr_v(I,J) = W_new_v(I,J)
+        endif
+      endif
     enddo ; enddo
 
     ! --- STEP 8: Check Convergence ---
@@ -2680,8 +2680,8 @@ subroutine ice_shelf_solve_inner_CR(CS, G, US, u_shlf, v_shlf, RHSu, RHSv, Au, A
 
   ! z_0 = M^-1 r_0
   do J=Jsdq,Jedq ; do I=Isdq,Iedq
-     if (CS%umask(I,J) == 1) Zu(I,J) = Ru(I,J) * IDIAGu(I,J)
-     if (CS%vmask(I,J) == 1) Zv(I,J) = Rv(I,J) * IDIAGv(I,J)
+    if (CS%umask(I,J) == 1) Zu(I,J) = Ru(I,J) * IDIAGu(I,J)
+    if (CS%vmask(I,J) == 1) Zv(I,J) = Rv(I,J) * IDIAGv(I,J)
   enddo ; enddo
 
   ! p_0 = z_0
@@ -2728,15 +2728,15 @@ subroutine ice_shelf_solve_inner_CR(CS, G, US, u_shlf, v_shlf, RHSu, RHSv, Au, A
     ! --- STEP 1: alpha = (z_k, q_k) / (q_k, M^-1 q_k) ---
     sum_vec_3d(:,:,:) = 0.0 ; sv3dsums(1:2) = 0.0
     do J=Jscq_sv,Jecq ; do I=Iscq_sv,Iecq
-       if (CS%umask(I,J) == 1) then
-           sum_vec_3d(I,J,1) = resid_scale * (Zu(I,J) * Qu(I,J))
-           ! Order matters to prevent float overflow: Q * (Q * IDiag)
-           sum_vec_3d(I,J,2) = resid_scale * (Qu(I,J) * (Qu(I,J) * IDIAGu(I,J)))
-       endif
-       if (CS%vmask(I,J) == 1) then
-           sum_vec_3d(I,J,1) = sum_vec_3d(I,J,1) + resid_scale * (Zv(I,J) * Qv(I,J))
-           sum_vec_3d(I,J,2) = sum_vec_3d(I,J,2) + resid_scale * (Qv(I,J) * (Qv(I,J) * IDIAGv(I,J)))
-       endif
+      if (CS%umask(I,J) == 1) then
+        sum_vec_3d(I,J,1) = resid_scale * (Zu(I,J) * Qu(I,J))
+        ! Order matters to prevent float overflow: Q * (Q * IDiag)
+        sum_vec_3d(I,J,2) = resid_scale * (Qu(I,J) * (Qu(I,J) * IDIAGu(I,J)))
+      endif
+      if (CS%vmask(I,J) == 1) then
+        sum_vec_3d(I,J,1) = sum_vec_3d(I,J,1) + resid_scale * (Zv(I,J) * Qv(I,J))
+        sum_vec_3d(I,J,2) = sum_vec_3d(I,J,2) + resid_scale * (Qv(I,J) * (Qv(I,J) * IDIAGv(I,J)))
+      endif
     enddo ; enddo
     sv3dsum = reproducing_sum( sum_vec_3d(:,:,1:2), Is_sum, Ie_sum, Js_sum, Je_sum, sums=sv3dsums(1:2) )
 
@@ -2753,16 +2753,16 @@ subroutine ice_shelf_solve_inner_CR(CS, G, US, u_shlf, v_shlf, RHSu, RHSv, Au, A
     ! --- STEP 2: Update x, r, and z (Fused over Full Domain) ---
     ! Zu halos are populated here since the loop covers Jsdq..Jedq; no pass_vector needed.
     do J=Jsdq,Jedq ; do I=Isdq,Iedq
-       if (CS%umask(I,J) == 1) then
-           u_shlf(I,J) = u_shlf(I,J) + alpha * Du(I,J)
-           Ru(I,J) = Ru(I,J) - alpha * Qu(I,J)
-           Zu(I,J) = Ru(I,J) * IDIAGu(I,J)
-       endif
-       if (CS%vmask(I,J) == 1) then
-           v_shlf(I,J) = v_shlf(I,J) + alpha * Dv(I,J)
-           Rv(I,J) = Rv(I,J) - alpha * Qv(I,J)
-           Zv(I,J) = Rv(I,J) * IDIAGv(I,J)
-       endif
+      if (CS%umask(I,J) == 1) then
+        u_shlf(I,J) = u_shlf(I,J) + alpha * Du(I,J)
+        Ru(I,J) = Ru(I,J) - alpha * Qu(I,J)
+        Zu(I,J) = Ru(I,J) * IDIAGu(I,J)
+      endif
+      if (CS%vmask(I,J) == 1) then
+        v_shlf(I,J) = v_shlf(I,J) + alpha * Dv(I,J)
+        Rv(I,J) = Rv(I,J) - alpha * Qv(I,J)
+        Zv(I,J) = Rv(I,J) * IDIAGv(I,J)
+      endif
     enddo ; enddo
 
     ! --- STEP 3: w_{k+1} = A z_{k+1} ---
@@ -2775,14 +2775,14 @@ subroutine ice_shelf_solve_inner_CR(CS, G, US, u_shlf, v_shlf, RHSu, RHSv, Au, A
     ! --- STEP 4: beta and convergence check ---
     sum_vec_3d(:,:,:) = 0.0 ; sv3dsums(1:2) = 0.0
     do J=Jscq_sv,Jecq ; do I=Iscq_sv,Iecq
-       if (CS%umask(I,J) == 1) then
-           sum_vec_3d(I,J,1) = resid2_scale * Ru(I,J)**2
-           sum_vec_3d(I,J,2) = resid_scale  * (Zu(I,J) * Au(I,J))
-       endif
-       if (CS%vmask(I,J) == 1) then
-           sum_vec_3d(I,J,1) = sum_vec_3d(I,J,1) + resid2_scale * Rv(I,J)**2
-           sum_vec_3d(I,J,2) = sum_vec_3d(I,J,2) + resid_scale  * (Zv(I,J) * Av(I,J))
-       endif
+      if (CS%umask(I,J) == 1) then
+        sum_vec_3d(I,J,1) = resid2_scale * Ru(I,J)**2
+        sum_vec_3d(I,J,2) = resid_scale  * (Zu(I,J) * Au(I,J))
+      endif
+      if (CS%vmask(I,J) == 1) then
+        sum_vec_3d(I,J,1) = sum_vec_3d(I,J,1) + resid2_scale * Rv(I,J)**2
+        sum_vec_3d(I,J,2) = sum_vec_3d(I,J,2) + resid_scale  * (Zv(I,J) * Av(I,J))
+      endif
     enddo ; enddo
     sv3dsum = reproducing_sum( sum_vec_3d(:,:,1:2), Is_sum, Ie_sum, Js_sum, Je_sum, sums=sv3dsums(1:2) )
 
@@ -2800,14 +2800,14 @@ subroutine ice_shelf_solve_inner_CR(CS, G, US, u_shlf, v_shlf, RHSu, RHSv, Au, A
 
     ! --- STEP 5: Update p and q ---
     do J=Jsdq,Jedq ; do I=Isdq,Iedq
-       if (CS%umask(I,J) == 1) then
-           Du(I,J) = Zu(I,J) + beta * Du(I,J)
-           Qu(I,J) = Au(I,J) + beta * Qu(I,J)
-       endif
-       if (CS%vmask(I,J) == 1) then
-           Dv(I,J) = Zv(I,J) + beta * Dv(I,J)
-           Qv(I,J) = Av(I,J) + beta * Qv(I,J)
-       endif
+      if (CS%umask(I,J) == 1) then
+        Du(I,J) = Zu(I,J) + beta * Du(I,J)
+        Qu(I,J) = Au(I,J) + beta * Qu(I,J)
+      endif
+      if (CS%vmask(I,J) == 1) then
+        Dv(I,J) = Zv(I,J) + beta * Dv(I,J)
+        Qv(I,J) = Av(I,J) + beta * Qv(I,J)
+      endif
     enddo ; enddo
 
   enddo ! end of CR loop

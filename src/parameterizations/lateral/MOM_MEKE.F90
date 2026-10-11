@@ -1624,34 +1624,34 @@ logical function MEKE_init(Time, G, GV, US, param_file, diag, dbcomms_CS, CS, ME
 ! Register fields for output from this module.
   CS%diag => diag
   CS%id_MEKE = register_diag_field('ocean_model', 'MEKE', diag%axesT1, Time, &
-     'Mesoscale Eddy Kinetic Energy', 'm2 s-2', conversion=US%L_T_to_m_s**2)
+      'Mesoscale Eddy Kinetic Energy', 'm2 s-2', conversion=US%L_T_to_m_s**2)
   if (.not. allocated(MEKE%MEKE)) CS%id_MEKE = -1
   CS%id_Kh = register_diag_field('ocean_model', 'MEKE_KH', diag%axesT1, Time, &
-     'MEKE derived diffusivity', 'm2 s-1', conversion=US%L_to_m**2*US%s_to_T)
+      'MEKE derived diffusivity', 'm2 s-1', conversion=US%L_to_m**2*US%s_to_T)
   if (.not. allocated(MEKE%Kh)) CS%id_Kh = -1
   CS%id_Ku = register_diag_field('ocean_model', 'MEKE_KU', diag%axesT1, Time, &
-     'MEKE derived lateral viscosity', 'm2 s-1', conversion=US%L_to_m**2*US%s_to_T)
+      'MEKE derived lateral viscosity', 'm2 s-1', conversion=US%L_to_m**2*US%s_to_T)
   if (.not. allocated(MEKE%Ku)) CS%id_Ku = -1
   CS%id_Au = register_diag_field('ocean_model', 'MEKE_AU', diag%axesT1, Time, &
-     'MEKE derived lateral biharmonic viscosity', 'm4 s-1', conversion=US%L_to_m**4*US%s_to_T)
+      'MEKE derived lateral biharmonic viscosity', 'm4 s-1', conversion=US%L_to_m**4*US%s_to_T)
   if (.not. allocated(MEKE%Au)) CS%id_Au = -1
   CS%id_Ue = register_diag_field('ocean_model', 'MEKE_Ue', diag%axesT1, Time, &
-     'MEKE derived eddy-velocity scale', 'm s-1', conversion=US%L_T_to_m_s)
+      'MEKE derived eddy-velocity scale', 'm s-1', conversion=US%L_T_to_m_s)
   if (.not. allocated(MEKE%MEKE)) CS%id_Ue = -1
   CS%id_Ub = register_diag_field('ocean_model', 'MEKE_Ub', diag%axesT1, Time, &
-     'MEKE derived bottom eddy-velocity scale', 'm s-1', conversion=US%L_T_to_m_s)
+      'MEKE derived bottom eddy-velocity scale', 'm s-1', conversion=US%L_T_to_m_s)
   if (.not. allocated(MEKE%MEKE)) CS%id_Ub = -1
   CS%id_Ut = register_diag_field('ocean_model', 'MEKE_Ut', diag%axesT1, Time, &
-     'MEKE derived barotropic eddy-velocity scale', 'm s-1', conversion=US%L_T_to_m_s)
+      'MEKE derived barotropic eddy-velocity scale', 'm s-1', conversion=US%L_T_to_m_s)
   if (.not. allocated(MEKE%MEKE)) CS%id_Ut = -1
   CS%id_src = register_diag_field('ocean_model', 'MEKE_src', diag%axesT1, Time, &
-     'MEKE energy source', 'm2 s-3', conversion=(US%L_T_to_m_s**2)*US%s_to_T)
+      'MEKE energy source', 'm2 s-3', conversion=(US%L_T_to_m_s**2)*US%s_to_T)
 
   CS%id_src_adv = register_diag_field('ocean_model', 'MEKE_src_adv', diag%axesT1, Time, &
-     'MEKE energy source from the horizontal advection of MEKE', 'm2 s-3', conversion=(US%L_T_to_m_s**2)*US%s_to_T)
+      'MEKE energy source from the horizontal advection of MEKE', 'm2 s-3', conversion=(US%L_T_to_m_s**2)*US%s_to_T)
 
   CS%id_src_btm_drag = register_diag_field('ocean_model', 'MEKE_src_btm_drag', diag%axesT1, Time, &
-     'MEKE energy source from the bottom drag acting on MEKE', 'm2 s-3', conversion=(US%L_T_to_m_s**2)*US%s_to_T)
+      'MEKE energy source from the bottom drag acting on MEKE', 'm2 s-3', conversion=(US%L_T_to_m_s**2)*US%s_to_T)
 
   if (CS%MEKE_K4 >= 0.) &
     CS%id_src_mom_K4 = register_diag_field('ocean_model', 'MEKE_src_mom_K4', &
@@ -1674,44 +1674,44 @@ logical function MEKE_init(Time, G, GV, US, param_file, diag, dbcomms_CS, CS, ME
         'm2 s-3', conversion=(US%L_T_to_m_s**2)*US%s_to_T)
 
   CS%id_decay = register_diag_field('ocean_model', 'MEKE_decay', diag%axesT1, Time, &
-     'MEKE decay rate', 's-1', conversion=US%s_to_T)
+      'MEKE decay rate', 's-1', conversion=US%s_to_T)
   CS%id_GM_src = register_diag_field('ocean_model', 'MEKE_GM_src', diag%axesT1, Time, &
-     'MEKE energy available from thickness mixing', &
-     'W m-2', conversion=US%RZ3_T3_to_W_m2*US%L_to_Z**2)
+      'MEKE energy available from thickness mixing', &
+      'W m-2', conversion=US%RZ3_T3_to_W_m2*US%L_to_Z**2)
   if (.not. allocated(MEKE%GM_src)) CS%id_GM_src = -1
   CS%id_mom_src = register_diag_field('ocean_model', 'MEKE_mom_src', diag%axesT1, Time, &
-     'MEKE energy available from momentum', &
-     'W m-2', conversion=US%RZ3_T3_to_W_m2*US%L_to_Z**2)
+      'MEKE energy available from momentum', &
+      'W m-2', conversion=US%RZ3_T3_to_W_m2*US%L_to_Z**2)
   if (.not. allocated(MEKE%mom_src)) CS%id_mom_src = -1
   CS%id_mom_src_bh = register_diag_field('ocean_model', 'MEKE_mom_src_bh', diag%axesT1, Time, &
-     'MEKE energy available from the biharmonic dissipation of momentum', &
-     'W m-2', conversion=US%RZ3_T3_to_W_m2*US%L_to_Z**2)
+      'MEKE energy available from the biharmonic dissipation of momentum', &
+      'W m-2', conversion=US%RZ3_T3_to_W_m2*US%L_to_Z**2)
   if (.not. allocated(MEKE%mom_src_bh)) CS%id_mom_src_bh = -1
   CS%id_GME_snk = register_diag_field('ocean_model', 'MEKE_GME_snk', diag%axesT1, Time, &
-     'MEKE energy lost to GME backscatter', &
-     'W m-2', conversion=US%RZ3_T3_to_W_m2*US%L_to_Z**2)
+      'MEKE energy lost to GME backscatter', &
+      'W m-2', conversion=US%RZ3_T3_to_W_m2*US%L_to_Z**2)
   if (.not. allocated(MEKE%GME_snk)) CS%id_GME_snk = -1
   CS%id_Le = register_diag_field('ocean_model', 'MEKE_Le', diag%axesT1, Time, &
-     'Eddy mixing length used in the MEKE derived eddy diffusivity', 'm', conversion=US%L_to_m)
+      'Eddy mixing length used in the MEKE derived eddy diffusivity', 'm', conversion=US%L_to_m)
   CS%id_Lrhines = register_diag_field('ocean_model', 'MEKE_Lrhines', diag%axesT1, Time, &
-     'Rhines length scale used in the MEKE derived eddy diffusivity', 'm', conversion=US%L_to_m)
+      'Rhines length scale used in the MEKE derived eddy diffusivity', 'm', conversion=US%L_to_m)
   CS%id_Leady = register_diag_field('ocean_model', 'MEKE_Leady', diag%axesT1, Time, &
-     'Eady length scale used in the MEKE derived eddy diffusivity', 'm', conversion=US%L_to_m)
+      'Eady length scale used in the MEKE derived eddy diffusivity', 'm', conversion=US%L_to_m)
   CS%id_gamma_b = register_diag_field('ocean_model', 'MEKE_gamma_b', diag%axesT1, Time, &
-     'Ratio of bottom-projected eddy velocity to column-mean eddy velocity', 'nondim')
+      'Ratio of bottom-projected eddy velocity to column-mean eddy velocity', 'nondim')
   CS%id_gamma_t = register_diag_field('ocean_model', 'MEKE_gamma_t', diag%axesT1, Time, &
-     'Ratio of barotropic eddy velocity to column-mean eddy velocity', 'nondim')
+      'Ratio of barotropic eddy velocity to column-mean eddy velocity', 'nondim')
 
   if (CS%kh_flux_enabled) then
     CS%id_KhMEKE_u = register_diag_field('ocean_model', 'KHMEKE_u', diag%axesCu1, Time, &
-     'Zonal diffusivity of MEKE', 'm2 s-1', conversion=US%L_to_m**2*US%s_to_T)
+        'Zonal diffusivity of MEKE', 'm2 s-1', conversion=US%L_to_m**2*US%s_to_T)
     CS%id_KhMEKE_v = register_diag_field('ocean_model', 'KHMEKE_v', diag%axesCv1, Time, &
-     'Meridional diffusivity of MEKE', 'm2 s-1', conversion=US%L_to_m**2*US%s_to_T)
+        'Meridional diffusivity of MEKE', 'm2 s-1', conversion=US%L_to_m**2*US%s_to_T)
   endif
 
   if (CS%MEKE_equilibrium_restoring) then
     CS%id_MEKE_equilibrium = register_diag_field('ocean_model', 'MEKE_equilibrium', diag%axesT1, Time, &
-     'Equilibrated Mesoscale Eddy Kinetic Energy', 'm2 s-2', conversion=US%L_T_to_m_s**2)
+        'Equilibrated Mesoscale Eddy Kinetic Energy', 'm2 s-2', conversion=US%L_T_to_m_s**2)
   endif
 
   CS%id_clock_pass = cpu_clock_id('(Ocean continuity halo updates)', grain=CLOCK_ROUTINE)
@@ -1815,15 +1815,15 @@ subroutine ML_MEKE_init(diag, G, US, Time, param_file, dbcomms_CS, CS)
 
   ! Diagnostics for ML_MEKE
   CS%id_mke = register_diag_field('ocean_model', 'MEKE_MKE', diag%axesT1, Time, &
-     'Surface mean (resolved) kinetic energy used in MEKE', 'm2 s-2', conversion=US%L_T_to_m_s**2)
+      'Surface mean (resolved) kinetic energy used in MEKE', 'm2 s-2', conversion=US%L_T_to_m_s**2)
   CS%id_slope_z = register_diag_field('ocean_model', 'MEKE_slope_z', diag%axesT1, Time, &
-     'Vertically averaged isopyncal slope magnitude used in MEKE', 'nondim', conversion=US%Z_to_L)
+      'Vertically averaged isopyncal slope magnitude used in MEKE', 'nondim', conversion=US%Z_to_L)
   CS%id_slope_x = register_diag_field('ocean_model', 'MEKE_slope_x', diag%axesCui, Time, &
-     'Isopycnal slope in the x-direction used in MEKE', 'nondim', conversion=US%Z_to_L)
+      'Isopycnal slope in the x-direction used in MEKE', 'nondim', conversion=US%Z_to_L)
   CS%id_slope_y = register_diag_field('ocean_model', 'MEKE_slope_y', diag%axesCvi, Time, &
-     'Isopycnal slope in the y-direction used in MEKE', 'nondim', conversion=US%Z_to_L)
+      'Isopycnal slope in the y-direction used in MEKE', 'nondim', conversion=US%Z_to_L)
   CS%id_rv = register_diag_field('ocean_model', 'MEKE_RV', diag%axesT1, Time, &
-     'Surface relative vorticity used in MEKE', 's-1', conversion=US%s_to_T)
+      'Surface relative vorticity used in MEKE', 's-1', conversion=US%s_to_T)
 
 end subroutine ML_MEKE_init
 

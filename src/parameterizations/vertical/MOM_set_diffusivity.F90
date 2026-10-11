@@ -2491,7 +2491,7 @@ subroutine set_diffusivity_init(Time, G, GV, US, param_file, diag, CS, int_tide_
                  "for an isopycnal layer-formulation.", &
                  default=.false., do_not_log=.not.TKE_to_Kd_used)
 
-   call get_param(param_file, mdl, "INTERNAL_TIDES", CS%use_int_tides, &
+  call get_param(param_file, mdl, "INTERNAL_TIDES", CS%use_int_tides, &
                  "If true, use the code that advances a separate set of "//&
                  "equations for the internal tide energy density.", default=.false.)
 

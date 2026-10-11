@@ -198,9 +198,9 @@ elemental subroutine calculate_density_derivs_elem_Wright_red(this, T, S, pressu
 
   I_denom2 = 1.0 / (lambda + al0*(pressure + p0))**2
   drho_dT = I_denom2 * (lambda * (b1 + (T*(2.0*b2 + 3.0*b3*T) + b5*S)) - &
-     (pressure+p0) * ( (pressure+p0)*a1 + (c1 + (T*(c2*2.0 + c3*3.0*T) + c5*S)) ))
+      (pressure+p0) * ( (pressure+p0)*a1 + (c1 + (T*(c2*2.0 + c3*3.0*T) + c5*S)) ))
   drho_dS = I_denom2 * (lambda * (b4 + b5*T) - &
-     (pressure+p0) * ( (pressure+p0)*a2 + (c4 + c5*T) ))
+      (pressure+p0) * ( (pressure+p0)*a2 + (c4 + c5*T) ))
 
 end subroutine calculate_density_derivs_elem_Wright_red
 

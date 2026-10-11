@@ -196,10 +196,10 @@ subroutine initialize_RGC_tracer(restart, day, G, GV, h, diag, OBC, CS, &
       enddo
       m = 1
       do j=js,je ; do i=is,ie
-         !set tracer to 1.0 in the surface of the continental shelf
-         if (G%geoLonT(i,j) <= (CS%CSL)) then
-            CS%tr(i,j,1,m) = 1.0 !first layer
-         endif
+        ! set tracer to 1.0 in the surface of the continental shelf
+        if (G%geoLonT(i,j) <= (CS%CSL)) then
+          CS%tr(i,j,1,m) = 1.0 ! first layer
+        endif
       enddo ; enddo
 
     endif

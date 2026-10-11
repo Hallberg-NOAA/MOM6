@@ -416,7 +416,7 @@ subroutine ideal_age_tracer_column_physics(h_old, h_new, ea, eb, fluxes, dt, G, 
               CS%tr(i,j,k,m) = CS%land_val(m)
             endif
           enddo
-       enddo ; enddo
+        enddo ; enddo
 
       else  ! use real BL depth
         do j=js,je ; do i=is,ie
@@ -437,7 +437,7 @@ subroutine ideal_age_tracer_column_physics(h_old, h_new, ea, eb, fluxes, dt, G, 
           enddo
         enddo ; enddo
 
-     endif ! use real BL depth
+      endif ! use real BL depth
 
     else ! if BL residence tracer
 
