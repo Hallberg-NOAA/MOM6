@@ -528,7 +528,7 @@ integer function interpolation_scheme(interp_scheme)
     case ("PQM_IH4IH3"); interpolation_scheme = INTERPOLATION_PQM_IH4IH3
     case ("PQM_IH6IH5"); interpolation_scheme = INTERPOLATION_PQM_IH6IH5
     case default ; call MOM_error(FATAL, "regrid_interp: "//&
-     "Unrecognized choice for INTERPOLATION_SCHEME ("//trim(interp_scheme)//").")
+        "Unrecognized choice for INTERPOLATION_SCHEME ("//trim(interp_scheme)//").")
   end select
 end function interpolation_scheme
 

@@ -514,12 +514,12 @@ end type OBC_registry_type
 
 !> Type to carry OBC information needed for setting segments for OBGC tracers
 type, private :: external_tracers_segments_props
-   type(external_tracers_segments_props), pointer :: next => NULL() !< pointer to the next node
-   character(len=128) :: tracer_name      !< tracer name
-   character(len=128) :: tracer_src_file  !< tracer source file for BC
-   character(len=128) :: tracer_src_field !< name of the field in source file to extract BC
-   real               :: lfac_in  !< multiplicative factor for inbound  tracer reservoir length scale [nondim]
-   real               :: lfac_out !< multiplicative factor for outbound tracer reservoir length scale [nondim]
+  type(external_tracers_segments_props), pointer :: next => NULL() !< pointer to the next node
+  character(len=128) :: tracer_name      !< tracer name
+  character(len=128) :: tracer_src_file  !< tracer source file for BC
+  character(len=128) :: tracer_src_field !< name of the field in source file to extract BC
+  real               :: lfac_in  !< multiplicative factor for inbound  tracer reservoir length scale [nondim]
+  real               :: lfac_out !< multiplicative factor for outbound tracer reservoir length scale [nondim]
 end type external_tracers_segments_props
 integer :: id_clock_pass !< A CPU time clock
 
@@ -1892,7 +1892,7 @@ subroutine setup_u_point_obc(OBC, G, US, segment_str, l_seg, l_seg_io, PF, reent
   call allocate_OBC_segment_data(OBC, OBC%segment(l_seg))
 
   if (OBC%segment(l_seg)%oblique .and.  OBC%segment(l_seg)%radiation) &
-         call MOM_error(FATAL, "MOM_open_boundary.F90, setup_u_point_obc: \n"//&
+    call MOM_error(FATAL, "MOM_open_boundary.F90, setup_u_point_obc: \n"//&
          "Orlanski and Oblique OBC options cannot be used together on one segment.")
 end subroutine setup_u_point_obc
 
@@ -2021,7 +2021,7 @@ subroutine setup_v_point_obc(OBC, G, US, segment_str, l_seg, l_seg_io, PF, reent
   call allocate_OBC_segment_data(OBC, OBC%segment(l_seg))
 
   if (OBC%segment(l_seg)%oblique .and.  OBC%segment(l_seg)%radiation) &
-         call MOM_error(FATAL, "MOM_open_boundary.F90, setup_v_point_obc: \n"//&
+    call MOM_error(FATAL, "MOM_open_boundary.F90, setup_v_point_obc: \n"//&
          "Orlanski and Oblique OBC options cannot be used together on one segment.")
 
 end subroutine setup_v_point_obc
@@ -5273,7 +5273,7 @@ subroutine segment_thickness_reservoir_init(GV, US, OBC, param_file)
     if (.not. segment%on_pe) cycle
 
     if (associated(segment%h_Reg)) &
-         call MOM_error(FATAL, "segment_thickness_reservoir_init: thickness array was previously allocated")
+      call MOM_error(FATAL, "segment_thickness_reservoir_init: thickness array was previously allocated")
     allocate(segment%h_Reg)
 
     isd = segment%HI%isd ; ied = segment%HI%ied
@@ -5475,7 +5475,7 @@ subroutine register_temp_salt_segments(GV, US, OBC, tr_Reg, param_file)
     if (.not. segment%on_pe) cycle
 
     if (associated(segment%tr_Reg)) &
-         call MOM_error(FATAL, "register_temp_salt_segments: tracer array was previously allocated")
+      call MOM_error(FATAL, "register_temp_salt_segments: tracer array was previously allocated")
 
     name = 'temp'
     call tracer_name_lookup(tr_Reg, ntr_id, tr_ptr, name)

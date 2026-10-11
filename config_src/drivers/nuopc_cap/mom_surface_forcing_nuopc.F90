@@ -624,16 +624,16 @@ subroutine convert_IOB_to_fluxes(IOB, fluxes, index_bounds, Time, valid_time, G,
       if (associated(IOB%hsnow)) &
         fluxes%heat_content_fprec(i,j)   = US%W_m2_to_QRZ_T * IOB%hsnow(i-i0,j-j0) * G%mask2dT(i,j)
 
-       if (associated(IOB%hevap)) &
+      if (associated(IOB%hevap)) &
         fluxes%heat_content_evap(i,j)    = US%W_m2_to_QRZ_T * IOB%hevap(i-i0,j-j0) * G%mask2dT(i,j)
 
-       if (associated(IOB%hcond)) &
+      if (associated(IOB%hcond)) &
         fluxes%heat_content_cond(i,j)    = US%W_m2_to_QRZ_T * IOB%hcond(i-i0,j-j0) * G%mask2dT(i,j)
 
-       if (associated(IOB%hrofl_glc)) &
+      if (associated(IOB%hrofl_glc)) &
         fluxes%heat_content_lrunoff_glc(i,j) = US%W_m2_to_QRZ_T * IOB%hrofl_glc(i-i0,j-j0) * G%mask2dT(i,j)
 
-       if (associated(IOB%hrofi_glc)) &
+      if (associated(IOB%hrofi_glc)) &
         fluxes%heat_content_frunoff_glc(i,j) = US%W_m2_to_QRZ_T * IOB%hrofi_glc(i-i0,j-j0) * G%mask2dT(i,j)
     endif
 
@@ -1328,7 +1328,7 @@ subroutine surface_forcing_init(Time, G, US, param_file, diag, CS, restore_salt,
     call get_param(param_file, mdl, "SRESTORE_AS_SFLUX", CS%salt_restore_as_sflux, &
                  "If true, the restoring of salinity is applied as a salt "//&
                  "flux instead of as a freshwater flux.", default=.false.)
-   call get_param(param_file, mdl, "MAX_DELTA_SRESTORE_FROM_FILE", CS%max_delta_srestore_file, &
+    call get_param(param_file, mdl, "MAX_DELTA_SRESTORE_FROM_FILE", CS%max_delta_srestore_file, &
                  "If true, read a file MAX_DELTA_SRESTORE_FILE containing the field "//&
                  "MAX_DELTA_SRESTORE_VARNAME for the maximum salinity difference used in "//&
                  "restoring terms.  Where the field's value is negative turn off restoring when "//&

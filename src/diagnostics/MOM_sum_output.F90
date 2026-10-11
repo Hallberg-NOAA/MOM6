@@ -294,10 +294,10 @@ subroutine MOM_sum_output_init(G, GV, US, param_file, directory, ntrnc, &
                  default=set_time(seconds=0), timeunit=CS%Timeunit)
 
   if ((time_type_to_real(CS%energysavedays_geometric) > 0.) .and. &
-     (CS%energysavedays_geometric < CS%energysavedays)) then
-         CS%energysave_geometric = .true.
+      (CS%energysavedays_geometric < CS%energysavedays)) then
+    CS%energysave_geometric = .true.
   else
-         CS%energysave_geometric = .false.
+    CS%energysave_geometric = .false.
   endif
 
   CS%Start_time = Input_start_time

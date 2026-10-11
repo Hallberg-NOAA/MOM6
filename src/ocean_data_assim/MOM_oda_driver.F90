@@ -212,7 +212,7 @@ subroutine init_oda(Time, G, GV, US, diag_CS, CS)
   call get_param(PF, mdl, "ASSIM_INTERVAL", CS%assim_interval,  &
        "data assimilation update interval in hours", default=-1.0, units="hours", scale=3600.*US%s_to_T)
   if (CS%assim_interval < 0.) then
-     call get_param(PF, mdl, "ASSIM_FREQUENCY", CS%assim_interval,  &
+    call get_param(PF, mdl, "ASSIM_FREQUENCY", CS%assim_interval,  &
           "data assimilation update  in hours. This parameter name will \n"//&
           "be deprecated in the future. ASSIM_INTERVAL should be used instead.", default=-1.0, &
           units="hours", scale=3600.*US%s_to_T)

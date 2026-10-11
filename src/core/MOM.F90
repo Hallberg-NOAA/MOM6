@@ -744,7 +744,7 @@ subroutine step_MOM(forces_in, fluxes_in, sfc_state, Time_start, time_int_in, CS
         .not.(associated(CS%tv%p_surf) .and. associated(forces%p_surf) .and. &
               allocated(CS%tv%SpV_avg) .and. associated(CS%tv%T))
     if (.not.associated(forces%taux) .or. .not.associated(forces%tauy)) &
-         call MOM_error(FATAL, 'step_MOM:forces%taux,tauy not associated')
+      call MOM_error(FATAL, 'step_MOM:forces%taux,tauy not associated')
     call create_group_pass(pass_tau_ustar_psurf, forces%taux, forces%tauy, G%Domain)
     if (associated(forces%ustar)) &
       call create_group_pass(pass_tau_ustar_psurf, forces%ustar, G%Domain)
@@ -1776,7 +1776,7 @@ subroutine step_MOM_thermo(CS, G, GV, US, u, v, h, tv, fluxes, dtdia, &
     fluxes%fluxes_used = .true.
 
     if (CS%stoch_CS%do_skeb) then
-       call apply_skeb(G, GV, US, CS%stoch_CS, u, v, h, tv, dtdia, Time_end_thermo)
+      call apply_skeb(G, GV, US, CS%stoch_CS, u, v, h, tv, dtdia, Time_end_thermo)
     endif
 
     if (showCallTree) call callTree_waypoint("finished diabatic (step_MOM_thermo)")
@@ -2853,15 +2853,15 @@ subroutine initialize_MOM(Time, Time_init, param_file, dirs, CS, &
 
   ! Check for inconsistent parameter settings.
   if (CS%use_ALE_algorithm .and. bulkmixedlayer) call MOM_error(FATAL, &
-    "MOM: BULKMIXEDLAYER can not currently be used with the ALE algorithm.")
+      "MOM: BULKMIXEDLAYER can not currently be used with the ALE algorithm.")
   if (CS%use_ALE_algorithm .and. .not.use_temperature) call MOM_error(FATAL, &
-     "MOM: At this time, USE_EOS should be True when using the ALE algorithm.")
+      "MOM: At this time, USE_EOS should be True when using the ALE algorithm.")
   if (CS%adiabatic .and. use_temperature) call MOM_error(WARNING, &
-    "MOM: ADIABATIC and ENABLE_THERMODYNAMICS both defined is usually unwise.")
+      "MOM: ADIABATIC and ENABLE_THERMODYNAMICS both defined is usually unwise.")
   if (use_EOS .and. .not.use_temperature) call MOM_error(FATAL, &
-    "MOM: ENABLE_THERMODYNAMICS must be defined to use USE_EOS.")
+      "MOM: ENABLE_THERMODYNAMICS must be defined to use USE_EOS.")
   if (CS%adiabatic .and. bulkmixedlayer) call MOM_error(FATAL, &
-    "MOM: ADIABATIC and BULKMIXEDLAYER can not both be defined.")
+      "MOM: ADIABATIC and BULKMIXEDLAYER can not both be defined.")
   if (bulkmixedlayer .and. .not.use_EOS) call MOM_error(FATAL, &
       "initialize_MOM: A bulk mixed layer can only be used with T & S as "//&
       "state variables. Add USE_EOS = True to MOM_input.")
@@ -3538,9 +3538,9 @@ subroutine initialize_MOM(Time, Time_init, param_file, dirs, CS, &
     endif
   endif
   if ( CS%use_ALE_algorithm ) then
-   call ALE_set_extrap_boundaries (param_file, CS%ALE_CSp)
-   call callTree_waypoint("returned from ALE_init() (initialize_MOM)")
-   call ALE_updateVerticalGridType( CS%ALE_CSp, GV )
+    call ALE_set_extrap_boundaries(param_file, CS%ALE_CSp)
+    call callTree_waypoint("returned from ALE_init() (initialize_MOM)")
+    call ALE_updateVerticalGridType(CS%ALE_CSp, GV)
   endif
   ! The basic state variables have now been fully initialized, so update their halos and
   ! calculate any derived thermodynmics quantities.

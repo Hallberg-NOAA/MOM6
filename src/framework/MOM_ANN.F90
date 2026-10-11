@@ -176,11 +176,11 @@ subroutine ANN_allocate(CS, num_layers, layer_sizes)
     allocate( CS%layers(l)%b(CS%layers(l)%output_width) )
 
     CS%parameters = CS%parameters &
-       + CS%layer_sizes(l) * CS%layer_sizes(l+1) & ! For weights
-       + CS%layer_sizes(l+1) ! For bias
+        + CS%layer_sizes(l) * CS%layer_sizes(l+1) & ! For weights
+        + CS%layer_sizes(l+1) ! For bias
   enddo
   CS%parameters = CS%parameters &
-     + 2 * CS%layer_sizes(CS%num_layers) ! For output normalization
+      + 2 * CS%layer_sizes(CS%num_layers) ! For output normalization
 
 end subroutine ANN_allocate
 

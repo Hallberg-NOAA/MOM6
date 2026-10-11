@@ -307,7 +307,7 @@ logical function neutral_diffusion_init(Time, G, GV, US, param_file, diag, EOS, 
 
   CS%KhTh_use_vert_struct = KhTh_use_ebt_struct .or. KhTh_use_sqg_struct
   if (CS%KhTh_use_vert_struct) &
-     allocate(CS%Coef_h(G%isd:G%ied,G%jsd:G%jed,SZK_(GV)+1), source=0.)
+    allocate(CS%Coef_h(G%isd:G%ied,G%jsd:G%jed,SZK_(GV)+1), source=0.)
 
   ! Store a rescaling factor for use in diagnostic messages.
   CS%R_to_kg_m3 = US%R_to_kg_m3

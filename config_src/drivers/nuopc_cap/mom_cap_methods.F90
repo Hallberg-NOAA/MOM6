@@ -37,8 +37,8 @@ public :: state_diagnose
 public :: ChkErr
 
 interface State_getImport
-   module procedure State_getImport_2d
-   module procedure State_getImport_3d ! third dimension being an ungridded dimension
+  module procedure State_getImport_2d
+  module procedure State_getImport_3d ! third dimension being an ungridded dimension
 end interface
 
 private :: State_setExport
@@ -922,9 +922,9 @@ subroutine State_GetImport_2d(state, fldname, isc, iec, jsc, jec, output, do_sum
 
   rc = ESMF_SUCCESS
   if (present(do_sum)) then
-     do_sum_loc = do_sum
+    do_sum_loc = do_sum
   else
-     do_sum_loc = .false.
+    do_sum_loc = .false.
   endif
 
   call ESMF_StateGet(State, trim(fldname), itemFlag, rc=rc)
@@ -934,10 +934,10 @@ subroutine State_GetImport_2d(state, fldname, isc, iec, jsc, jec, output, do_sum
 
       ! get field pointer
       if (present(esmf_ind)) then
-         call state_getfldptr(state, trim(fldname), dataptr2d, rc)
-         dataptr1d => dataptr2d(esmf_ind,:)
+        call state_getfldptr(state, trim(fldname), dataptr2d, rc)
+        dataptr1d => dataptr2d(esmf_ind,:)
       else
-         call state_getfldptr(state, trim(fldname), dataptr1d, rc)
+        call state_getfldptr(state, trim(fldname), dataptr1d, rc)
       endif
       if (ChkErr(rc, __LINE__, u_FILE_u)) return
 
@@ -1019,49 +1019,49 @@ subroutine State_GetImport_3d(state, fldname, isc, iec, jsc, jec, lbd, ubd, outp
 
   rc = ESMF_SUCCESS
   if (present(do_sum)) then
-     do_sum_loc = do_sum
+    do_sum_loc = do_sum
   else
-     do_sum_loc = .false.
+    do_sum_loc = .false.
   endif
 
   call ESMF_StateGet(State, trim(fldname), itemFlag, rc=rc)
   if (itemFlag /= ESMF_STATEITEM_NOTFOUND) then
 
-     if (geomtype == ESMF_GEOMTYPE_MESH) then
+    if (geomtype == ESMF_GEOMTYPE_MESH) then
 
-        ! get field pointer
-        call state_getfldptr(state, trim(fldname), dataptr2d, rc)
-        if (ChkErr(rc, __LINE__, u_FILE_u)) return
+      ! get field pointer
+      call state_getfldptr(state, trim(fldname), dataptr2d, rc)
+      if (ChkErr(rc, __LINE__, u_FILE_u)) return
 
-        ! determine output array and apply area correction if present
-        do u = lbd, ubd ! ungridded dims
-           n = 0
-           do j = jsc,jec
-              do i = isc,iec
-                 n = n + 1
-                 if (do_sum_loc) then
-                    if (present(areacor)) then
-                       output(i,j,u)  = output(i,j,u) + dataPtr2d(u,n) * areacor(n)
-                    else
-                       output(i,j,u)  = output(i,j,u) + dataPtr2d(u,n)
-                    endif
-                 else
-                    if (present(areacor)) then
-                       output(i,j,u)  = dataPtr2d(u,n) * areacor(n)
-                    else
-                       output(i,j,u)  = dataPtr2d(u,n)
-                    endif
-                 endif
-              enddo
-           enddo
-         enddo
+      ! determine output array and apply area correction if present
+      do u = lbd, ubd ! ungridded dims
+        n = 0
+        do j = jsc,jec
+          do i = isc,iec
+            n = n + 1
+            if (do_sum_loc) then
+              if (present(areacor)) then
+                output(i,j,u) = output(i,j,u) + dataPtr2d(u,n) * areacor(n)
+              else
+                output(i,j,u) = output(i,j,u) + dataPtr2d(u,n)
+              endif
+            else
+              if (present(areacor)) then
+                output(i,j,u) = dataPtr2d(u,n) * areacor(n)
+              else
+                output(i,j,u) = dataPtr2d(u,n)
+              endif
+            endif
+          enddo
+        enddo
+      enddo
 
-     else if (geomtype == ESMF_GEOMTYPE_GRID) then
-        call ESMF_LogWrite(trim(subname)//": ERROR ungridded dimensions not supported in MOM6 nuopc cap when "// &
-         "ESMF_GEOMTYPE_GRID is used. Use ESMF_GEOMTYPE_MESH instead.", ESMF_LOGMSG_ERROR)
-        rc = ESMF_FAILURE
-        return
-     endif
+    else if (geomtype == ESMF_GEOMTYPE_GRID) then
+      call ESMF_LogWrite(trim(subname)//": ERROR ungridded dimensions not supported in MOM6 nuopc cap when "// &
+          "ESMF_GEOMTYPE_GRID is used. Use ESMF_GEOMTYPE_MESH instead.", ESMF_LOGMSG_ERROR)
+      rc = ESMF_FAILURE
+      return
+    endif
 
   endif
 

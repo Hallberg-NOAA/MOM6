@@ -512,7 +512,7 @@ subroutine convert_IOB_to_fluxes(IOB, fluxes, index_bounds, Time, valid_time, G,
     endif
 
     if (associated(IOB%shelf_sfc_mass_flux)) then
-       fluxes%shelf_sfc_mass_flux(i,j) = kg_m2_s_conversion * IOB%shelf_sfc_mass_flux(i-i0,j-j0)
+      fluxes%shelf_sfc_mass_flux(i,j) = kg_m2_s_conversion * IOB%shelf_sfc_mass_flux(i-i0,j-j0)
     endif
 
     if (associated(IOB%ustar_berg)) then
@@ -1543,7 +1543,7 @@ subroutine surface_forcing_init(Time, G, US, param_file, diag, CS, wind_stagger)
     call get_param(param_file, mdl, "SRESTORE_AS_SFLUX", CS%salt_restore_as_sflux, &
                  "If true, the restoring of salinity is applied as a salt "//&
                  "flux instead of as a freshwater flux.", default=.false.)
-   call get_param(param_file, mdl, "MAX_DELTA_SRESTORE_FROM_FILE", CS%max_delta_srestore_file, &
+    call get_param(param_file, mdl, "MAX_DELTA_SRESTORE_FROM_FILE", CS%max_delta_srestore_file, &
                  "If true, read a file MAX_DELTA_SRESTORE_FILE containing the field "//&
                  "MAX_DELTA_SRESTORE_VARNAME for the maximum salinity difference used in "//&
                  "restoring terms.  Where the field's value is negative turn off restoring when "//&
@@ -1884,7 +1884,7 @@ subroutine ice_ocn_bnd_type_chksum(id, timestep, iobt)
   chks = field_chksum( iobt%calving        ) ; if (root) write(outunit,100) 'iobt%calving        ', chks
   chks = field_chksum( iobt%p              ) ; if (root) write(outunit,100) 'iobt%p              ', chks
   if (associated(iobt%shelf_sfc_mass_flux)) then
-     chks = field_chksum( iobt%shelf_sfc_mass_flux ) ; if (root) write(outunit,100) 'iobt%shelf_sfc_mass_flux     ',&
+    chks = field_chksum( iobt%shelf_sfc_mass_flux ) ; if (root) write(outunit,100) 'iobt%shelf_sfc_mass_flux     ', &
         chks
   endif
   if (associated(iobt%ustar_berg)) then

@@ -1920,7 +1920,7 @@ subroutine initialize_ice_shelf(param_file, ocn_grid, Time, CS, diag, Time_init,
     call get_param(param_file, mdl, "TIDEAMP_VARNAME", tideamp_var, &
                  "The name of the tidal amplitude variable in the input file.", &
                  default="tideamp")
-     call get_param(param_file, mdl, "INPUTDIR", inputdir, default=".")
+    call get_param(param_file, mdl, "INPUTDIR", inputdir, default=".")
     inputdir = slasher(inputdir)
     TideAmp_file = trim(inputdir) // trim(TideAmp_file)
     if (CS%rotate_index) then
@@ -2082,8 +2082,8 @@ subroutine initialize_ice_shelf(param_file, ocn_grid, Time, CS, diag, Time_init,
   CS%restart_output_dir = dirs%restart_output_dir
 
   if (present(fluxes_in)) then
-     call initialize_ice_shelf_fluxes(CS, ocn_grid, US, fluxes_in)
-     call register_restart_field(fluxes_in%shelf_sfc_mass_flux, "sfc_mass_flux", .true., CS%restart_CSp, &
+    call initialize_ice_shelf_fluxes(CS, ocn_grid, US, fluxes_in)
+    call register_restart_field(fluxes_in%shelf_sfc_mass_flux, "sfc_mass_flux", .true., CS%restart_CSp, &
         "ice shelf surface mass flux deposition from atmosphere", &
         'kg m-2 s-1', conversion=US%RZ_T_to_kg_m2s)
   endif
@@ -2207,15 +2207,15 @@ subroutine initialize_ice_shelf(param_file, ocn_grid, Time, CS, diag, Time_init,
   CS%id_ustar_shelf = register_diag_field('ice_shelf_model', 'ustar_shelf', CS%diag%axesT1, CS%Time, &
       'Fric vel under shelf', 'm/s', conversion=US%Z_to_m*US%s_to_T)
   CS%id_frazil = register_diag_field('ice_shelf_model', 'frazil', CS%diag%axesT1, CS%Time, &
-     'Frazil heat rejected by the ocean', 'J m-2', conversion=US%Q_to_J_kg*US%RZ_to_kg_m2)
+      'Frazil heat rejected by the ocean', 'J m-2', conversion=US%Q_to_J_kg*US%RZ_to_kg_m2)
   if (CS%active_shelf_dynamics) then
     CS%id_h_mask = register_diag_field('ice_shelf_model', 'h_mask', CS%diag%axesT1, CS%Time, &
-       'ice shelf thickness mask', 'none', conversion=1.0)
+        'ice shelf thickness mask', 'none', conversion=1.0)
   endif
 
   CS%id_shelf_sfc_mass_flux = register_diag_field('ice_shelf_model', 'sfc_mass_flux', CS%diag%axesT1, CS%Time, &
-     'ice shelf surface mass flux deposition from atmosphere', &
-     'kg m-2 s-1', conversion=US%RZ_T_to_kg_m2s)
+      'ice shelf surface mass flux deposition from atmosphere', &
+      'kg m-2 s-1', conversion=US%RZ_T_to_kg_m2s)
 
   ! Scalars (area integrated over all ice sheets)
   CS%id_vaf = register_scalar_field('ice_shelf_model', 'int_vaf', CS%diag%axesT1, CS%Time, &
@@ -2537,11 +2537,11 @@ subroutine initialize_shelf_mass(G, param_file, CS, ISS, new_sim)
                             MOM_domain=CS%Grid_in%Domain, verbose=CS%debug)
 
       if (read_shelf_area) then
-         call get_param(param_file, mdl, "SHELF_AREA_VAR", shelf_area_var, &
+        call get_param(param_file, mdl, "SHELF_AREA_VAR", shelf_area_var, &
                   "The variable in SHELF_FILE with the shelf area.", &
                   default="shelf_area")
 
-         CS%area_handle = init_external_field(filename, shelf_area_var, &
+        CS%area_handle = init_external_field(filename, shelf_area_var, &
                                MOM_domain=CS%Grid_in%Domain)
       endif
 
@@ -2676,8 +2676,8 @@ subroutine update_ice_SMB(CS, G, SMB, Time)
 
 
   if (CS%time_varying_smb) then
-     call time_interp_external(CS%smb_file, Time, SMB)
-     if (CS%debug) call hchksum(SMB, "update_ice_SMB", CS%Grid_in%HI, haloshift=0)
+    call time_interp_external(CS%smb_file, Time, SMB)
+    if (CS%debug) call hchksum(SMB, "update_ice_SMB", CS%Grid_in%HI, haloshift=0)
   endif
 
 
@@ -3128,11 +3128,11 @@ subroutine initialize_ice_SMB(CS, SMB, G, US, PF)
     if (.not.file_exists(filename, G%Domain)) call MOM_error(FATAL, &
        " initialize_ice_SMV_from_file: Unable to open "//trim(filename))
     if (SMB_file_has_time) then
-       CS%smb_file = init_external_field(filename, varname, MOM_domain=G%Domain, correct_leap_year_inconsistency=.true.)
-       CS%time_varying_smb = .true.
+      CS%smb_file = init_external_field(filename, varname, MOM_domain=G%Domain, correct_leap_year_inconsistency=.true.)
+      CS%time_varying_smb = .true.
     else
-       call MOM_read_data(filename, trim(varname), SMB, G%Domain, scale=US%kg_m2s_to_RZ_T)
-       CS%time_varying_smb = .false.
+      call MOM_read_data(filename, trim(varname), SMB, G%Domain, scale=US%kg_m2s_to_RZ_T)
+      CS%time_varying_smb = .false.
     endif
   endif
 end subroutine initialize_ice_SMB

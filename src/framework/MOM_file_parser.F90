@@ -1003,7 +1003,7 @@ function max_input_line_length(CS, pf_num) result(max_len)
         contBufSize = contBufSize + last - 1
         continuedLine = .true.
         if (count==CS%param_data(ipf)%num_lines .and. is_root_pe()) &
-           call MOM_error(FATAL, "MOM_file_parser : the last line of the file ends in a"// &
+          call MOM_error(FATAL, "MOM_file_parser : the last line of the file ends in a"// &
                  " continuation character but there are no more lines to read. "// &
                  " Line: '"//trim(CS%param_data(ipf)%fln(count)%line(:last))//"'"// &
                  " in file "//trim(filename)//".")
@@ -1083,7 +1083,7 @@ subroutine get_variable_line(CS, varname, found, defined, value_string, paramIsL
         contBufSize = contBufSize + len_trim(line)-1
         continuedLine = .true.
         if (count==CS%param_data(ipf)%num_lines .and. is_root_pe()) &
-           call MOM_error(FATAL, "MOM_file_parser : the last line"// &
+          call MOM_error(FATAL, "MOM_file_parser : the last line"// &
                  " of the file ends in a continuation character but"// &
                  " there are no more lines to read. "// &
                  " Line: '"//trim(line(:last))//"'"//&

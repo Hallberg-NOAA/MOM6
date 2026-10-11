@@ -1697,10 +1697,10 @@ subroutine EOS_init(param_file, EOS, US, use_conT_absS)
   endif
 
   if ((EOS%form_of_TFreeze==TFREEZE_TEOSPOLY) .or. (EOS%form_of_TFreeze==TFREEZE_TEOS10)) then
-     ! Which default is appropriate for Millero?
-     EOS_TS_default = .false.
+    ! Which default is appropriate for Millero?
+    EOS_TS_default = .false.
   else
-     EOS_TS_default = .true.
+    EOS_TS_default = .true.
   endif
   call get_param(param_file, mdl, "TFREEZE_S_IS_PRACS", EOS%TFreeze_S_is_pracS, &
                "When True, the model will check if the model internal salinity is "//&

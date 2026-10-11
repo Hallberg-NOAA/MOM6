@@ -2231,20 +2231,20 @@ subroutine find_depth_of_pressure_in_cell(T_t, T_b, S_t, S_b, z_t, z_b, P_t, P_t
 
     m = m + 1
     if (m > 30) then ! Call an error, because convergence to the tolerance has not been achieved
-     write(msg,*) Pa_left,Pa,Pa_right,P_t-P_tgt,P_b-P_tgt
-     call MOM_error(FATAL, 'find_depth_of_pressure_in_cell completes too many iterations: '//msg)
+      write(msg,*) Pa_left, Pa, Pa_right, P_t-P_tgt, P_b-P_tgt
+      call MOM_error(FATAL, 'find_depth_of_pressure_in_cell completes too many iterations: '//msg)
     endif
     z_out = z_t + ( z_b - z_t ) * F_guess
     Pa = frac_dp_at_pos(T_t, T_b, S_t, S_b, z_t, z_b, rho_ref, G_e, F_guess, EOS, frac_dp_bugfix) - ( P_tgt - P_t )
 
     if (Pa<Pa_left) then
-      write(msg,*) Pa_left,Pa,Pa_right,P_t-P_tgt,P_b-P_tgt
+      write(msg,*) Pa_left, Pa, Pa_right, P_t-P_tgt, P_b-P_tgt
       call MOM_error(FATAL, 'find_depth_of_pressure_in_cell out of bounds negative: /n'//msg)
     elseif (Pa<0.) then
       Pa_left = Pa
       F_l = F_guess
     elseif (Pa>Pa_right) then
-      write(msg,*) Pa_left,Pa,Pa_right,P_t-P_tgt,P_b-P_tgt
+      write(msg,*) Pa_left, Pa, Pa_right, P_t-P_tgt, P_b-P_tgt
       call MOM_error(FATAL, 'find_depth_of_pressure_in_cell out of bounds positive: /n'//msg)
     elseif (Pa>0.) then
       Pa_right = Pa

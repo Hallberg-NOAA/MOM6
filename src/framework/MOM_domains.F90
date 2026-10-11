@@ -310,7 +310,7 @@ subroutine MOM_domains_init(MOM_dom, param_file, symmetric, static_memory, &
 
   auto_mask_table = .false.
   if (.not. present(param_suffix) .and. .not. is_static .and. trim(topo_config) == 'file') then
-     call get_param(param_file, mdl, 'AUTO_MASKTABLE', auto_mask_table, &
+    call get_param(param_file, mdl, 'AUTO_MASKTABLE', auto_mask_table, &
                  "Turn on automatic mask table generation to eliminate land blocks.", &
                  default=.false., layoutParam=.true.)
   endif

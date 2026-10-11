@@ -433,19 +433,19 @@ subroutine apply_skeb(grid, GV, US, CS, uc, vc, thickness, tv, dt, Time_end)
 
   call enable_averages(dt, Time_end, CS%diag)
   if (CS%id_diss > 0) then
-     call post_data(CS%id_diss, sqrt(dt * max(CS%skeb_diss(:,:,:), 0.)), CS%diag)
+    call post_data(CS%id_diss, sqrt(dt * max(CS%skeb_diss(:,:,:), 0.)), CS%diag)
   endif
   if (CS%id_skeb_wts > 0) then
-     call post_data(CS%id_skeb_wts, CS%skeb_wts, CS%diag)
+    call post_data(CS%id_skeb_wts, CS%skeb_wts, CS%diag)
   endif
   if (CS%id_skebu > 0) then
-     call post_data(CS%id_skebu, ustar(:,:,:), CS%diag)
+    call post_data(CS%id_skebu, ustar(:,:,:), CS%diag)
   endif
   if (CS%id_skebv > 0) then
-     call post_data(CS%id_skebv, vstar(:,:,:), CS%diag)
+    call post_data(CS%id_skebv, vstar(:,:,:), CS%diag)
   endif
   if (CS%id_psi > 0) then
-     call post_data(CS%id_psi, psi(:,:,:), CS%diag)
+    call post_data(CS%id_psi, psi(:,:,:), CS%diag)
   endif
   call disable_averaging(CS%diag)
   CS%skeb_diss(:,:,:) = 0.0 ! Must zero before next time step.

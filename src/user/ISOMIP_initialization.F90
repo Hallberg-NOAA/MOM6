@@ -607,8 +607,8 @@ subroutine ISOMIP_initialize_sponges(G, GV, US, tv, depth_tot, PF, use_ALE, CSp,
         enddo ; enddo
 
       case default
-         call MOM_error(FATAL, "ISOMIP_initialize_sponges: "// &
-         "Unrecognized i.c. setup - set REGRIDDING_COORDINATE_MODE")
+        call MOM_error(FATAL, "ISOMIP_initialize_sponges: "// &
+            "Unrecognized i.c. setup - set REGRIDDING_COORDINATE_MODE")
 
     end select
 

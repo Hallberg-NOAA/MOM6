@@ -466,10 +466,10 @@ subroutine calculate_diagnostic_fields(u, v, h, uh, vh, tv, ADp, CDp, p_surf, &
         call post_data(CS%id_bigtemp_layer_ave, temp_layer_ave, CS%diag)
       endif
       if (CS%id_tosq > 0) then
-         do k=1,nz ; do j=js,je ; do i=is,ie
-           work_3d(i,j,k) = work_3d(i,j,k)*work_3d(i,j,k)
-         enddo ; enddo ; enddo
-         call post_data(CS%id_tosq, work_3d, CS%diag)
+        do k=1,nz ; do j=js,je ; do i=is,ie
+          work_3d(i,j,k) = work_3d(i,j,k)*work_3d(i,j,k)
+        enddo ; enddo ; enddo
+        call post_data(CS%id_tosq, work_3d, CS%diag)
       endif
     endif
   else

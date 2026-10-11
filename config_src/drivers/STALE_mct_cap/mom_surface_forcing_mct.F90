@@ -1180,7 +1180,7 @@ subroutine surface_forcing_init(Time, G, US, param_file, diag, CS, restore_salt,
     call get_param(param_file, mdl, "SRESTORE_AS_SFLUX", CS%salt_restore_as_sflux, &
                  "If true, the restoring of salinity is applied as a salt "//&
                  "flux instead of as a freshwater flux.", default=.false.)
-   call get_param(param_file, mdl, "MAX_DELTA_SRESTORE_FROM_FILE", CS%max_delta_srestore_file, &
+    call get_param(param_file, mdl, "MAX_DELTA_SRESTORE_FROM_FILE", CS%max_delta_srestore_file, &
                  "If true, read a file MAX_DELTA_SRESTORE_FILE containing the field "//&
                  "MAX_DELTA_SRESTORE_VARNAME for the maximum salinity difference used in "//&
                  "restoring terms.  Where the field's value is negative turn off restoring when "//&

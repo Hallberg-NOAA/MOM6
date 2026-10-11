@@ -432,7 +432,7 @@ subroutine InitializeP0(gcomp, importState, exportState, clock, rc)
                               isPresent=isPresent, isSet=isSet, rc=rc)
   if (ChkErr(rc, __LINE__, u_FILE_u)) return
   if (isPresent .and. isSet) then
-     if (trim(value) .eq. '.true.') restart_eor = .true.
+    if (trim(value) .eq. '.true.') restart_eor = .true.
   endif
 
   if (localPet == 0) call cap_profiling("mom", "InitializeP0", "E")
@@ -1621,8 +1621,8 @@ subroutine InitializeRealize(gcomp, importState, exportState, clock, rc)
   call mom_set_geomtype(geomtype)
 
   if (use_cdeps_inline) then
-     call mom_inline_init(gcomp, clock, eMesh, localPet, rc=rc)
-     if (ChkErr(rc, __LINE__, u_FILE_u)) return
+    call mom_inline_init(gcomp, clock, eMesh, localPet, rc=rc)
+    if (ChkErr(rc, __LINE__, u_FILE_u)) return
   endif
 
   !---------------------------------
@@ -1797,8 +1797,8 @@ subroutine ModelAdvance(gcomp, rc)
 
   if (profile_memory) call ESMF_VMLogMemInfo("Entering MOM Model_ADVANCE: ")
   if (write_runtimelog) then
-     timers = MPI_Wtime()
-     if (timere>0. .and. is_root_pe()) write(stdout,*) 'In ',trim(subname),' time since last time step ',timers-timere
+    timers = MPI_Wtime()
+    if (timere>0. .and. is_root_pe()) write(stdout,*) 'In ',trim(subname),' time since last time step ',timers-timere
   endif
 
   call shr_log_setLogUnit (stdout)
@@ -2221,8 +2221,8 @@ subroutine ModelSetRunClock(gcomp, rc)
                isPresent=isPresent, isSet=isSet, rc=rc)
           if (ChkErr(rc, __LINE__, u_FILE_u)) return
           if (isPresent .and. isSet) then
-             read(cvalue,*) restart_ymd
-             call ESMF_LogWrite(subname//" Restart_ymd = "//trim(cvalue), ESMF_LOGMSG_INFO)
+            read(cvalue,*) restart_ymd
+            call ESMF_LogWrite(subname//" Restart_ymd = "//trim(cvalue), ESMF_LOGMSG_INFO)
           endif
         else
           ! restart_n is zero, restarts will be written at finalize only (no alarm control)

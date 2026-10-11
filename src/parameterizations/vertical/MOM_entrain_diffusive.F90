@@ -2026,13 +2026,13 @@ subroutine find_maxF_kb(h_bl, Sref, Ent_bl, I_dSkbp1, min_ent_in, max_ent_in, &
           elseif ((F(i) <= F_maxent(i)) .and. (F(i) > F_minent(i))) then
             new_min_bound = .false. ! We have a new maximum bound.
           else ! This case would bracket a minimum.  Weird.
-             ! Unless the derivative indicates that there is a maximum near the
-             ! lower bound, try keeping the end with the larger value of F
-             ! in a tie keep the minimum as the answer here will be compared
-             ! with the maximum input value later.
-             new_min_bound = .true.
-             if (dF_dE_min(i) > 0.0 .or. (F_minent(i) >= F_maxent(i))) &
-               new_min_bound = .false.
+            ! Unless the derivative indicates that there is a maximum near the
+            ! lower bound, try keeping the end with the larger value of F
+            ! in a tie keep the minimum as the answer here will be compared
+            ! with the maximum input value later.
+            new_min_bound = .true.
+            if (dF_dE_min(i) > 0.0 .or. (F_minent(i) >= F_maxent(i))) &
+              new_min_bound = .false.
           endif
           if (need_bracket(i)) then ! Still not bracketed.
             if (new_min_bound) then
