@@ -337,30 +337,30 @@ subroutine convert_IOB_to_fluxes(IOB, fluxes, index_bounds, Time, valid_time, G,
                                press=.true., fix_accum_bug=.not.CS%ustar_gustless_bug, &
                                cfc=CS%use_CFC, marbl=CS%use_MARBL_tracers, hevap=CS%enthalpy_cpl, &
                                tau_mag=.true., ice_ncat=IOB%ice_ncat)
-    call safe_alloc_ptr(fluxes%omega_w2x,isd,ied,jsd,jed)
-    call safe_alloc_ptr(fluxes%sw_vis_dir,isd,ied,jsd,jed)
-    call safe_alloc_ptr(fluxes%sw_vis_dif,isd,ied,jsd,jed)
-    call safe_alloc_ptr(fluxes%sw_nir_dir,isd,ied,jsd,jed)
-    call safe_alloc_ptr(fluxes%sw_nir_dif,isd,ied,jsd,jed)
+    call safe_alloc_ptr(fluxes%omega_w2x, isd, ied, jsd, jed)
+    call safe_alloc_ptr(fluxes%sw_vis_dir, isd, ied, jsd, jed)
+    call safe_alloc_ptr(fluxes%sw_vis_dif, isd, ied, jsd, jed)
+    call safe_alloc_ptr(fluxes%sw_nir_dir, isd, ied, jsd, jed)
+    call safe_alloc_ptr(fluxes%sw_nir_dif, isd, ied, jsd, jed)
 
-    call safe_alloc_ptr(fluxes%p_surf     ,isd,ied,jsd,jed)
-    call safe_alloc_ptr(fluxes%p_surf_full,isd,ied,jsd,jed)
+    call safe_alloc_ptr(fluxes%p_surf, isd, ied, jsd, jed)
+    call safe_alloc_ptr(fluxes%p_surf_full, isd, ied, jsd, jed)
     if (CS%use_limited_P_SSH) then
       fluxes%p_surf_SSH => fluxes%p_surf
     else
       fluxes%p_surf_SSH => fluxes%p_surf_full
     endif
 
-    call safe_alloc_ptr(fluxes%salt_flux,isd,ied,jsd,jed)
-    call safe_alloc_ptr(fluxes%salt_flux_in,isd,ied,jsd,jed)
-    call safe_alloc_ptr(fluxes%salt_flux_added,isd,ied,jsd,jed)
+    call safe_alloc_ptr(fluxes%salt_flux, isd, ied, jsd, jed)
+    call safe_alloc_ptr(fluxes%salt_flux_in, isd, ied, jsd, jed)
+    call safe_alloc_ptr(fluxes%salt_flux_added, isd, ied, jsd, jed)
 
-    call safe_alloc_ptr(fluxes%BBL_tidal_dis,isd,ied,jsd,jed)
-    call safe_alloc_ptr(fluxes%ustar_tidal,isd,ied,jsd,jed)
+    call safe_alloc_ptr(fluxes%BBL_tidal_dis, isd, ied, jsd, jed)
+    call safe_alloc_ptr(fluxes%ustar_tidal, isd, ied, jsd, jed)
 
     if (CS%allow_flux_adjustments) then
-      call safe_alloc_ptr(fluxes%heat_added,isd,ied,jsd,jed)
-      call safe_alloc_ptr(fluxes%salt_flux_added,isd,ied,jsd,jed)
+      call safe_alloc_ptr(fluxes%heat_added, isd, ied, jsd, jed)
+      call safe_alloc_ptr(fluxes%salt_flux_added, isd, ied, jsd, jed)
     endif
 
     do j=js-2,je+2 ; do i=is-2,ie+2
@@ -368,7 +368,7 @@ subroutine convert_IOB_to_fluxes(IOB, fluxes, index_bounds, Time, valid_time, G,
       fluxes%ustar_tidal(i,j) = CS%ustar_tidal(i,j)
     enddo ; enddo
 
-    if (restore_temp) call safe_alloc_ptr(fluxes%heat_added,isd,ied,jsd,jed)
+    if (restore_temp) call safe_alloc_ptr(fluxes%heat_added, isd, ied, jsd, jed)
 
   endif   ! endif for allocation and initialization
 
@@ -796,13 +796,13 @@ subroutine convert_IOB_to_forces(IOB, forces, index_bounds, Time, G, US, CS)
 
     call allocate_mech_forcing(G, forces, stress=.true., ustar=.true., press=.true., tau_mag=.true.)
 
-    call safe_alloc_ptr(forces%p_surf,isd,ied,jsd,jed)
-    call safe_alloc_ptr(forces%p_surf_full,isd,ied,jsd,jed)
-    call safe_alloc_ptr(forces%omega_w2x,isd,ied,jsd,jed)
+    call safe_alloc_ptr(forces%p_surf, isd, ied, jsd, jed)
+    call safe_alloc_ptr(forces%p_surf_full, isd, ied, jsd, jed)
+    call safe_alloc_ptr(forces%omega_w2x, isd, ied, jsd, jed)
 
     if (CS%rigid_sea_ice) then
-      call safe_alloc_ptr(forces%rigidity_ice_u,IsdB,IedB,jsd,jed)
-      call safe_alloc_ptr(forces%rigidity_ice_v,isd,ied,JsdB,JedB)
+      call safe_alloc_ptr(forces%rigidity_ice_u, IsdB, IedB, jsd, jed)
+      call safe_alloc_ptr(forces%rigidity_ice_v, isd, ied, JsdB, JedB)
     endif
 
     forces%initialized = .true.
@@ -814,8 +814,8 @@ subroutine convert_IOB_to_forces(IOB, forces, index_bounds, Time, G, US, CS)
 
   if (associated(IOB%ice_rigidity)) then
     rigidity_at_h(:,:) = 0.0
-    call safe_alloc_ptr(forces%rigidity_ice_u,IsdB,IedB,jsd,jed)
-    call safe_alloc_ptr(forces%rigidity_ice_v,isd,ied,JsdB,JedB)
+    call safe_alloc_ptr(forces%rigidity_ice_u, IsdB, IedB, jsd, jed)
+    call safe_alloc_ptr(forces%rigidity_ice_v, isd, ied, JsdB, JedB)
   endif
 
   forces%accumulate_rigidity = .true. ! Multiple components may contribute to rigidity.
@@ -1346,7 +1346,7 @@ subroutine surface_forcing_init(Time, G, US, param_file, diag, CS, restore_salt,
                    "The name of the maximum salinity difference variable in the input file.", &
                    default="max_delta_srestore")
       CS%max_delta_srestore = 999.0
-      call safe_alloc_ptr(CS%max_delta_srestore_2d,isd,ied,jsd,jed)
+      call safe_alloc_ptr(CS%max_delta_srestore_2d, isd, ied, jsd, jed)
       call MOM_read_data(flnam,varnam, CS%max_delta_srestore_2d, G%domain, timelevel=1)
     endif
     call get_param(param_file, mdl, "MIN_RATIO_SRESTORE", CS%min_ratio_srestore, &
@@ -1365,7 +1365,7 @@ subroutine surface_forcing_init(Time, G, US, param_file, diag, CS, restore_salt,
                  "A file in which to find the basin masks, in variable 'basin'.", &
                  default="basin.nc")
     basin_file = trim(CS%inputdir) // trim(basin_file)
-    call safe_alloc_ptr(CS%basin_mask,isd,ied,jsd,jed) ; CS%basin_mask(:,:) = 1.0
+    call safe_alloc_ptr(CS%basin_mask, isd, ied, jsd, jed) ; CS%basin_mask(:,:) = 1.0
     if (CS%mask_srestore_marginal_seas) then
       call MOM_read_data(basin_file,'basin',CS%basin_mask,G%domain, timelevel=1)
       do j=jsd,jed ; do i=isd,ied
@@ -1422,8 +1422,8 @@ subroutine surface_forcing_init(Time, G, US, param_file, diag, CS, restore_salt,
                  units="m s-1", default=0.0, scale=US%m_to_Z*US%T_to_s)
   endif
 
-  call safe_alloc_ptr(CS%TKE_tidal,isd,ied,jsd,jed)
-  call safe_alloc_ptr(CS%ustar_tidal,isd,ied,jsd,jed)
+  call safe_alloc_ptr(CS%TKE_tidal, isd, ied, jsd, jed)
+  call safe_alloc_ptr(CS%ustar_tidal, isd, ied, jsd, jed)
 
   if (CS%read_TIDEAMP) then
     TideAmp_file = trim(CS%inputdir) // trim(TideAmp_file)
@@ -1458,7 +1458,7 @@ subroutine surface_forcing_init(Time, G, US, param_file, diag, CS, restore_salt,
                  "The file in which the wind gustiness is found in "//&
                  "variable gustiness.")
 
-    call safe_alloc_ptr(CS%gust,isd,ied,jsd,jed)
+    call safe_alloc_ptr(CS%gust, isd, ied, jsd, jed)
     gust_file = trim(CS%inputdir) // trim(gust_file)
     call MOM_read_data(gust_file, 'gustiness', CS%gust, G%domain, timelevel=1, &
                scale=US%kg_m3_to_R*US%m_s_to_L_T**2*US%L_to_Z) ! units in file should be Pa
@@ -1545,7 +1545,7 @@ subroutine surface_forcing_init(Time, G, US, param_file, diag, CS, restore_salt,
   if (present(restore_salt)) then ; if (restore_salt) then
     salt_file = trim(CS%inputdir) // trim(CS%salt_restore_file)
     CS%srestore_handle = init_external_field(salt_file, CS%salt_restore_var_name, domain=G%Domain%mpp_domain)
-    call safe_alloc_ptr(CS%srestore_mask,isd,ied,jsd,jed) ; CS%srestore_mask(:,:) = 1.0
+    call safe_alloc_ptr(CS%srestore_mask, isd, ied, jsd, jed) ; CS%srestore_mask(:,:) = 1.0
     if (CS%mask_srestore) then ! read a 2-d file containing a mask for restoring fluxes
       flnam = trim(CS%inputdir) // 'salt_restore_mask.nc'
       call MOM_read_data(flnam,'mask', CS%srestore_mask, G%domain, timelevel=1)
@@ -1555,7 +1555,7 @@ subroutine surface_forcing_init(Time, G, US, param_file, diag, CS, restore_salt,
   if (present(restore_temp)) then ; if (restore_temp) then
     temp_file = trim(CS%inputdir) // trim(CS%temp_restore_file)
     CS%trestore_handle = init_external_field(temp_file, CS%temp_restore_var_name, domain=G%Domain%mpp_domain)
-    call safe_alloc_ptr(CS%trestore_mask,isd,ied,jsd,jed) ; CS%trestore_mask(:,:) = 1.0
+    call safe_alloc_ptr(CS%trestore_mask, isd, ied, jsd, jed) ; CS%trestore_mask(:,:) = 1.0
     if (CS%mask_trestore) then  ! read a 2-d file containing a mask for restoring fluxes
       flnam = trim(CS%inputdir) // 'temp_restore_mask.nc'
       call MOM_read_data(flnam, 'mask', CS%trestore_mask, G%domain, timelevel=1)

@@ -1911,7 +1911,7 @@ subroutine initialize_ice_shelf(param_file, ocn_grid, Time, CS, diag, Time_init,
   endif
 
 
-  call safe_alloc_ptr(CS%utide,isd,ied,jsd,jed) ; CS%utide(:,:) = 0.0
+  call safe_alloc_ptr(CS%utide, isd, ied, jsd, jed) ; CS%utide(:,:) = 0.0
 
   if (read_TIDEAMP) then
     call get_param(param_file, mdl, "TIDEAMP_FILE", TideAmp_file, &

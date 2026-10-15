@@ -449,16 +449,16 @@ subroutine register_tracer_diagnostics(Reg, h, Time, diag, G, GV, US, use_ALE, u
         trim(units) // " m", conversion=Tr%conc_scale*US%Z_to_m)
     Tr%id_surf = register_diag_field("ocean_model", trim(shortnm)//"_SURF", &
         diag%axesT1, Time, "Surface values of "// trim(longname), trim(units), conversion=Tr%conc_scale)
-    if (Tr%id_adx > 0) call safe_alloc_ptr(Tr%ad_x,IsdB,IedB,jsd,jed,nz)
-    if (Tr%id_ady > 0) call safe_alloc_ptr(Tr%ad_y,isd,ied,JsdB,JedB,nz)
-    if (Tr%id_adx_resolved > 0) call safe_alloc_ptr(Tr%ad_x_resolved,IsdB,IedB,jsd,jed,nz)
-    if (Tr%id_ady_resolved > 0) call safe_alloc_ptr(Tr%ad_y_resolved,isd,ied,JsdB,JedB,nz)
-    if (Tr%id_adx_param > 0) call safe_alloc_ptr(Tr%ad_x_param,IsdB,IedB,jsd,jed,nz)
-    if (Tr%id_ady_param > 0) call safe_alloc_ptr(Tr%ad_y_param,isd,ied,JsdB,JedB,nz)
-    if (Tr%id_dfx > 0) call safe_alloc_ptr(Tr%df_x,IsdB,IedB,jsd,jed,nz)
-    if (Tr%id_dfy > 0) call safe_alloc_ptr(Tr%df_y,isd,ied,JsdB,JedB,nz)
-    if (Tr%id_hbd_dfx > 0) call safe_alloc_ptr(Tr%hbd_dfx,IsdB,IedB,jsd,jed,nz)
-    if (Tr%id_hbd_dfy > 0) call safe_alloc_ptr(Tr%hbd_dfy,isd,ied,JsdB,JedB,nz)
+    if (Tr%id_adx > 0) call safe_alloc_ptr(Tr%ad_x, IsdB, IedB, jsd, jed, nz)
+    if (Tr%id_ady > 0) call safe_alloc_ptr(Tr%ad_y, isd, ied, JsdB, JedB, nz)
+    if (Tr%id_adx_resolved > 0) call safe_alloc_ptr(Tr%ad_x_resolved, IsdB, IedB, jsd, jed, nz)
+    if (Tr%id_ady_resolved > 0) call safe_alloc_ptr(Tr%ad_y_resolved, isd, ied, JsdB, JedB, nz)
+    if (Tr%id_adx_param > 0) call safe_alloc_ptr(Tr%ad_x_param, IsdB, IedB, jsd, jed, nz)
+    if (Tr%id_ady_param > 0) call safe_alloc_ptr(Tr%ad_y_param, isd, ied, JsdB, JedB, nz)
+    if (Tr%id_dfx > 0) call safe_alloc_ptr(Tr%df_x, IsdB, IedB, jsd, jed, nz)
+    if (Tr%id_dfy > 0) call safe_alloc_ptr(Tr%df_y, isd, ied, JsdB, JedB, nz)
+    if (Tr%id_hbd_dfx > 0) call safe_alloc_ptr(Tr%hbd_dfx, IsdB, IedB, jsd, jed, nz)
+    if (Tr%id_hbd_dfy > 0) call safe_alloc_ptr(Tr%hbd_dfy, isd, ied, JsdB, JedB, nz)
 
     Tr%id_adx_2d = register_diag_field("ocean_model", trim(shortnm)//"_adx_2d", &
         diag%axesCu1, Time, &
@@ -487,12 +487,12 @@ subroutine register_tracer_diagnostics(Reg, h, Time, diag, G, GV, US, use_ALE, u
         "scheme for "//trim(flux_longname), flux_units, conversion=(US%L_to_m**2)*Tr%flux_scale*US%s_to_T, &
         x_cell_method='sum')
 
-    if (Tr%id_adx_2d > 0) call safe_alloc_ptr(Tr%ad2d_x,IsdB,IedB,jsd,jed)
-    if (Tr%id_ady_2d > 0) call safe_alloc_ptr(Tr%ad2d_y,isd,ied,JsdB,JedB)
-    if (Tr%id_dfx_2d > 0) call safe_alloc_ptr(Tr%df2d_x,IsdB,IedB,jsd,jed)
-    if (Tr%id_dfy_2d > 0) call safe_alloc_ptr(Tr%df2d_y,isd,ied,JsdB,JedB)
-    if (Tr%id_hbd_dfx_2d > 0) call safe_alloc_ptr(Tr%hbd_dfx_2d,IsdB,IedB,jsd,jed)
-    if (Tr%id_hbd_dfy_2d > 0) call safe_alloc_ptr(Tr%hbd_dfy_2d,isd,ied,JsdB,JedB)
+    if (Tr%id_adx_2d > 0) call safe_alloc_ptr(Tr%ad2d_x, IsdB, IedB, jsd, jed)
+    if (Tr%id_ady_2d > 0) call safe_alloc_ptr(Tr%ad2d_y, isd, ied, JsdB, JedB)
+    if (Tr%id_dfx_2d > 0) call safe_alloc_ptr(Tr%df2d_x, IsdB, IedB, jsd, jed)
+    if (Tr%id_dfy_2d > 0) call safe_alloc_ptr(Tr%df2d_y, isd, ied, JsdB, JedB)
+    if (Tr%id_hbd_dfx_2d > 0) call safe_alloc_ptr(Tr%hbd_dfx_2d, IsdB, IedB, jsd, jed)
+    if (Tr%id_hbd_dfy_2d > 0) call safe_alloc_ptr(Tr%hbd_dfy_2d, isd, ied, JsdB, JedB)
 
     Tr%id_adv_xy = register_diag_field('ocean_model', trim(shortnm)//"_advection_xy", &
         diag%axesTL, Time, &
@@ -504,7 +504,7 @@ subroutine register_tracer_diagnostics(Reg, h, Time, diag, G, GV, US, use_ALE, u
         'Vertical sum of horizontal convergence of residual mean advective fluxes of '//&
         trim(lowercase(flux_longname)), conv_units, conversion=Tr%conv_scale*US%s_to_T)
     if ((Tr%id_adv_xy > 0) .or. (Tr%id_adv_xy_2d > 0)) &
-      call safe_alloc_ptr(Tr%advection_xy,isd,ied,jsd,jed,nz)
+      call safe_alloc_ptr(Tr%advection_xy, isd, ied, jsd, jed, nz)
 
     Tr%id_tendency = register_diag_field('ocean_model', trim(shortnm)//'_tendency', &
         diag%axesTL, Time, &
@@ -512,7 +512,7 @@ subroutine register_tracer_diagnostics(Reg, h, Time, diag, G, GV, US, use_ALE, u
         trim(units)//' s-1', conversion=Tr%conc_scale*US%s_to_T)
 
     if (Tr%id_tendency > 0) then
-      call safe_alloc_ptr(Tr%t_prev,isd,ied,jsd,jed,nz)
+      call safe_alloc_ptr(Tr%t_prev, isd, ied, jsd, jed, nz)
       do k=1,nz ; do j=js,je ; do i=is,ie
         Tr%t_prev(i,j,k) = Tr%t(i,j,k)
       enddo ; enddo ; enddo
@@ -603,7 +603,7 @@ subroutine register_tracer_diagnostics(Reg, h, Time, diag, G, GV, US, use_ALE, u
           cmor_standard_name=cmor_long_std(cmor_var_lname), cmor_long_name=cmor_var_lname)
     endif
     if ((Tr%id_trxh_tendency > 0) .or. (Tr%id_trxh_tendency_2d > 0)) then
-      call safe_alloc_ptr(Tr%Trxh_prev,isd,ied,jsd,jed,nz)
+      call safe_alloc_ptr(Tr%Trxh_prev, isd, ied, jsd, jed, nz)
       do k=1,nz ; do j=js,je ; do i=is,ie
         Tr%Trxh_prev(i,j,k) = Tr%t(i,j,k) * h(i,j,k)
       enddo ; enddo ; enddo
@@ -639,7 +639,7 @@ subroutine register_tracer_diagnostics(Reg, h, Time, diag, G, GV, US, use_ALE, u
         ! Set up a new tracer for this tracer squared
         m2 = Reg%ntr+1
         Tr%ind_tr_squared = m2
-        call safe_alloc_ptr(Reg%Tr(m2)%t,isd,ied,jsd,jed,nz) ; Reg%Tr(m2)%t(:,:,:) = 0.0
+        call safe_alloc_ptr(Reg%Tr(m2)%t, isd, ied, jsd, jed, nz) ; Reg%Tr(m2)%t(:,:,:) = 0.0
         Reg%Tr(m2)%name = trim(shortnm)//"2"
         Reg%Tr(m2)%longname = "Squared "//trim(longname)
         Reg%Tr(m2)%units = unit2

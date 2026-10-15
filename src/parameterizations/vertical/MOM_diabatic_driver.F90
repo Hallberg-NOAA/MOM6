@@ -3501,7 +3501,7 @@ subroutine diabatic_driver_init(Time, G, GV, US, param_file, useALEalgorithm, di
   if (.not.CS%useALEalgorithm) then
     CS%id_wd = register_diag_field('ocean_model', 'wd', diag%axesTi, Time, &
       'Diapycnal velocity', 'm s-1', conversion=GV%H_to_m*US%s_to_T)
-    if (CS%id_wd > 0) call safe_alloc_ptr(CDp%diapyc_vel,isd,ied,jsd,jed,nz+1)
+    if (CS%id_wd > 0) call safe_alloc_ptr(CDp%diapyc_vel, isd, ied, jsd, jed, nz+1)
 
     CS%id_dudt_dia = register_diag_field('ocean_model', 'dudt_dia', diag%axesCuL, Time, &
         'Zonal Acceleration from Diapycnal Mixing', 'm s-2', conversion=US%L_T2_to_m_s2)
@@ -3511,17 +3511,17 @@ subroutine diabatic_driver_init(Time, G, GV, US, param_file, useALEalgorithm, di
     CS%id_hf_dudt_dia_2d = register_diag_field('ocean_model', 'hf_dudt_dia_2d', diag%axesCu1, Time, &
         'Depth-sum Fractional Thickness-weighted Zonal Acceleration from Diapycnal Mixing', &
         'm s-2', conversion=US%L_T2_to_m_s2)
-    if (CS%id_hf_dudt_dia_2d > 0) call safe_alloc_ptr(ADp%diag_hfrac_u,IsdB,IedB,jsd,jed,nz)
+    if (CS%id_hf_dudt_dia_2d > 0) call safe_alloc_ptr(ADp%diag_hfrac_u, IsdB, IedB, jsd, jed, nz)
 
     CS%id_hf_dvdt_dia_2d = register_diag_field('ocean_model', 'hf_dvdt_dia_2d', diag%axesCv1, Time, &
         'Depth-sum Fractional Thickness-weighted Meridional Acceleration from Diapycnal Mixing', &
         'm s-2', conversion=US%L_T2_to_m_s2)
-    if (CS%id_hf_dvdt_dia_2d > 0)  call safe_alloc_ptr(ADp%diag_hfrac_v,isd,ied,JsdB,JedB,nz)
+    if (CS%id_hf_dvdt_dia_2d > 0)  call safe_alloc_ptr(ADp%diag_hfrac_v, isd, ied, JsdB, JedB, nz)
 
     if ((CS%id_dudt_dia > 0) .or. (CS%id_hf_dudt_dia_2d > 0)) &
-      call safe_alloc_ptr(ADp%du_dt_dia,IsdB,IedB,jsd,jed,nz)
+      call safe_alloc_ptr(ADp%du_dt_dia, IsdB, IedB, jsd, jed, nz)
     if ((CS%id_dvdt_dia > 0) .or. (CS%id_hf_dvdt_dia_2d > 0)) &
-      call safe_alloc_ptr(ADp%dv_dt_dia,isd,ied,JsdB,JedB,nz)
+      call safe_alloc_ptr(ADp%dv_dt_dia, isd, ied, JsdB, JedB, nz)
   endif
 
   if (use_temperature) then

@@ -2499,12 +2499,12 @@ subroutine thickness_diffuse_init(Time, G, GV, US, param_file, diag, CDp, CS)
            'Time Mean Diffusive Zonal Thickness Flux', &
            'kg s-1', conversion=GV%H_to_kg_m2*US%L_to_m**2*US%s_to_T, &
            y_cell_method='sum', v_extensive=.true.)
-  if (CS%id_uhGM > 0) call safe_alloc_ptr(CDp%uhGM,G%IsdB,G%IedB,G%jsd,G%jed,GV%ke)
+  if (CS%id_uhGM > 0) call safe_alloc_ptr(CDp%uhGM, G%IsdB, G%IedB, G%jsd, G%jed, GV%ke)
   CS%id_vhGM = register_diag_field('ocean_model', 'vhGM', diag%axesCvL, Time, &
            'Time Mean Diffusive Meridional Thickness Flux', &
            'kg s-1', conversion=GV%H_to_kg_m2*US%L_to_m**2*US%s_to_T, &
            x_cell_method='sum', v_extensive=.true.)
-  if (CS%id_vhGM > 0) call safe_alloc_ptr(CDp%vhGM,G%isd,G%ied,G%JsdB,G%JedB,GV%ke)
+  if (CS%id_vhGM > 0) call safe_alloc_ptr(CDp%vhGM, G%isd, G%ied, G%JsdB, G%JedB, GV%ke)
 
   CS%id_GMwork = register_diag_field('ocean_model', 'GMwork', diag%axesT1, Time, &
           'Integrated Tendency of Ocean Mesoscale Eddy KE from Parameterized Eddy Advection', &

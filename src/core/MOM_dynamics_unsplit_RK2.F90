@@ -266,7 +266,7 @@ subroutine step_MOM_dyn_unsplit_RK2(u_in, v_in, h_in, tv, visc, Time_local, dt, 
 
   dyn_p_surf = associated(p_surf_begin) .and. associated(p_surf_end)
   if (dyn_p_surf) then
-    call safe_alloc_ptr(p_surf,G%isd,G%ied,G%jsd,G%jed) ; p_surf(:,:) = 0.0
+    call safe_alloc_ptr(p_surf, G%isd, G%ied, G%jsd, G%jed) ; p_surf(:,:) = 0.0
   else
     p_surf => forces%p_surf
   endif

@@ -3608,97 +3608,97 @@ subroutine allocate_forcing_by_group(G, fluxes, water, heat, ustar, press, &
   isd  = G%isd   ; ied  = G%ied    ; jsd  = G%jsd   ; jed  = G%jed
   IsdB = G%IsdB  ; IedB = G%IedB   ; JsdB = G%JsdB  ; JedB = G%JedB
 
-  call myAlloc(fluxes%ustar,isd,ied,jsd,jed, ustar)
-  call myAlloc(fluxes%ustar_gustless,isd,ied,jsd,jed, ustar)
-  call myAlloc(fluxes%tau_mag,isd,ied,jsd,jed, ustar)
+  call myAlloc(fluxes%ustar, isd, ied, jsd, jed, ustar)
+  call myAlloc(fluxes%ustar_gustless, isd, ied, jsd, jed, ustar)
+  call myAlloc(fluxes%tau_mag, isd, ied, jsd, jed, ustar)
 
   ! Note that myAlloc can be called safely multiple times for the same pointer.
-  call myAlloc(fluxes%tau_mag,isd,ied,jsd,jed, tau_mag)
-  call myAlloc(fluxes%tau_mag_gustless,isd,ied,jsd,jed, tau_mag)
+  call myAlloc(fluxes%tau_mag, isd, ied, jsd, jed, tau_mag)
+  call myAlloc(fluxes%tau_mag_gustless, isd, ied, jsd, jed, tau_mag)
 
-  call myAlloc(fluxes%evap,isd,ied,jsd,jed, water)
-  call myAlloc(fluxes%lprec,isd,ied,jsd,jed, water)
-  call myAlloc(fluxes%fprec,isd,ied,jsd,jed, water)
-  call myAlloc(fluxes%vprec,isd,ied,jsd,jed, water)
-  call myAlloc(fluxes%lrunoff,isd,ied,jsd,jed, water)
-  call myAlloc(fluxes%frunoff,isd,ied,jsd,jed, water)
-  call myAlloc(fluxes%lrunoff_glc,isd,ied,jsd,jed, water)
-  call myAlloc(fluxes%frunoff_glc,isd,ied,jsd,jed, water)
-  call myAlloc(fluxes%seaice_melt,isd,ied,jsd,jed, water)
-  call myAlloc(fluxes%netMassOut,isd,ied,jsd,jed, water)
-  call myAlloc(fluxes%netMassIn,isd,ied,jsd,jed, water)
-  call myAlloc(fluxes%seaice_melt_heat,isd,ied,jsd,jed, heat)
-  call myAlloc(fluxes%sw,isd,ied,jsd,jed, heat)
-  call myAlloc(fluxes%lw,isd,ied,jsd,jed, heat)
-  call myAlloc(fluxes%latent,isd,ied,jsd,jed, heat)
-  call myAlloc(fluxes%sens,isd,ied,jsd,jed, heat)
-  call myAlloc(fluxes%latent_evap_diag,isd,ied,jsd,jed, heat)
-  call myAlloc(fluxes%latent_fprec_diag,isd,ied,jsd,jed, heat)
-  call myAlloc(fluxes%latent_frunoff_diag,isd,ied,jsd,jed, heat)
-  call myAlloc(fluxes%latent_frunoff_glc_diag,isd,ied,jsd,jed, heat)
+  call myAlloc(fluxes%evap, isd, ied, jsd, jed, water)
+  call myAlloc(fluxes%lprec, isd, ied, jsd, jed, water)
+  call myAlloc(fluxes%fprec, isd, ied, jsd, jed, water)
+  call myAlloc(fluxes%vprec, isd, ied, jsd, jed, water)
+  call myAlloc(fluxes%lrunoff, isd, ied, jsd, jed, water)
+  call myAlloc(fluxes%frunoff, isd, ied, jsd, jed, water)
+  call myAlloc(fluxes%lrunoff_glc, isd, ied, jsd, jed, water)
+  call myAlloc(fluxes%frunoff_glc, isd, ied, jsd, jed, water)
+  call myAlloc(fluxes%seaice_melt, isd, ied, jsd, jed, water)
+  call myAlloc(fluxes%netMassOut, isd, ied, jsd, jed, water)
+  call myAlloc(fluxes%netMassIn, isd, ied, jsd, jed, water)
+  call myAlloc(fluxes%seaice_melt_heat, isd, ied, jsd, jed, heat)
+  call myAlloc(fluxes%sw, isd, ied, jsd, jed, heat)
+  call myAlloc(fluxes%lw, isd, ied, jsd, jed, heat)
+  call myAlloc(fluxes%latent, isd, ied, jsd, jed, heat)
+  call myAlloc(fluxes%sens, isd, ied, jsd, jed, heat)
+  call myAlloc(fluxes%latent_evap_diag, isd, ied, jsd, jed, heat)
+  call myAlloc(fluxes%latent_fprec_diag, isd, ied, jsd, jed, heat)
+  call myAlloc(fluxes%latent_frunoff_diag, isd, ied, jsd, jed, heat)
+  call myAlloc(fluxes%latent_frunoff_glc_diag, isd, ied, jsd, jed, heat)
 
-  call myAlloc(fluxes%salt_flux,isd,ied,jsd,jed, salt)
-  call myAlloc(fluxes%carbon_content_lrunoff,isd,ied,jsd,jed, carbon)
+  call myAlloc(fluxes%salt_flux, isd, ied, jsd, jed, salt)
+  call myAlloc(fluxes%carbon_content_lrunoff, isd, ied, jsd, jed, carbon)
 
   if (present(heat) .and. present(water)) then ; if (heat .and. water) then
-    call myAlloc(fluxes%heat_content_cond,isd,ied,jsd,jed, .true.)
-    call myAlloc(fluxes%heat_content_evap,isd,ied,jsd,jed, .not. enthalpy_mom)
-    call myAlloc(fluxes%heat_content_lprec,isd,ied,jsd,jed, .true.)
-    call myAlloc(fluxes%heat_content_fprec,isd,ied,jsd,jed, .true.)
-    call myAlloc(fluxes%heat_content_vprec,isd,ied,jsd,jed, .true.)
-    call myAlloc(fluxes%heat_content_lrunoff,isd,ied,jsd,jed, .true.)
-    call myAlloc(fluxes%heat_content_frunoff,isd,ied,jsd,jed, .true.)
-    call myAlloc(fluxes%heat_content_lrunoff_glc,isd,ied,jsd,jed, .true.)
-    call myAlloc(fluxes%heat_content_frunoff_glc,isd,ied,jsd,jed, .true.)
-    call myAlloc(fluxes%heat_content_massout,isd,ied,jsd,jed, enthalpy_mom)
-    call myAlloc(fluxes%heat_content_massin,isd,ied,jsd,jed,  enthalpy_mom)
+    call myAlloc(fluxes%heat_content_cond, isd, ied, jsd, jed, .true.)
+    call myAlloc(fluxes%heat_content_evap, isd, ied, jsd, jed, .not. enthalpy_mom)
+    call myAlloc(fluxes%heat_content_lprec, isd, ied, jsd, jed, .true.)
+    call myAlloc(fluxes%heat_content_fprec, isd, ied, jsd, jed, .true.)
+    call myAlloc(fluxes%heat_content_vprec, isd, ied, jsd, jed, .true.)
+    call myAlloc(fluxes%heat_content_lrunoff, isd, ied, jsd, jed, .true.)
+    call myAlloc(fluxes%heat_content_frunoff, isd, ied, jsd, jed, .true.)
+    call myAlloc(fluxes%heat_content_lrunoff_glc, isd, ied, jsd, jed, .true.)
+    call myAlloc(fluxes%heat_content_frunoff_glc, isd, ied, jsd, jed, .true.)
+    call myAlloc(fluxes%heat_content_massout, isd, ied, jsd, jed, enthalpy_mom)
+    call myAlloc(fluxes%heat_content_massin, isd, ied, jsd, jed,  enthalpy_mom)
   endif ; endif
 
-  call myAlloc(fluxes%p_surf,isd,ied,jsd,jed, press)
+  call myAlloc(fluxes%p_surf, isd, ied, jsd, jed, press)
 
   ! These fields should only be allocated if ice shelf is enabled.
   if (present(shelf)) then ; if (shelf) then
-    call myAlloc(fluxes%frac_shelf_h,isd,ied,jsd,jed, shelf)
-    call myAlloc(fluxes%ustar_shelf,isd,ied,jsd,jed, shelf)
-    call myAlloc(fluxes%iceshelf_melt,isd,ied,jsd,jed, shelf)
+    call myAlloc(fluxes%frac_shelf_h, isd, ied, jsd, jed, shelf)
+    call myAlloc(fluxes%ustar_shelf, isd, ied, jsd, jed, shelf)
+    call myAlloc(fluxes%iceshelf_melt, isd, ied, jsd, jed, shelf)
     shelf_sfc_acc = .false. ; if (present(shelf_sfc_accumulation)) shelf_sfc_acc = shelf_sfc_accumulation
-    if (shelf_sfc_acc) call myAlloc(fluxes%shelf_sfc_mass_flux,isd,ied,jsd,jed, shelf_sfc_acc)
+    if (shelf_sfc_acc) call myAlloc(fluxes%shelf_sfc_mass_flux, isd, ied, jsd, jed, shelf_sfc_acc)
   endif ; endif
 
   !These fields should only be allocated when iceberg area is being passed through the coupler.
-  call myAlloc(fluxes%ustar_berg,isd,ied,jsd,jed, iceberg)
-  call myAlloc(fluxes%area_berg,isd,ied,jsd,jed, iceberg)
-  call myAlloc(fluxes%mass_berg,isd,ied,jsd,jed, iceberg)
+  call myAlloc(fluxes%ustar_berg, isd, ied, jsd, jed, iceberg)
+  call myAlloc(fluxes%area_berg, isd, ied, jsd, jed, iceberg)
+  call myAlloc(fluxes%mass_berg, isd, ied, jsd, jed, iceberg)
 
   !These fields should only be allocated when USE_CFC_CAP is activated.
-  call myAlloc(fluxes%ice_fraction,isd,ied,jsd,jed, cfc)
-  call myAlloc(fluxes%u10_sqr,isd,ied,jsd,jed, cfc)
+  call myAlloc(fluxes%ice_fraction, isd, ied, jsd, jed, cfc)
+  call myAlloc(fluxes%u10_sqr, isd, ied, jsd, jed, cfc)
 
   !These fields should only be allocated when wave coupling is activated.
-  call myAlloc(fluxes%ice_fraction,isd,ied,jsd,jed, waves)
-  call myAlloc(fluxes%lamult,isd,ied,jsd,jed, lamult)
+  call myAlloc(fluxes%ice_fraction, isd, ied, jsd, jed, waves)
+  call myAlloc(fluxes%lamult, isd, ied, jsd, jed, lamult)
 
   if (present(fix_accum_bug)) fluxes%gustless_accum_bug = .not.fix_accum_bug
 
   !These fields should only be allocated when USE_MARBL_TRACERS is activated.
-  call myAlloc(fluxes%ice_fraction,isd,ied,jsd,jed, marbl)
-  call myAlloc(fluxes%u10_sqr,isd,ied,jsd,jed, marbl)
-  call myAlloc(fluxes%noy_dep,isd,ied,jsd,jed, marbl)
-  call myAlloc(fluxes%nhx_dep,isd,ied,jsd,jed, marbl)
-  call myAlloc(fluxes%atm_co2,isd,ied,jsd,jed, marbl)
-  call myAlloc(fluxes%atm_alt_co2,isd,ied,jsd,jed, marbl)
-  call myAlloc(fluxes%dust_flux,isd,ied,jsd,jed, marbl)
-  call myAlloc(fluxes%iron_flux,isd,ied,jsd,jed, marbl)
-  call myAlloc(fluxes%atm_fine_dust_flux,isd,ied,jsd,jed, marbl)
-  call myAlloc(fluxes%atm_coarse_dust_flux,isd,ied,jsd,jed, marbl)
-  call myAlloc(fluxes%atm_bc_flux,isd,ied,jsd,jed, marbl)
-  call myAlloc(fluxes%seaice_dust_flux,isd,ied,jsd,jed, marbl)
-  call myAlloc(fluxes%seaice_bc_flux,isd,ied,jsd,jed, marbl)
+  call myAlloc(fluxes%ice_fraction, isd, ied, jsd, jed, marbl)
+  call myAlloc(fluxes%u10_sqr, isd, ied, jsd, jed, marbl)
+  call myAlloc(fluxes%noy_dep, isd, ied, jsd, jed, marbl)
+  call myAlloc(fluxes%nhx_dep, isd, ied, jsd, jed, marbl)
+  call myAlloc(fluxes%atm_co2, isd, ied, jsd, jed, marbl)
+  call myAlloc(fluxes%atm_alt_co2, isd, ied, jsd, jed, marbl)
+  call myAlloc(fluxes%dust_flux, isd, ied, jsd, jed, marbl)
+  call myAlloc(fluxes%iron_flux, isd, ied, jsd, jed, marbl)
+  call myAlloc(fluxes%atm_fine_dust_flux, isd, ied, jsd, jed, marbl)
+  call myAlloc(fluxes%atm_coarse_dust_flux, isd, ied, jsd, jed, marbl)
+  call myAlloc(fluxes%atm_bc_flux, isd, ied, jsd, jed, marbl)
+  call myAlloc(fluxes%seaice_dust_flux, isd, ied, jsd, jed, marbl)
+  call myAlloc(fluxes%seaice_bc_flux, isd, ied, jsd, jed, marbl)
 
   ! These fields should only be allocated when receiving multiple ice categories
   if (present(ice_ncat)) then
-    call myAlloc(fluxes%fracr_cat,isd,ied,jsd,jed,1,ice_ncat+1, ice_ncat > 0)
-    call myAlloc(fluxes%qsw_cat,isd,ied,jsd,jed,1,ice_ncat+1, ice_ncat > 0)
+    call myAlloc(fluxes%fracr_cat, isd, ied, jsd, jed, 1, ice_ncat+1, ice_ncat > 0)
+    call myAlloc(fluxes%qsw_cat, isd, ied, jsd, jed, 1, ice_ncat+1, ice_ncat > 0)
   endif
 
 end subroutine allocate_forcing_by_group
@@ -3790,26 +3790,26 @@ subroutine allocate_mech_forcing_by_group(G, forces, stress, ustar, shelf, &
   isd  = G%isd   ; ied  = G%ied    ; jsd  = G%jsd   ; jed  = G%jed
   IsdB = G%IsdB  ; IedB = G%IedB   ; JsdB = G%JsdB  ; JedB = G%JedB
 
-  call myAlloc(forces%taux,IsdB,IedB,jsd,jed, stress)
-  call myAlloc(forces%tauy,isd,ied,JsdB,JedB, stress)
+  call myAlloc(forces%taux, IsdB, IedB, jsd, jed, stress)
+  call myAlloc(forces%tauy, isd, ied, JsdB, JedB, stress)
 
-  call myAlloc(forces%ustar,isd,ied,jsd,jed, ustar)
-  call myAlloc(forces%tau_mag,isd,ied,jsd,jed, ustar)
+  call myAlloc(forces%ustar, isd, ied, jsd, jed, ustar)
+  call myAlloc(forces%tau_mag, isd, ied, jsd, jed, ustar)
   ! Note that myAlloc can be called safely multiple times for the same pointer.
-  call myAlloc(forces%tau_mag,isd,ied,jsd,jed, tau_mag)
+  call myAlloc(forces%tau_mag, isd, ied, jsd, jed, tau_mag)
 
-  call myAlloc(forces%p_surf,isd,ied,jsd,jed, press)
-  call myAlloc(forces%p_surf_full,isd,ied,jsd,jed, press)
-  call myAlloc(forces%net_mass_src,isd,ied,jsd,jed, press)
+  call myAlloc(forces%p_surf, isd, ied, jsd, jed, press)
+  call myAlloc(forces%p_surf_full, isd, ied, jsd, jed, press)
+  call myAlloc(forces%net_mass_src, isd, ied, jsd, jed, press)
 
-  call myAlloc(forces%rigidity_ice_u,IsdB,IedB,jsd,jed, shelf)
-  call myAlloc(forces%rigidity_ice_v,isd,ied,JsdB,JedB, shelf)
-  call myAlloc(forces%frac_shelf_u,IsdB,IedB,jsd,jed, shelf)
-  call myAlloc(forces%frac_shelf_v,isd,ied,JsdB,JedB, shelf)
+  call myAlloc(forces%rigidity_ice_u, IsdB, IedB, jsd, jed, shelf)
+  call myAlloc(forces%rigidity_ice_v, isd, ied, JsdB, JedB, shelf)
+  call myAlloc(forces%frac_shelf_u, IsdB, IedB, jsd, jed, shelf)
+  call myAlloc(forces%frac_shelf_v, isd, ied, JsdB, JedB, shelf)
 
   !These fields should only on allocated when iceberg area is being passed through the coupler.
-  call myAlloc(forces%area_berg,isd,ied,jsd,jed, iceberg)
-  call myAlloc(forces%mass_berg,isd,ied,jsd,jed, iceberg)
+  call myAlloc(forces%area_berg, isd, ied, jsd, jed, iceberg)
+  call myAlloc(forces%mass_berg, isd, ied, jsd, jed, iceberg)
 
   !These fields should only be allocated when waves
   if (present(waves)) then ; if (waves) then

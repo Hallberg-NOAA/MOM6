@@ -3090,31 +3090,31 @@ subroutine vertvisc_init(MIS, Time, G, GV, US, param_file, diag, ADp, dirs, &
 
   CS%id_du_dt_visc = register_diag_field('ocean_model', 'du_dt_visc', diag%axesCuL, Time, &
       'Zonal Acceleration from Vertical Viscosity', 'm s-2', conversion=US%L_T2_to_m_s2)
-  if (CS%id_du_dt_visc > 0) call safe_alloc_ptr(ADp%du_dt_visc,IsdB,IedB,jsd,jed,nz)
+  if (CS%id_du_dt_visc > 0) call safe_alloc_ptr(ADp%du_dt_visc, IsdB, IedB, jsd, jed, nz)
   CS%id_dv_dt_visc = register_diag_field('ocean_model', 'dv_dt_visc', diag%axesCvL, Time, &
       'Meridional Acceleration from Vertical Viscosity', 'm s-2', conversion=US%L_T2_to_m_s2)
-  if (CS%id_dv_dt_visc > 0) call safe_alloc_ptr(ADp%dv_dt_visc,isd,ied,JsdB,JedB,nz)
+  if (CS%id_dv_dt_visc > 0) call safe_alloc_ptr(ADp%dv_dt_visc, isd, ied, JsdB, JedB, nz)
   CS%id_GLwork = register_diag_field('ocean_model', 'GLwork', diag%axesTL, Time, &
       'Sign-definite Kinetic Energy Source from GL90 Vertical Viscosity', &
       'm3 s-3', conversion=GV%H_to_m*(US%L_T_to_m_s**2)*US%s_to_T)
   CS%id_du_dt_visc_gl90 = register_diag_field('ocean_model', 'du_dt_visc_gl90', diag%axesCuL, Time, &
       'Zonal Acceleration from GL90 Vertical Viscosity', 'm s-2', conversion=US%L_T2_to_m_s2)
   if ((CS%id_du_dt_visc_gl90 > 0) .or. (CS%id_GLwork > 0)) then
-    call safe_alloc_ptr(ADp%du_dt_visc_gl90,IsdB,IedB,jsd,jed,nz)
-    call safe_alloc_ptr(ADp%du_dt_visc,IsdB,IedB,jsd,jed,nz)
+    call safe_alloc_ptr(ADp%du_dt_visc_gl90, IsdB, IedB, jsd, jed, nz)
+    call safe_alloc_ptr(ADp%du_dt_visc, IsdB, IedB, jsd, jed, nz)
   endif
   CS%id_dv_dt_visc_gl90 = register_diag_field('ocean_model', 'dv_dt_visc_gl90', diag%axesCvL, Time, &
       'Meridional Acceleration from GL90 Vertical Viscosity', 'm s-2', conversion=US%L_T2_to_m_s2)
   if ((CS%id_dv_dt_visc_gl90 > 0) .or. (CS%id_GLwork > 0)) then
-    call safe_alloc_ptr(ADp%dv_dt_visc_gl90,isd,ied,JsdB,JedB,nz)
-    call safe_alloc_ptr(ADp%dv_dt_visc,isd,ied,JsdB,JedB,nz)
+    call safe_alloc_ptr(ADp%dv_dt_visc_gl90, isd, ied, JsdB, JedB, nz)
+    call safe_alloc_ptr(ADp%dv_dt_visc, isd, ied, JsdB, JedB, nz)
   endif
   CS%id_du_dt_str = register_diag_field('ocean_model', 'du_dt_str', diag%axesCuL, Time, &
       'Zonal Acceleration from Surface Wind Stresses', 'm s-2', conversion=US%L_T2_to_m_s2)
-  if (CS%id_du_dt_str > 0) call safe_alloc_ptr(ADp%du_dt_str,IsdB,IedB,jsd,jed,nz)
+  if (CS%id_du_dt_str > 0) call safe_alloc_ptr(ADp%du_dt_str, IsdB, IedB, jsd, jed, nz)
   CS%id_dv_dt_str = register_diag_field('ocean_model', 'dv_dt_str', diag%axesCvL, Time, &
       'Meridional Acceleration from Surface Wind Stresses', 'm s-2', conversion=US%L_T2_to_m_s2)
-  if (CS%id_dv_dt_str > 0) call safe_alloc_ptr(ADp%dv_dt_str,isd,ied,JsdB,JedB,nz)
+  if (CS%id_dv_dt_str > 0) call safe_alloc_ptr(ADp%dv_dt_str, isd, ied, JsdB, JedB, nz)
 
   CS%id_taux_bot = register_diag_field('ocean_model', 'taux_bot', diag%axesCu1, &
       Time, 'Zonal Bottom Stress from Ocean to Earth', &
@@ -3127,80 +3127,80 @@ subroutine vertvisc_init(MIS, Time, G, GV, US, param_file, diag, ADp, dirs, &
   !    'Fractional Thickness-weighted Zonal Acceleration from Vertical Viscosity', &
   !    'm s-2', v_extensive=.true., conversion=US%L_T2_to_m_s2)
   !if (CS%id_hf_du_dt_visc > 0) then
-  !  call safe_alloc_ptr(ADp%du_dt_visc,IsdB,IedB,jsd,jed,nz)
-  !  call safe_alloc_ptr(ADp%diag_hfrac_u,IsdB,IedB,jsd,jed,nz)
+  !  call safe_alloc_ptr(ADp%du_dt_visc, IsdB, IedB, jsd, jed, nz)
+  !  call safe_alloc_ptr(ADp%diag_hfrac_u, IsdB, IedB, jsd, jed, nz)
   !endif
 
   !CS%id_hf_dv_dt_visc = register_diag_field('ocean_model', 'hf_dv_dt_visc', diag%axesCvL, Time, &
   !    'Fractional Thickness-weighted Meridional Acceleration from Vertical Viscosity', &
   !    'm s-2', v_extensive=.true., conversion=US%L_T2_to_m_s2)
   !if (CS%id_hf_dv_dt_visc > 0) then
-  !  call safe_alloc_ptr(ADp%dv_dt_visc,isd,ied,JsdB,JedB,nz)
-  !  call safe_alloc_ptr(ADp%diag_hfrac_v,isd,ied,JsdB,JedB,nz)
+  !  call safe_alloc_ptr(ADp%dv_dt_visc, isd, ied, JsdB, JedB, nz)
+  !  call safe_alloc_ptr(ADp%diag_hfrac_v, isd, ied, JsdB, JedB, nz)
   !endif
 
   CS%id_hf_du_dt_visc_2d = register_diag_field('ocean_model', 'hf_du_dt_visc_2d', diag%axesCu1, Time, &
       'Depth-sum Fractional Thickness-weighted Zonal Acceleration from Vertical Viscosity', &
       'm s-2', conversion=US%L_T2_to_m_s2)
   if (CS%id_hf_du_dt_visc_2d > 0) then
-    call safe_alloc_ptr(ADp%du_dt_visc,IsdB,IedB,jsd,jed,nz)
-    call safe_alloc_ptr(ADp%diag_hfrac_u,IsdB,IedB,jsd,jed,nz)
+    call safe_alloc_ptr(ADp%du_dt_visc, IsdB, IedB, jsd, jed, nz)
+    call safe_alloc_ptr(ADp%diag_hfrac_u, IsdB, IedB, jsd, jed, nz)
   endif
 
   CS%id_hf_dv_dt_visc_2d = register_diag_field('ocean_model', 'hf_dv_dt_visc_2d', diag%axesCv1, Time, &
       'Depth-sum Fractional Thickness-weighted Meridional Acceleration from Vertical Viscosity', &
       'm s-2', conversion=US%L_T2_to_m_s2)
   if (CS%id_hf_dv_dt_visc_2d > 0) then
-    call safe_alloc_ptr(ADp%dv_dt_visc,isd,ied,JsdB,JedB,nz)
-    call safe_alloc_ptr(ADp%diag_hfrac_v,isd,ied,JsdB,JedB,nz)
+    call safe_alloc_ptr(ADp%dv_dt_visc, isd, ied, JsdB, JedB, nz)
+    call safe_alloc_ptr(ADp%diag_hfrac_v, isd, ied, JsdB, JedB, nz)
   endif
 
   CS%id_h_du_dt_visc = register_diag_field('ocean_model', 'h_du_dt_visc', diag%axesCuL, Time, &
       'Thickness Multiplied Zonal Acceleration from Horizontal Viscosity', &
       'm2 s-2', conversion=GV%H_to_m*US%L_T2_to_m_s2)
   if (CS%id_h_du_dt_visc > 0) then
-    call safe_alloc_ptr(ADp%du_dt_visc,IsdB,IedB,jsd,jed,nz)
-    call safe_alloc_ptr(ADp%diag_hu,IsdB,IedB,jsd,jed,nz)
+    call safe_alloc_ptr(ADp%du_dt_visc, IsdB, IedB, jsd, jed, nz)
+    call safe_alloc_ptr(ADp%diag_hu, IsdB, IedB, jsd, jed, nz)
   endif
 
   CS%id_h_dv_dt_visc = register_diag_field('ocean_model', 'h_dv_dt_visc', diag%axesCvL, Time, &
       'Thickness Multiplied Meridional Acceleration from Horizontal Viscosity', &
       'm2 s-2', conversion=GV%H_to_m*US%L_T2_to_m_s2)
   if (CS%id_h_dv_dt_visc > 0) then
-    call safe_alloc_ptr(ADp%dv_dt_visc,isd,ied,JsdB,JedB,nz)
-    call safe_alloc_ptr(ADp%diag_hv,isd,ied,JsdB,JedB,nz)
+    call safe_alloc_ptr(ADp%dv_dt_visc, isd, ied, JsdB, JedB, nz)
+    call safe_alloc_ptr(ADp%diag_hv, isd, ied, JsdB, JedB, nz)
   endif
 
   CS%id_h_du_dt_str = register_diag_field('ocean_model', 'h_du_dt_str', diag%axesCuL, Time, &
       'Thickness Multiplied Zonal Acceleration from Surface Wind Stresses', &
       'm2 s-2', conversion=GV%H_to_m*US%L_T2_to_m_s2)
   if (CS%id_h_du_dt_str > 0) then
-    call safe_alloc_ptr(ADp%du_dt_str,IsdB,IedB,jsd,jed,nz)
-    call safe_alloc_ptr(ADp%diag_hu,IsdB,IedB,jsd,jed,nz)
+    call safe_alloc_ptr(ADp%du_dt_str, IsdB, IedB, jsd, jed, nz)
+    call safe_alloc_ptr(ADp%diag_hu, IsdB, IedB, jsd, jed, nz)
   endif
 
   CS%id_h_dv_dt_str = register_diag_field('ocean_model', 'h_dv_dt_str', diag%axesCvL, Time, &
       'Thickness Multiplied Meridional Acceleration from Surface Wind Stresses', &
       'm2 s-2', conversion=GV%H_to_m*US%L_T2_to_m_s2)
   if (CS%id_h_dv_dt_str > 0) then
-    call safe_alloc_ptr(ADp%dv_dt_str,isd,ied,JsdB,JedB,nz)
-    call safe_alloc_ptr(ADp%diag_hv,isd,ied,JsdB,JedB,nz)
+    call safe_alloc_ptr(ADp%dv_dt_str, isd, ied, JsdB, JedB, nz)
+    call safe_alloc_ptr(ADp%diag_hv, isd, ied, JsdB, JedB, nz)
   endif
 
   CS%id_du_dt_str_visc_rem = register_diag_field('ocean_model', 'du_dt_str_visc_rem', diag%axesCuL, Time, &
       'Zonal Acceleration from Surface Wind Stresses multiplied by viscous remnant', &
       'm s-2', conversion=US%L_T2_to_m_s2)
   if (CS%id_du_dt_str_visc_rem > 0) then
-    call safe_alloc_ptr(ADp%du_dt_str,IsdB,IedB,jsd,jed,nz)
-    call safe_alloc_ptr(ADp%visc_rem_u,IsdB,IedB,jsd,jed,nz)
+    call safe_alloc_ptr(ADp%du_dt_str, IsdB, IedB, jsd, jed, nz)
+    call safe_alloc_ptr(ADp%visc_rem_u, IsdB, IedB, jsd, jed, nz)
   endif
 
   CS%id_dv_dt_str_visc_rem = register_diag_field('ocean_model', 'dv_dt_str_visc_rem', diag%axesCvL, Time, &
       'Meridional Acceleration from Surface Wind Stresses multiplied by viscous remnant', &
       'm s-2', conversion=US%L_T2_to_m_s2)
   if (CS%id_dv_dt_str_visc_rem > 0) then
-    call safe_alloc_ptr(ADp%dv_dt_str,isd,ied,JsdB,JedB,nz)
-    call safe_alloc_ptr(ADp%visc_rem_v,isd,ied,JsdB,JedB,nz)
+    call safe_alloc_ptr(ADp%dv_dt_str, isd, ied, JsdB, JedB, nz)
+    call safe_alloc_ptr(ADp%visc_rem_v, isd, ied, JsdB, JedB, nz)
   endif
 
   if ((len_trim(CS%u_trunc_file) > 0) .or. (len_trim(CS%v_trunc_file) > 0)) &

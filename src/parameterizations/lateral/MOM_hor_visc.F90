@@ -3611,72 +3611,72 @@ subroutine hor_visc_init(Time, G, GV, US, param_file, diag, CS, ADp)
   !    'Fractional Thickness-weighted Zonal Acceleration from Horizontal Viscosity', &
   !    'm s-2', v_extensive=.true., conversion=US%L_T2_to_m_s2)
   !if ((CS%id_hf_diffu > 0) .and. (present(ADp))) then
-  !  call safe_alloc_alloc(CS%hf_diffu,G%IsdB,G%IedB,G%jsd,G%jed,GV%ke)
-  !  call safe_alloc_ptr(ADp%diag_hfrac_u,G%IsdB,G%IedB,G%jsd,G%jed,GV%ke)
+  !  call safe_alloc_alloc(CS%hf_diffu, G%IsdB, G%IedB, G%jsd, G%jed, GV%ke)
+  !  call safe_alloc_ptr(ADp%diag_hfrac_u, G%IsdB, G%IedB, G%jsd, G%jed, GV%ke)
   !endif
 
   !CS%id_hf_diffv = register_diag_field('ocean_model', 'hf_diffv', diag%axesCvL, Time, &
   !    'Fractional Thickness-weighted Meridional Acceleration from Horizontal Viscosity', &
   !    'm s-2', v_extensive=.true., conversion=US%L_T2_to_m_s2)
   !if ((CS%id_hf_diffv > 0) .and. (present(ADp))) then
-  !  call safe_alloc_alloc(CS%hf_diffv,G%isd,G%ied,G%JsdB,G%JedB,GV%ke)
-  !  call safe_alloc_ptr(ADp%diag_hfrac_v,G%isd,G%ied,G%JsdB,G%JedB,GV%ke)
+  !  call safe_alloc_alloc(CS%hf_diffv, G%isd, G%ied, G%JsdB, G%JedB, GV%ke)
+  !  call safe_alloc_ptr(ADp%diag_hfrac_v, G%isd, G%ied, G%JsdB, G%JedB, GV%ke)
   !endif
 
   CS%id_hf_diffu_2d = register_diag_field('ocean_model', 'hf_diffu_2d', diag%axesCu1, Time, &
       'Depth-sum Fractional Thickness-weighted Zonal Acceleration from Horizontal Viscosity', &
       'm s-2', conversion=US%L_T2_to_m_s2)
   if ((CS%id_hf_diffu_2d > 0) .and. (present(ADp))) then
-    call safe_alloc_ptr(ADp%diag_hfrac_u,G%IsdB,G%IedB,G%jsd,G%jed,GV%ke)
+    call safe_alloc_ptr(ADp%diag_hfrac_u, G%IsdB, G%IedB, G%jsd, G%jed, GV%ke)
   endif
 
   CS%id_hf_diffv_2d = register_diag_field('ocean_model', 'hf_diffv_2d', diag%axesCv1, Time, &
       'Depth-sum Fractional Thickness-weighted Meridional Acceleration from Horizontal Viscosity', &
       'm s-2', conversion=US%L_T2_to_m_s2)
   if ((CS%id_hf_diffv_2d > 0) .and. (present(ADp))) then
-    call safe_alloc_ptr(ADp%diag_hfrac_v,G%isd,G%ied,G%JsdB,G%JedB,GV%ke)
+    call safe_alloc_ptr(ADp%diag_hfrac_v, G%isd, G%ied, G%JsdB, G%JedB, GV%ke)
   endif
 
   CS%id_h_diffu = register_diag_field('ocean_model', 'h_diffu', diag%axesCuL, Time, &
       'Thickness Multiplied Zonal Acceleration from Horizontal Viscosity', &
       'm2 s-2', conversion=GV%H_to_m*US%L_T2_to_m_s2)
   if ((CS%id_h_diffu > 0) .and. (present(ADp))) then
-    call safe_alloc_ptr(ADp%diag_hu,G%IsdB,G%IedB,G%jsd,G%jed,GV%ke)
+    call safe_alloc_ptr(ADp%diag_hu, G%IsdB, G%IedB, G%jsd, G%jed, GV%ke)
   endif
 
   CS%id_h_diffv = register_diag_field('ocean_model', 'h_diffv', diag%axesCvL, Time, &
       'Thickness Multiplied Meridional Acceleration from Horizontal Viscosity', &
       'm2 s-2', conversion=GV%H_to_m*US%L_T2_to_m_s2)
   if ((CS%id_h_diffv > 0) .and. (present(ADp))) then
-    call safe_alloc_ptr(ADp%diag_hv,G%isd,G%ied,G%JsdB,G%JedB,GV%ke)
+    call safe_alloc_ptr(ADp%diag_hv, G%isd, G%ied, G%JsdB, G%JedB, GV%ke)
   endif
 
   CS%id_intz_diffu_2d = register_diag_field('ocean_model', 'intz_diffu_2d', diag%axesCu1, Time, &
       'Depth-integral of Zonal Acceleration from Horizontal Viscosity', &
       'm2 s-2', conversion=GV%H_to_m*US%L_T2_to_m_s2)
   if ((CS%id_intz_diffu_2d > 0) .and. (present(ADp))) then
-    call safe_alloc_ptr(ADp%diag_hu,G%IsdB,G%IedB,G%jsd,G%jed,GV%ke)
+    call safe_alloc_ptr(ADp%diag_hu, G%IsdB, G%IedB, G%jsd, G%jed, GV%ke)
   endif
 
   CS%id_intz_diffv_2d = register_diag_field('ocean_model', 'intz_diffv_2d', diag%axesCv1, Time, &
       'Depth-integral of Meridional Acceleration from Horizontal Viscosity', &
       'm2 s-2', conversion=GV%H_to_m*US%L_T2_to_m_s2)
   if ((CS%id_intz_diffv_2d > 0) .and. (present(ADp))) then
-    call safe_alloc_ptr(ADp%diag_hv,G%isd,G%ied,G%JsdB,G%JedB,GV%ke)
+    call safe_alloc_ptr(ADp%diag_hv, G%isd, G%ied, G%JsdB, G%JedB, GV%ke)
   endif
 
   CS%id_diffu_visc_rem = register_diag_field('ocean_model', 'diffu_visc_rem', diag%axesCuL, Time, &
       'Zonal Acceleration from Horizontal Viscosity multiplied by viscous remnant', &
       'm s-2', conversion=US%L_T2_to_m_s2)
   if ((CS%id_diffu_visc_rem > 0) .and. (present(ADp))) then
-    call safe_alloc_ptr(ADp%visc_rem_u,G%IsdB,G%IedB,G%jsd,G%jed,GV%ke)
+    call safe_alloc_ptr(ADp%visc_rem_u, G%IsdB, G%IedB, G%jsd, G%jed, GV%ke)
   endif
 
   CS%id_diffv_visc_rem = register_diag_field('ocean_model', 'diffv_visc_rem', diag%axesCvL, Time, &
       'Meridional Acceleration from Horizontal Viscosity multiplied by viscous remnant', &
       'm s-2', conversion=US%L_T2_to_m_s2)
   if ((CS%id_diffv_visc_rem > 0) .and. (present(ADp))) then
-    call safe_alloc_ptr(ADp%visc_rem_v,G%isd,G%ied,G%JsdB,G%JedB,GV%ke)
+    call safe_alloc_ptr(ADp%visc_rem_v, G%isd, G%ied, G%JsdB, G%JedB, GV%ke)
   endif
 
   if (CS%biharmonic) then
