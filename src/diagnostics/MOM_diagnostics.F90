@@ -2653,26 +2653,26 @@ subroutine set_dependent_diagnostics(MIS, ADp, CDp, G, GV, CS)
 
   ! Allocate memory for other dependent diagnostics.
   if (CS%id_KE_adv > 0) then
-    call safe_alloc_ptr(ADp%gradKEu,IsdB,IedB,jsd,jed,nz)
-    call safe_alloc_ptr(ADp%gradKEv,isd,ied,JsdB,JedB,nz)
+    call safe_alloc_ptr(ADp%gradKEu, IsdB, IedB, jsd, jed, nz)
+    call safe_alloc_ptr(ADp%gradKEv, isd, ied, JsdB, JedB, nz)
   endif
   if (CS%id_KE_visc > 0) then
-    call safe_alloc_ptr(ADp%du_dt_visc,IsdB,IedB,jsd,jed,nz)
-    call safe_alloc_ptr(ADp%dv_dt_visc,isd,ied,JsdB,JedB,nz)
+    call safe_alloc_ptr(ADp%du_dt_visc, IsdB, IedB, jsd, jed, nz)
+    call safe_alloc_ptr(ADp%dv_dt_visc, isd, ied, JsdB, JedB, nz)
   endif
   if (CS%id_KE_visc_gl90 > 0) then
-    call safe_alloc_ptr(ADp%du_dt_visc_gl90,IsdB,IedB,jsd,jed,nz)
-    call safe_alloc_ptr(ADp%dv_dt_visc_gl90,isd,ied,JsdB,JedB,nz)
+    call safe_alloc_ptr(ADp%du_dt_visc_gl90, IsdB, IedB, jsd, jed, nz)
+    call safe_alloc_ptr(ADp%dv_dt_visc_gl90, isd, ied, JsdB, JedB, nz)
   endif
   if (CS%id_KE_stress > 0) then
-    call safe_alloc_ptr(ADp%du_dt_str,IsdB,IedB,jsd,jed,nz)
-    call safe_alloc_ptr(ADp%dv_dt_str,isd,ied,JsdB,JedB,nz)
+    call safe_alloc_ptr(ADp%du_dt_str, IsdB, IedB, jsd, jed, nz)
+    call safe_alloc_ptr(ADp%dv_dt_str, isd, ied, JsdB, JedB, nz)
   endif
 
   if (CS%id_KE_dia > 0) then
-    call safe_alloc_ptr(ADp%du_dt_dia,IsdB,IedB,jsd,jed,nz)
-    call safe_alloc_ptr(ADp%dv_dt_dia,isd,ied,JsdB,JedB,nz)
-    call safe_alloc_ptr(CDp%diapyc_vel,isd,ied,jsd,jed,nz+1)
+    call safe_alloc_ptr(ADp%du_dt_dia, IsdB, IedB, jsd, jed, nz)
+    call safe_alloc_ptr(ADp%dv_dt_dia, isd, ied, JsdB, JedB, nz)
+    call safe_alloc_ptr(CDp%diapyc_vel, isd, ied, jsd, jed, nz+1)
   endif
 
   if ((CS%id_PE_to_KE_btbc > 0) .or. (CS%id_KE_BT_PF > 0)) then
@@ -2707,16 +2707,16 @@ subroutine set_dependent_diagnostics(MIS, ADp, CDp, G, GV, CS)
                    (CS%id_KE_Coradv_btbc > 0) .or. (CS%id_KE_BT_CF > 0) .or. (CS%id_KE_BT_WD > 0) .or. &
                    (CS%id_KE_SAL > 0) .or. (CS%id_KE_TIDES > 0))
 
-  if (CS%id_h_du_dt > 0) call safe_alloc_ptr(ADp%diag_hu,IsdB,IedB,jsd,jed,nz)
-  if (CS%id_h_dv_dt > 0) call safe_alloc_ptr(ADp%diag_hv,isd,ied,JsdB,JedB,nz)
+  if (CS%id_h_du_dt > 0) call safe_alloc_ptr(ADp%diag_hu, IsdB, IedB, jsd, jed, nz)
+  if (CS%id_h_dv_dt > 0) call safe_alloc_ptr(ADp%diag_hv, isd, ied, JsdB, JedB, nz)
 
-  if (CS%id_hf_du_dt_2d > 0) call safe_alloc_ptr(ADp%diag_hfrac_u,IsdB,IedB,jsd,jed,nz)
-  if (CS%id_hf_dv_dt_2d > 0) call safe_alloc_ptr(ADp%diag_hfrac_v,isd,ied,JsdB,JedB,nz)
-  ! if (CS%id_hf_du_dt > 0) call safe_alloc_ptr(ADp%diag_hfrac_u,IsdB,IedB,jsd,jed,nz)
-  ! if (CS%id_hf_dv_dt > 0) call safe_alloc_ptr(ADp%diag_hfrac_v,isd,ied,JsdB,JedB,nz)
+  if (CS%id_hf_du_dt_2d > 0) call safe_alloc_ptr(ADp%diag_hfrac_u, IsdB, IedB, jsd, jed, nz)
+  if (CS%id_hf_dv_dt_2d > 0) call safe_alloc_ptr(ADp%diag_hfrac_v, isd, ied, JsdB, JedB, nz)
+  ! if (CS%id_hf_du_dt > 0) call safe_alloc_ptr(ADp%diag_hfrac_u, IsdB, IedB, jsd, jed, nz)
+  ! if (CS%id_hf_dv_dt > 0) call safe_alloc_ptr(ADp%diag_hfrac_v, isd, ied, JsdB, JedB, nz)
 
-  if (CS%id_uhGM_Rlay > 0) call safe_alloc_ptr(CDp%uhGM,IsdB,IedB,jsd,jed,nz)
-  if (CS%id_vhGM_Rlay > 0) call safe_alloc_ptr(CDp%vhGM,isd,ied,JsdB,JedB,nz)
+  if (CS%id_uhGM_Rlay > 0) call safe_alloc_ptr(CDp%uhGM, IsdB, IedB, jsd, jed, nz)
+  if (CS%id_vhGM_Rlay > 0) call safe_alloc_ptr(CDp%vhGM, isd, ied, JsdB, JedB, nz)
 
 end subroutine set_dependent_diagnostics
 

@@ -295,7 +295,7 @@ subroutine set_forcing(sfc_state, forces, fluxes, day_start, day_interval, G, US
       if ( CS%use_temperature ) then
         call allocate_forcing_type(G, fluxes, water=.true., heat=.true., press=.true.)
         if (CS%restorebuoy) then
-          call safe_alloc_ptr(CS%T_Restore,isd, ied, jsd, jed)
+          call safe_alloc_ptr(CS%T_Restore, isd, ied, jsd, jed)
           call safe_alloc_ptr(fluxes%heat_added, isd, ied, jsd, jed)
           call safe_alloc_ptr(CS%S_Restore, isd, ied, jsd, jed)
         endif
@@ -2143,7 +2143,7 @@ subroutine surface_forcing_init(Time, G, US, param_file, diag, CS, tracer_flow_C
     call get_param(param_file, mdl, "GUST_2D_FILE", gust_file, &
                  "The file in which the wind gustiness is found in "//&
                  "variable gustiness.", fail_if_missing=.true.)
-    call safe_alloc_ptr(CS%gust,G%isd,G%ied,G%jsd,G%jed)
+    call safe_alloc_ptr(CS%gust, G%isd, G%ied, G%jsd, G%jed)
     filename = trim(CS%inputdir) // trim(gust_file)
     ! NOTE: There are certain cases where FMS is unable to read this file, so
     ! we use read_netCDF_data in place of MOM_read_data.

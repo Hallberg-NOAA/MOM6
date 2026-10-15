@@ -3123,11 +3123,11 @@ subroutine initialize_MOM(Time, Time_init, param_file, dirs, CS, &
     allocate(CS%v_prev(isd:ied,JsdB:JedB,nz), source=0.0)
     MOM_internal_state%u_prev => CS%u_prev
     MOM_internal_state%v_prev => CS%v_prev
-    call safe_alloc_ptr(CS%ADp%du_dt_visc,IsdB,IedB,jsd,jed,nz)
-    call safe_alloc_ptr(CS%ADp%dv_dt_visc,isd,ied,JsdB,JedB,nz)
+    call safe_alloc_ptr(CS%ADp%du_dt_visc, IsdB, IedB, jsd, jed, nz)
+    call safe_alloc_ptr(CS%ADp%dv_dt_visc, isd, ied, JsdB, JedB, nz)
     if (.not.CS%adiabatic) then
-      call safe_alloc_ptr(CS%ADp%du_dt_dia,IsdB,IedB,jsd,jed,nz)
-      call safe_alloc_ptr(CS%ADp%dv_dt_dia,isd,ied,JsdB,JedB,nz)
+      call safe_alloc_ptr(CS%ADp%du_dt_dia, IsdB, IedB, jsd, jed, nz)
+      call safe_alloc_ptr(CS%ADp%dv_dt_dia, isd, ied, JsdB, JedB, nz)
     endif
   endif
 
