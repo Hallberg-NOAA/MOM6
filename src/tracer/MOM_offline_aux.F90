@@ -411,10 +411,10 @@ subroutine distribute_residual_uh_upwards(G, GV, hvol, uh)
             uh_sum = uh_remain + uh2d(I,k_rev)
             if (uh_sum<0.0) then ! Transport to the left
               hup = h2d(i+1,k_rev)
-              hlos = max(0.0,uh2d(I+1,k_rev))
+              hlos = max(0.0, uh2d(I+1,k_rev))
               if ((((hup - hlos) + uh_sum) < 0.0) .and. &
                   ((0.5*hup + uh_sum) < 0.0)) then
-                uh2d(I,k_rev) = min(-0.5*hup,-hup+hlos,0.0)
+                uh2d(I,k_rev) = min(-0.5*hup, -hup+hlos, 0.0)
                 uh_remain = uh_sum - uh2d(I,k_rev)
               else
                 uh2d(I,k_rev) = uh_sum
@@ -423,10 +423,10 @@ subroutine distribute_residual_uh_upwards(G, GV, hvol, uh)
               endif
             else ! Transport to the right
               hup = h2d(i,k_rev)
-              hlos = max(0.0,-uh2d(I-1,k_rev))
+              hlos = max(0.0, -uh2d(I-1,k_rev))
               if ((((hup - hlos) - uh_sum) < 0.0) .and. &
                   ((0.5*hup - uh_sum) < 0.0)) then
-                uh2d(I,k_rev) = max(0.5*hup,hup-hlos,0.0)
+                uh2d(I,k_rev) = max(0.5*hup, hup-hlos, 0.0)
                 uh_remain = uh_sum - uh2d(I,k_rev)
               else
                 uh2d(I,k_rev) = uh_sum
@@ -507,10 +507,10 @@ subroutine distribute_residual_vh_upwards(G, GV, hvol, vh)
             vh_sum = vh_remain + vh2d(J,k_rev)
             if (vh_sum<0.0) then ! Transport to the left
               hup = h2d(j+1,k_rev)
-              hlos = MAX(0.0,vh2d(J+1,k_rev))
+              hlos = MAX(0.0, vh2d(J+1,k_rev))
               if ((((hup - hlos) + vh_sum) < 0.0) .and. &
                   ((0.5*hup + vh_sum) < 0.0)) then
-                vh2d(J,k_rev) = MIN(-0.5*hup,-hup+hlos,0.0)
+                vh2d(J,k_rev) = MIN(-0.5*hup, -hup+hlos, 0.0)
                 vh_remain = vh_sum - vh2d(J,k_rev)
               else
                 vh2d(J,k_rev) = vh_sum
@@ -519,10 +519,10 @@ subroutine distribute_residual_vh_upwards(G, GV, hvol, vh)
               endif
             else ! Transport to the right
               hup = h2d(j,k_rev)
-              hlos = MAX(0.0,-vh2d(J-1,k_rev))
+              hlos = MAX(0.0, -vh2d(J-1,k_rev))
               if ((((hup - hlos) - vh_sum) < 0.0) .and. &
                   ((0.5*hup - vh_sum) < 0.0)) then
-                vh2d(J,k_rev) = MAX(0.5*hup,hup-hlos,0.0)
+                vh2d(J,k_rev) = MAX(0.5*hup, hup-hlos, 0.0)
                 vh_remain = vh_sum - vh2d(J,k_rev)
               else
                 vh2d(J,k_rev) = vh_sum

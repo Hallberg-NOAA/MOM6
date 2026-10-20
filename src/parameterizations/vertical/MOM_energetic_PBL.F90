@@ -3562,7 +3562,7 @@ subroutine find_mstar(CS, US, Buoyancy_Flux, UStar, &
 
     if (CS%answer_date < 20190101) then
       ! The limit for the balance of rotation and stabilizing is f(L_Ekman,L_Obukhov)
-      mstar_S = CS%mstar_coef*sqrt(max(0.0,Buoyancy_Flux) / UStar**2 / &
+      mstar_S = CS%mstar_coef*sqrt(max(0.0, Buoyancy_Flux) / UStar**2 / &
                     (Abs_Coriolis + 1.e-10*US%T_to_s) )
       ! The limit for rotation (Ekman length) limited mixing
       mstar_N =  CS%C_Ek * log( max( 1., UStar / (Abs_Coriolis + 1.e-10*US%T_to_s) / BLD ) )
@@ -3576,7 +3576,7 @@ subroutine find_mstar(CS, US, Buoyancy_Flux, UStar, &
 
     ! Here 1.25 is about .5/von Karman, which gives the Obukhov limit.
     mstar = max(mstar_S, min(1.25, mstar_N))
-    if (CS%mstar_Cap > 0.0) mstar = min( CS%mstar_Cap,mstar )
+    if (CS%mstar_Cap > 0.0) mstar = min(CS%mstar_Cap, mstar)
   elseif ( mstar_scheme == mstar_from_RH18 ) then
     if (CS%answer_date < 20190101) then
       mstar_N = CS%RH18_mstar_cn1 * ( 1.0 - 1.0 / ( 1. + CS%RH18_mstar_cn2 * &
@@ -3586,14 +3586,14 @@ subroutine find_mstar(CS, US, Buoyancy_Flux, UStar, &
       mstar_N = (CS%RH18_mstar_cn1 *  MSN_term) / ( 1. + MSN_term)
     endif
     mstar_S = CS%RH18_mstar_CS1 * ( max(0.0, Buoyancy_Flux)**2 * BLD / &
-             ( UStar**5 * max(Abs_Coriolis,1.e-20*US%T_to_s) ) )**CS%RH18_mstar_cs2
+             ( UStar**5 * max(Abs_Coriolis, 1.e-20*US%T_to_s) ) )**CS%RH18_mstar_cs2
     mstar = mstar_N + mstar_S
   endif
 
   !/ 2. Adjust mstar to account for convective turbulence
   if (CS%answer_date < 20190101) then
-    mstar_Conv_Red = 1. - CS%mstar_Convect_coef * (-min(0.0,Buoyancy_Flux) + 1.e-10*US%T_to_s**3*US%m_to_Z**2) / &
-                         ( (-min(0.0,Buoyancy_Flux) + 1.e-10*US%T_to_s**3*US%m_to_Z**2) + &
+    mstar_Conv_Red = 1. - CS%mstar_Convect_coef * (-min(0.0, Buoyancy_Flux) + 1.e-10*US%T_to_s**3*US%m_to_Z**2) / &
+                         ( (-min(0.0, Buoyancy_Flux) + 1.e-10*US%T_to_s**3*US%m_to_Z**2) + &
                          2.0 *mstar * UStar**3 / BLD )
   else
     MSCR_term1 = -BLD * min(0.0, Buoyancy_Flux)

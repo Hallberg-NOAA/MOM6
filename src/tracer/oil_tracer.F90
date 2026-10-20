@@ -362,12 +362,12 @@ subroutine oil_tracer_column_physics(h_old, h_new, ea, eb, fluxes, dt, G, GV, US
       !CS%tr(i,j,k,m) = CS%tr(i,j,k,m) - dt*CS%oil_decay_rate(m)*CS%tr(i,j,k,m) ! Simple
       !CS%tr(i,j,k,m) = CS%tr(i,j,k,m) - min(dt*CS%oil_decay_rate(m),1.)*CS%tr(i,j,k,m) ! Safer
       if (CS%oil_decay_rate(m)>0.) then
-        CS%tr(i,j,k,m) = G%mask2dT(i,j)*max(1. - dt*CS%oil_decay_rate(m),0.)*CS%tr(i,j,k,m) ! Safest
+        CS%tr(i,j,k,m) = G%mask2dT(i,j) * max(1. - dt*CS%oil_decay_rate(m), 0.) * CS%tr(i,j,k,m) ! Safest
       elseif (CS%oil_decay_rate(m)<0.) then
         decay_timescale = (12.0 * (3.0**(-(tv%T(i,j,k)-20.0*US%degC_to_C)/10.0*US%degC_to_C))) * &
                           (86400.0*US%s_to_T) ! Timescale [T ~> s]
         ldecay = 1. / decay_timescale ! Rate [T-1 ~> s-1]
-        CS%tr(i,j,k,m) = G%mask2dT(i,j)*max(1. - dt*ldecay,0.)*CS%tr(i,j,k,m)
+        CS%tr(i,j,k,m) = G%mask2dT(i,j) * max(1. - dt*ldecay, 0.) * CS%tr(i,j,k,m)
       endif
     enddo ; enddo ; enddo
   enddo
@@ -385,7 +385,7 @@ subroutine oil_tracer_column_physics(h_old, h_new, ea, eb, fluxes, dt, G, GV, US
     do m=1,CS%ntr
       k = CS%oil_source_k(m)
       if (k>0) then
-        k = min(k,k_max) ! Only insert k or first layer with interface 10 m above bottom
+        k = min(k, k_max) ! Only insert k or first layer with interface 10 m above bottom
         CS%tr(i,j,k,m) = CS%tr(i,j,k,m) + CS%oil_source_rate*dt / &
                 (vol_scale * (h_new(i,j,k)+GV%H_subroundoff) * G%areaT(i,j) )
       elseif (k<0) then

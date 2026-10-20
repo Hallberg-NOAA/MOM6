@@ -1053,7 +1053,7 @@ subroutine initialize_diagnostic_fields(CS, ISS, G, US, Time)
 
   do j=jsd,jed
     do i=isd,ied
-      OD = CS%bed_elev(i,j) - CS%rhoi_rhow * max(ISS%h_shelf(i,j),CS%min_h_shelf)
+      OD = CS%bed_elev(i,j) - CS%rhoi_rhow * max(ISS%h_shelf(i,j), CS%min_h_shelf)
       if (OD >= 0) then
     ! ice thickness does not take up whole ocean column -> floating
         CS%OD_av(i,j) = OD
@@ -1645,7 +1645,7 @@ subroutine ice_shelf_solve_outer(CS, ISS, G, US, u_shlf, v_shlf, taudx, taudy, i
 
   if (.not. CS%GL_couple) then
     do j=G%jsc,G%jec ; do i=G%isc,G%iec
-      if (CS%rhoi_rhow * max(ISS%h_shelf(i,j),CS%min_h_shelf) - CS%bed_elev(i,j) > 0) then
+      if (CS%rhoi_rhow * max(ISS%h_shelf(i,j), CS%min_h_shelf) - CS%bed_elev(i,j) > 0) then
         CS%ground_frac(i,j) = 1.0
         CS%OD_av(i,j) =0.0
       endif
@@ -1957,7 +1957,7 @@ subroutine ice_shelf_solve_outer(CS, ISS, G, US, u_shlf, v_shlf, taudx, taudy, i
             write(mesg,*) "ice_shelf_solve_outer: ew_stol = ", ew_stol
             call MOM_mesg(mesg, 8)
           endif
-          ew_eta = min(ew_eta,CS%ew_eta_max)
+          ew_eta = min(ew_eta, CS%ew_eta_max)
           CS%cg_tol_current = ew_eta
           ew_eta_prev   = ew_eta
           ew_prev_resid = ew_resid
@@ -3295,15 +3295,15 @@ subroutine calc_shelf_driving_stress(CS, ISS, G, US, taudx, taudy, OD)
 
   if (CS%GL_couple) then
     do j=jsc-2,jec+2 ; do i=isc-2,iec+2
-      S(i,j) = -CS%bed_elev(i,j) + (OD(i,j) + max(ISS%h_shelf(i,j),CS%min_h_shelf))
+      S(i,j) = -CS%bed_elev(i,j) + (OD(i,j) + max(ISS%h_shelf(i,j), CS%min_h_shelf))
     enddo ; enddo
   else
     ! check whether the ice is floating or grounded
     do j=jsc-2,jec+2 ; do i=isc-2,iec+2
-      if (CS%rhoi_rhow * max(ISS%h_shelf(i,j),CS%min_h_shelf) - CS%bed_elev(i,j) <= 0) then
-        S(i,j) = (1 - CS%rhoi_rhow)*max(ISS%h_shelf(i,j),CS%min_h_shelf)
+      if (CS%rhoi_rhow * max(ISS%h_shelf(i,j), CS%min_h_shelf) - CS%bed_elev(i,j) <= 0) then
+        S(i,j) = (1 - CS%rhoi_rhow)*max(ISS%h_shelf(i,j), CS%min_h_shelf)
       else
-        S(i,j) = max(ISS%h_shelf(i,j),CS%min_h_shelf)-CS%bed_elev(i,j)
+        S(i,j) = max(ISS%h_shelf(i,j), CS%min_h_shelf) - CS%bed_elev(i,j)
       endif
     enddo ; enddo
   endif
@@ -3385,17 +3385,17 @@ subroutine calc_shelf_driving_stress(CS, ISS, G, US, taudx, taudy, OD)
           sx = scale*sx ; sy = scale*sy
         endif
 
-        sx_e(i,j) = (-.25 * G%areaT(i,j)) * ((rho * grav) * (max(ISS%h_shelf(i,j),CS%min_h_shelf) * sx))
-        sy_e(i,j) = (-.25 * G%areaT(i,j)) * ((rho * grav) * (max(ISS%h_shelf(i,j),CS%min_h_shelf) * sy))
+        sx_e(i,j) = (-.25 * G%areaT(i,j)) * ((rho * grav) * (max(ISS%h_shelf(i,j), CS%min_h_shelf) * sx))
+        sy_e(i,j) = (-.25 * G%areaT(i,j)) * ((rho * grav) * (max(ISS%h_shelf(i,j), CS%min_h_shelf) * sy))
 
         CS%sx_shelf(i,j) = sx ; CS%sy_shelf(i,j) = sy
 
         !Stress (Neumann) boundary conditions
         if (CS%ground_frac(i,j) == 1) then
-          neumann_val = ((.5 * grav) * (rho * max(ISS%h_shelf(i,j),CS%min_h_shelf)**2 - &
+          neumann_val = ((.5 * grav) * (rho * max(ISS%h_shelf(i,j), CS%min_h_shelf)**2 - &
                                         rhow * max(0.0, CS%bed_elev(i,j))**2))
         else
-          neumann_val = (.5 * grav) * ((1-CS%rhoi_rhow) * (rho * max(ISS%h_shelf(i,j),CS%min_h_shelf)**2))
+          neumann_val = (.5 * grav) * ((1-CS%rhoi_rhow) * (rho * max(ISS%h_shelf(i,j), CS%min_h_shelf)**2))
         endif
         if ((CS%u_face_mask_bdry(I-1,j) == 2) .OR. &
           ((ISS%hmask(i-1,j) == 0 .OR. ISS%hmask(i-1,j) == 2) .AND. (CS%reentrant_x .OR. (i+i_off /= gisc)))) then
@@ -4482,12 +4482,12 @@ subroutine calc_shelf_visc(CS, ISS, G, US, u_shlf, v_shlf)
 
       if (trim(CS%ice_viscosity_compute) == "CONSTANT") then
         CS%ice_visc(i,j,1) = 1e15 * (US%kg_m3_to_R*US%m_to_L*US%m_s_to_L_T) * &
-                             (G%areaT(i,j) * max(ISS%h_shelf(i,j),CS%min_h_shelf))
+                             (G%areaT(i,j) * max(ISS%h_shelf(i,j), CS%min_h_shelf))
         ! constant viscocity for debugging
       elseif (trim(CS%ice_viscosity_compute) == "OBS") then
         if (CS%AGlen_visc(i,j) >0) then
-          CS%ice_visc(i,j,1) = (G%areaT(i,j) * max(ISS%h_shelf(i,j),CS%min_h_shelf)) * &
-                               max(CS%AGlen_visc(i,j) ,CS%min_ice_visc)
+          CS%ice_visc(i,j,1) = (G%areaT(i,j) * max(ISS%h_shelf(i,j), CS%min_h_shelf)) * &
+                               max(CS%AGlen_visc(i,j), CS%min_ice_visc)
         endif
         ! Here CS%Aglen_visc(i,j) is the ice viscosity [R L2 T-1 ~> Pa s] computed from obs and read from a file
       elseif (model_qp1) then
@@ -4516,10 +4516,10 @@ subroutine calc_shelf_visc(CS, ISS, G, US, u_shlf, v_shlf)
              ((v_shlf(I-1,J) * CS%PhiC(6,i,j)) + &
               (v_shlf(I,J-1) * CS%PhiC(4,i,j)))
 
-        CS%ice_visc(i,j,1) = (G%areaT(i,j) * max(ISS%h_shelf(i,j),CS%min_h_shelf)) * &
+        CS%ice_visc(i,j,1) = (G%areaT(i,j) * max(ISS%h_shelf(i,j), CS%min_h_shelf)) * &
             max(0.5 * Visc_coef * &
             (US%s_to_T**2 * (((ux**2) + (vy**2)) + ((ux*vy) + 0.25*((uy+vx)**2)) + eps_min**2))**(eps_e2_exp) * &
-            (US%Pa_to_RL2_T2*US%s_to_T),CS%min_ice_visc)  ! Rescale after the fractional power law.
+            (US%Pa_to_RL2_T2*US%s_to_T), CS%min_ice_visc)  ! Rescale after the fractional power law.
         ! Store Newton tangent stiffness data: strain rates and coefficient for Newton iterations.
         ! The Newton correction coefficient is (1/n-1) * ice_visc / eps_e2,
         ! where eps_e2 = ux^2 + vy^2 + ux*vy + (uy+vx)^2/4 + eps_min^2 [T-2].
@@ -4527,7 +4527,7 @@ subroutine calc_shelf_visc(CS, ISS, G, US, u_shlf, v_shlf)
         CS%newton_str_ux(i,j,1) = ux ; CS%newton_str_vy(i,j,1) = vy
         CS%newton_str_sh(i,j,1) = uy + vx
         CS%newton_visc_factor(i,j,1) = 0.0
-        if (CS%ice_visc(i,j,1) > CS%min_ice_visc * (G%areaT(i,j) * max(ISS%h_shelf(i,j),CS%min_h_shelf))) then
+        if (CS%ice_visc(i,j,1) > CS%min_ice_visc * (G%areaT(i,j) * max(ISS%h_shelf(i,j), CS%min_h_shelf))) then
           CS%newton_visc_factor(i,j,1) = ((In_g - 1.) / &
               (((ux**2) + (vy**2)) + ((ux*vy) + 0.25*((uy+vx)**2)) + eps_min**2)) * &
               CS%ice_visc(i,j,1)
@@ -4558,16 +4558,16 @@ subroutine calc_shelf_visc(CS, ISS, G, US, u_shlf, v_shlf)
                ((v_shlf(I,J-1) * CS%Phi(4,2*(jq-1)+iq,i,j)) + &
                 (v_shlf(I-1,J) * CS%Phi(6,2*(jq-1)+iq,i,j)))
 
-          CS%ice_visc(i,j,2*(jq-1)+iq) = (G%areaT(i,j) * max(ISS%h_shelf(i,j),CS%min_h_shelf)) * &
+          CS%ice_visc(i,j,2*(jq-1)+iq) = (G%areaT(i,j) * max(ISS%h_shelf(i,j), CS%min_h_shelf)) * &
               max(0.5 * Visc_coef * &
               (US%s_to_T**2*(((ux**2) + (vy**2)) + ((ux*vy) + 0.25*((uy+vx)**2)) + eps_min**2))**(eps_e2_exp) * &
-              (US%Pa_to_RL2_T2*US%s_to_T),CS%min_ice_visc)  ! Rescale after the fractional power law.
+              (US%Pa_to_RL2_T2*US%s_to_T), CS%min_ice_visc)  ! Rescale after the fractional power law.
           ! Store Newton tangent stiffness data at each quadrature point.
           CS%newton_str_ux(i,j,2*(jq-1)+iq) = ux ; CS%newton_str_vy(i,j,2*(jq-1)+iq) = vy
           CS%newton_str_sh(i,j,2*(jq-1)+iq) = (uy + vx)
           CS%newton_visc_factor(i,j,2*(jq-1)+iq) = 0.0
           if (CS%ice_visc(i,j,2*(jq-1)+iq) > &
-              CS%min_ice_visc * (G%areaT(i,j) * max(ISS%h_shelf(i,j),CS%min_h_shelf))) then
+              CS%min_ice_visc * (G%areaT(i,j) * max(ISS%h_shelf(i,j), CS%min_h_shelf))) then
             CS%newton_visc_factor(i,j,2*(jq-1)+iq) = ((In_g - 1.) / &
                 (((ux**2) + (vy**2)) + ((ux*vy) + 0.25*((uy+vx)**2)) + eps_min**2)) * &
                 CS%ice_visc(i,j,2*(jq-1)+iq)
@@ -4652,7 +4652,7 @@ subroutine calc_shelf_taub(CS, ISS, G, basal_tr)
       if (CS%CoulombFriction) then
         !Effective pressure
         Hf = max(CS%rhow_rhoi * CS%bed_elev(i,j), 0.0)
-        fN = max((G%US%L_to_Z*(CS%density_ice * CS%g_Earth) * (max(ISS%h_shelf(i,j),CS%min_h_shelf) - Hf)), CS%CF_MinN)
+        fN = max((G%US%L_to_Z*(CS%density_ice * CS%g_Earth) * (max(ISS%h_shelf(i,j), CS%min_h_shelf) - Hf)), CS%CF_MinN)
         fB = alpha * (CS%C_basal_friction(i,j) / (CS%CF_Max * fN))**(CS%coulomb_pp_n)
         fBuq = fB * unorm**CS%CF_PostPeak
         basal_trac = ((G%areaT(i,j) * CS%C_basal_friction(i,j)) * &
@@ -4724,7 +4724,7 @@ subroutine update_OD_ffrac_uncoupled(CS, G, h_shelf)
 
   do j=jsd,jed
     do i=isd,ied
-      OD = CS%bed_elev(i,j) - CS%rhoi_rhow * max(h_shelf(i,j),CS%min_h_shelf)
+      OD = CS%bed_elev(i,j) - CS%rhoi_rhow * max(h_shelf(i,j), CS%min_h_shelf)
       if (OD >= 0) then
     ! ice thickness does not take up whole ocean column -> floating
         CS%OD_av(i,j) = OD

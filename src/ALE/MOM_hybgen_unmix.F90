@@ -357,7 +357,7 @@ subroutine hybgen_column_unmix(CS, nk, Rcv_tgt, temp, saln, Rcv, eqn_of_state, &
   enddo !k
 
   k  = kp  !at least 2
-  ka = max(k-2,1)  !k might be 2
+  ka = max(k-2, 1)  ! k might be 2
 !
   if ( ((k > fixlay+1) .and. (.not.terrain_following)) .and. & ! layer not fixed depth
        (h_col(k-1) >= h_thin)        .and. & ! layer above not too thin
@@ -436,7 +436,7 @@ subroutine hybgen_column_unmix(CS, nk, Rcv_tgt, temp, saln, Rcv, eqn_of_state, &
   endif
 
   k  = kp  !at least 2
-  ka = max(k-2,1)  !k might be 2
+  ka = max(k-2, 1)  ! k might be 2
 
   if ( lunmix .and.  & ! usually .true.
        ((k > fixlay+1) .and. (.not.terrain_following)) .and. & ! layer not fixed depth

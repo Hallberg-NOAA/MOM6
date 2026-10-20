@@ -428,7 +428,7 @@ recursive function symmetric_sum_2d(field) result(sum)
       ic = szi_2+1 ; jc = szj_2+1 ! The index of the central point
       sum = field(ic,jc)
       ! Add pairs of pairs of values, working from the inside out.
-      do ij=1,min(szi_2,szj_2)
+      do ij = 1, min(szi_2, szj_2)
         sum = sum + ((field(ic-ij,jc) + field(ic+ij,jc)) + (field(ic,jc-ij) + field(ic,jc+ij)))
       enddo
       ! Add extra pairs of values, working from the inside out.

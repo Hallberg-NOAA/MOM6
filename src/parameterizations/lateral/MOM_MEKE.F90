@@ -691,10 +691,10 @@ subroutine step_forward_MEKE(MEKE, h, SN_u, SN_v, visc, dt, G, GV, US, CS, hu, h
           Kh_here = max(0., CS%MEKE_Kh) + &
               CS%KhMEKE_Fac*0.5*(MEKE%Kh(i,j)+MEKE%Kh(i+1,j))
         if (allocated(MEKE%Kh_diff)) &
-          Kh_here = max(0.,CS%MEKE_Kh) + &
+          Kh_here = max(0., CS%MEKE_Kh) + &
               CS%KhMEKE_Fac*0.5*(MEKE%Kh_diff(i,j)+MEKE%Kh_diff(i+1,j))
         Inv_Kh_max = 2.0*sdt * ((G%dy_Cu(I,j)*G%IdxCu(I,j)) * &
-                     max(G%IareaT(i,j),G%IareaT(i+1,j)))
+                     max(G%IareaT(i,j), G%IareaT(i+1,j)))
         if (Kh_here*Inv_Kh_max > 0.25) Kh_here = 0.25 / Inv_Kh_max
         Kh_u(I,j) = Kh_here
 
@@ -706,10 +706,10 @@ subroutine step_forward_MEKE(MEKE, h, SN_u, SN_v, visc, dt, G, GV, US, CS, hu, h
       !$OMP parallel do default(shared) firstprivate(Kh_here) private(Inv_Kh_max)
       do J=js-1,je ; do i=is,ie
         if (allocated(MEKE%Kh)) &
-          Kh_here = max(0.,CS%MEKE_Kh) + CS%KhMEKE_Fac * 0.5*(MEKE%Kh(i,j)+MEKE%Kh(i,j+1))
+          Kh_here = max(0., CS%MEKE_Kh) + CS%KhMEKE_Fac * 0.5*(MEKE%Kh(i,j)+MEKE%Kh(i,j+1))
         if (allocated(MEKE%Kh_diff)) &
-          Kh_here = max(0.,CS%MEKE_Kh) + CS%KhMEKE_Fac * 0.5*(MEKE%Kh_diff(i,j)+MEKE%Kh_diff(i,j+1))
-        Inv_Kh_max = 2.0*sdt * ((G%dx_Cv(i,J)*G%IdyCv(i,J)) * max(G%IareaT(i,j),G%IareaT(i,j+1)))
+          Kh_here = max(0., CS%MEKE_Kh) + CS%KhMEKE_Fac * 0.5*(MEKE%Kh_diff(i,j)+MEKE%Kh_diff(i,j+1))
+        Inv_Kh_max = 2.0*sdt * ((G%dx_Cv(i,J)*G%IdyCv(i,J)) * max(G%IareaT(i,j), G%IareaT(i,j+1)))
         if (Kh_here*Inv_Kh_max > 0.25) Kh_here = 0.25 / Inv_Kh_max
         Kh_v(i,J) = Kh_here
 
@@ -889,7 +889,7 @@ subroutine step_forward_MEKE(MEKE, h, SN_u, SN_v, visc, dt, G, GV, US, CS, hu, h
           !$OMP parallel do default(shared)
           do j=js,je ; do i=is,ie
             MEKE%Kh(i,j) = (CS%MEKE_KhCoeff * &
-                       sqrt(2.*max(0.,barotrFac2(i,j)*MEKE%MEKE(i,j))*G%areaT(i,j)) ) * &
+                       sqrt(2.*max(0., barotrFac2(i,j)*MEKE%MEKE(i,j))*G%areaT(i,j)) ) * &
                        min(MEKE%Rd_dx_h(i,j), 1.0)
           enddo ; enddo
         else
@@ -912,13 +912,13 @@ subroutine step_forward_MEKE(MEKE, h, SN_u, SN_v, visc, dt, G, GV, US, CS, hu, h
   ! Calculate viscosity for the main model to use
   if (CS%viscosity_coeff_Ku /=0.) then
     do j=js,je ; do i=is,ie
-      MEKE%Ku(i,j) = CS%viscosity_coeff_Ku * sqrt(2.*max(0.,MEKE%MEKE(i,j))) * LmixScale(i,j)
+      MEKE%Ku(i,j) = CS%viscosity_coeff_Ku * sqrt(2.*max(0., MEKE%MEKE(i,j))) * LmixScale(i,j)
     enddo ; enddo
   endif
 
   if (CS%viscosity_coeff_Au /=0.) then
     do j=js,je ; do i=is,ie
-      MEKE%Au(i,j) = CS%viscosity_coeff_Au * sqrt(2.*max(0.,MEKE%MEKE(i,j))) * LmixScale(i,j)**3
+      MEKE%Au(i,j) = CS%viscosity_coeff_Au * sqrt(2.*max(0., MEKE%MEKE(i,j))) * LmixScale(i,j)**3
     enddo ; enddo
   endif
 
@@ -1307,12 +1307,12 @@ subroutine MEKE_lengthScales_0d(CS, US, area, beta, depth_tot, Rd_dx, SN, EKE, &
     endif
     if (CS%use_min_lscale) then
       LmixScale = CS%lscale_maxval
-      if (CS%aDeform*Ldeform > 0.) LmixScale = min(LmixScale,CS%aDeform*Ldeform)
-      if (CS%aFrict *Lfrict  > 0.) LmixScale = min(LmixScale,CS%aFrict *Lfrict)
-      if (CS%aRhines*Lrhines > 0.) LmixScale = min(LmixScale,CS%aRhines*Lrhines)
-      if (CS%aEady  *Leady   > 0.) LmixScale = min(LmixScale,CS%aEady  *Leady)
-      if (CS%aGrid  *Lgrid   > 0.) LmixScale = min(LmixScale,CS%aGrid  *Lgrid)
-      if (CS%Lfixed          > 0.) LmixScale = min(LmixScale,CS%Lfixed)
+      if (CS%aDeform*Ldeform > 0.) LmixScale = min(LmixScale, CS%aDeform*Ldeform)
+      if (CS%aFrict *Lfrict  > 0.) LmixScale = min(LmixScale, CS%aFrict *Lfrict)
+      if (CS%aRhines*Lrhines > 0.) LmixScale = min(LmixScale, CS%aRhines*Lrhines)
+      if (CS%aEady  *Leady   > 0.) LmixScale = min(LmixScale, CS%aEady  *Leady)
+      if (CS%aGrid  *Lgrid   > 0.) LmixScale = min(LmixScale, CS%aGrid  *Lgrid)
+      if (CS%Lfixed          > 0.) LmixScale = min(LmixScale, CS%Lfixed)
     else
       LmixScale = 0.
       if (CS%aDeform*Ldeform > 0.) LmixScale = LmixScale + 1./(CS%aDeform*Ldeform)

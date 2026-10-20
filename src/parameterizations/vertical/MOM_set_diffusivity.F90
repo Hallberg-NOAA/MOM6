@@ -1444,7 +1444,7 @@ subroutine add_drag_diffusivity(h, u, v, tv, fluxes, visc, j, TKE_to_Kd, maxTKE,
 
   do K=2,nz ; Rint(K) = 0.5*(GV%Rlay(k-1)+GV%Rlay(k)) ; enddo
 
-  kb_min = max(GV%nk_rho_varies+1,2)
+  kb_min = max(GV%nk_rho_varies+1, 2)
 
   ! The turbulence decay scale is 0.5*ustar/f from K&E & MOM_vertvisc.F90
   ! Any turbulence that makes it into the mixed layers is assumed
@@ -2251,7 +2251,7 @@ subroutine set_density_ratios(h, tv, kb, G, GV, US, CS, j, ds_dsp1, rho_0)
           endif
         endif
 
-        ds_dsp1(i,k) = MAX(a(kmb+1),1e-5)
+        ds_dsp1(i,k) = MAX(a(kmb+1), 1e-5)
 
         do k3=2,kmb
 !           ds_dsp1(i,k3) = MAX(a(k3),1e-5)
@@ -2260,7 +2260,7 @@ subroutine set_density_ratios(h, tv, kb, G, GV, US, CS, j, ds_dsp1, rho_0)
           ! though they don't exist.  They will be eliminated by the upcoming
           ! call to the mixedlayer code anyway.
           ! The indexing convention is appropriate for the interfaces.
-          ds_dsp1(i,k3) = MAX(a(k3),ds_dsp1(i,k))
+          ds_dsp1(i,k3) = MAX(a(k3), ds_dsp1(i,k))
         enddo
       endif ! (kb(i) <= nz-1)
     enddo ! I-loop.

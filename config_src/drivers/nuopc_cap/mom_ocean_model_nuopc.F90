@@ -672,7 +672,7 @@ subroutine update_ocean_model(Ice_ocean_boundary, OS, Ocean_sfc, &
       dt_therm = dt_coupling * floor(OS%dt_therm / dt_coupling + 0.001)
       nts = floor(dt_therm/dt_dyn + 0.001)
     else
-      nts = MAX(1,MIN(n_max,floor(OS%dt_therm/dt_dyn + 0.001)))
+      nts = MAX(1, MIN(n_max, floor(OS%dt_therm/dt_dyn + 0.001)))
       n_last_thermo = 0
     endif
 
@@ -683,7 +683,7 @@ subroutine update_ocean_model(Ice_ocean_boundary, OS, Ocean_sfc, &
             "MOM is not yet set up to have restarts that work with "//&
             "THERMO_SPANS_COUPLING and DIABATIC_FIRST.")
         if (modulo(n-1,nts)==0) then
-          dtdia = dt_dyn*min(nts,n_max-(n-1))
+          dtdia = dt_dyn * min(nts, n_max-(n-1))
           call step_MOM(OS%forces, OS%fluxes, OS%sfc_state, Time2, dtdia, OS%MOM_CSp, &
                         Waves=OS%Waves, do_dynamics=.false., do_thermodynamics=.true., &
                         start_cycle=(n==1), end_cycle=.false., cycle_length=dt_coupling)

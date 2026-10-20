@@ -76,7 +76,7 @@ subroutine doc_param_none(doc, varname, desc, units)
   call open_doc_file(doc)
 
   if (doc%filesAreOpen) then
-    numspc = max(1,doc%commentColumn-8-len_trim(varname))
+    numspc = max(1, doc%commentColumn-8-len_trim(varname))
     mesg = "#define "//trim(varname)//repeat(" ",numspc)//"!"
     if (len_trim(units) > 0) mesg = trim(mesg)//"   ["//trim(units)//"]"
 
@@ -155,7 +155,7 @@ subroutine doc_param_logical_array(doc, varname, desc, units, vals, default, &
 
   if (doc%filesAreOpen) then
     if (vals(1)) then ; valstring = STRING_TRUE ; else ; valstring = STRING_FALSE ; endif
-    do i=2,min(size(vals),128)
+    do i = 2, min(size(vals), 128)
       if (vals(i)) then
         valstring = trim(valstring)//", "//STRING_TRUE
       else
@@ -248,7 +248,7 @@ subroutine doc_param_int_array(doc, varname, desc, units, vals, default, default
 
   if (doc%filesAreOpen) then
     valstring = int_string(vals(1))
-    do i=2,min(size(vals),128)
+    do i = 2, min(size(vals), 128)
       valstring = trim(valstring)//", "//trim(int_string(vals(i)))
     enddo
 
@@ -540,7 +540,7 @@ subroutine writeMessageAndDesc(doc, vmesg, desc, valueWasDefault, indent, &
     len_desc = len_trim(desc)
     do ! Adjust the available line length for anomalies in the size of tabs, counting \t as 2 spaces.
       if (substr_start >= start_ind+len_cor) exit
-      tab_ind = index(desc(substr_start:min(len_desc,start_ind+len_cor)), "\t")
+      tab_ind = index(desc(substr_start:min(len_desc, start_ind+len_cor)), "\t")
       if (tab_ind == 0) exit
       substr_start = substr_start + tab_ind
       len_cor = len_cor + (len_tab - 2)

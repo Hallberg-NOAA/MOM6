@@ -373,13 +373,13 @@ subroutine convert_IOB_to_fluxes(IOB, fluxes, index_bounds, Time, valid_time, G,
         delta_sss = data_restore(i,j) - sfc_state%SSS(i,j)
         if (sfc_state%SSS(i,j) >= data_restore(i,j)*CS%min_ratio_srestore) then
           if (.not. CS%max_delta_srestore_file) then
-            delta_sss = sign(1.0,delta_sss) * min(abs(delta_sss), CS%max_delta_srestore)
+            delta_sss = sign(1.0, delta_sss) * min(abs(delta_sss), CS%max_delta_srestore)
           else
             if (abs(delta_sss) > abs(CS%max_delta_srestore_2d(i,j))) then
               if (CS%max_delta_srestore_2d(i,j) < 0.0) then
                 delta_sss = 0.0  !turn off restoring
               else !clip restoring
-                delta_sss = sign(1.0,delta_sss) * min(abs(delta_sss), CS%max_delta_srestore_2d(i,j))
+                delta_sss = sign(1.0, delta_sss) * min(abs(delta_sss), CS%max_delta_srestore_2d(i,j))
               endif
             endif
           endif !max_delta_srestore_file
@@ -406,13 +406,13 @@ subroutine convert_IOB_to_fluxes(IOB, fluxes, index_bounds, Time, valid_time, G,
           delta_sss = sfc_state%SSS(i,j) - data_restore(i,j)
           if (sfc_state%SSS(i,j) >= data_restore(i,j)*CS%min_ratio_srestore) then
             if (.not. CS%max_delta_srestore_file) then
-              delta_sss = sign(1.0,delta_sss) * min(abs(delta_sss), CS%max_delta_srestore)
+              delta_sss = sign(1.0, delta_sss) * min(abs(delta_sss), CS%max_delta_srestore)
             else
               if (abs(delta_sss) > abs(CS%max_delta_srestore_2d(i,j))) then
                 if (CS%max_delta_srestore_2d(i,j) < 0.0) then
                   delta_sss = 0.0  !turn off restoring
                 else !clip restoring
-                  delta_sss = sign(1.0,delta_sss) * min(abs(delta_sss), CS%max_delta_srestore_2d(i,j))
+                  delta_sss = sign(1.0, delta_sss) * min(abs(delta_sss), CS%max_delta_srestore_2d(i,j))
                 endif
               endif
             endif !max_delta_srestore_file
@@ -444,7 +444,7 @@ subroutine convert_IOB_to_fluxes(IOB, fluxes, index_bounds, Time, valid_time, G,
     call time_interp_external(CS%trestore_handle, Time, data_restore, scale=US%degC_to_C)
     do j=js,je ; do i=is,ie
       delta_sst = data_restore(i,j) - sfc_state%SST(i,j)
-      delta_sst = sign(1.0,delta_sst)*min(abs(delta_sst),CS%max_delta_trestore)
+      delta_sst = sign(1.0, delta_sst) * min(abs(delta_sst), CS%max_delta_trestore)
       fluxes%heat_added(i,j) = G%mask2dT(i,j) * CS%trestore_mask(i,j) * &
                       (CS%Rho0*fluxes%C_p) * delta_sst * CS%Flux_const   ! W m-2
     enddo ; enddo
@@ -559,7 +559,7 @@ subroutine convert_IOB_to_fluxes(IOB, fluxes, index_bounds, Time, valid_time, G,
     if (CS%max_p_surf >= 0.0) then
       do j=js,je ; do i=is,ie
         fluxes%p_surf_full(i,j) = G%mask2dT(i,j) * US%kg_m3_to_R*US%m_s_to_L_T**2*IOB%p(i-i0,j-j0)
-        fluxes%p_surf(i,j) = MIN(fluxes%p_surf_full(i,j),CS%max_p_surf)
+        fluxes%p_surf(i,j) = MIN(fluxes%p_surf_full(i,j), CS%max_p_surf)
       enddo ; enddo
     else
       do j=js,je ; do i=is,ie
@@ -718,7 +718,7 @@ subroutine convert_IOB_to_forces(IOB, forces, index_bounds, Time, G, US, CS)
     if (CS%max_p_surf >= 0.0) then
       do j=js,je ; do i=is,ie
         forces%p_surf_full(i,j) = G%mask2dT(i,j) * US%kg_m3_to_R*US%m_s_to_L_T**2*IOB%p(i-i0,j-j0)
-        forces%p_surf(i,j) = MIN(forces%p_surf_full(i,j),CS%max_p_surf)
+        forces%p_surf(i,j) = MIN(forces%p_surf_full(i,j), CS%max_p_surf)
       enddo ; enddo
     else
       do j=js,je ; do i=is,ie

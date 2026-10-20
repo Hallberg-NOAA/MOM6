@@ -979,7 +979,7 @@ subroutine tracer_epipycnal_ML_diff(h, dt, Tr, ntr, khdt_epi_x, khdt_epi_y, G, &
   !$OMP end parallel
 
   do j=js,je
-    k_size = max(2*max_srt(j),1)
+    k_size = max(2*max_srt(j), 1)
     allocate(deep_wt_Lu(j)%p(IsdB:IedB,k_size))
     allocate(deep_wt_Ru(j)%p(IsdB:IedB,k_size))
     allocate(hP_Lu(j)%p(IsdB:IedB,k_size))
@@ -1132,7 +1132,7 @@ subroutine tracer_epipycnal_ML_diff(h, dt, Tr, ntr, khdt_epi_x, khdt_epi_y, G, &
   endif ; enddo ; enddo ! i- & j- loops over zonal faces.
 
   do J=js-1,je
-    k_size = max(max_srt(j)+max_srt(j+1),1)
+    k_size = max(max_srt(j)+max_srt(j+1), 1)
     allocate(deep_wt_Lv(J)%p(isd:ied,k_size))
     allocate(deep_wt_Rv(J)%p(isd:ied,k_size))
     allocate(hP_Lv(J)%p(isd:ied,k_size))

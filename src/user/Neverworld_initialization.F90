@@ -91,7 +91,7 @@ real function cosbell(x, L)
   real              :: PI      !< 3.1415926... calculated as 4*atan(1) [nondim]
 
   PI      = 4.0*atan(1.0)
-  cosbell = 0.5 * (1 + cos(PI*MIN(ABS(x/L),1.0)))
+  cosbell = 0.5 * (1 + cos(PI * MIN(ABS(x/L), 1.0)))
 end function cosbell
 
 !> Returns the value of a sin-spike function evaluated at x/L [nondim]
@@ -102,7 +102,7 @@ real function spike(x, L)
   real              :: PI      !< 3.1415926... calculated as 4*atan(1) [nondim]
 
   PI    = 4.0*atan(1.0)
-  spike = (1 - sin(PI*MIN(ABS(x/L),0.5)))
+  spike = (1 - sin(PI * MIN(ABS(x/L), 0.5)))
 end function spike
 
 !> Returns the value of a triangular function centered at x=x0 with value 1
@@ -126,7 +126,7 @@ real function scurve(x, x0, L)
   real, intent(in) :: L       !< half-width of base of cone in arbitrary units [A]
   real :: s ! A rescaled position [nondim]
 
-  s = max( 0., min( 1.,( x - x0 ) / L ) )
+  s = max( 0., min( 1., ( x - x0 ) / L ) )
   scurve = ( 3. - 2.*s ) * ( s * s )
 end function scurve
 
@@ -143,7 +143,7 @@ real function cstprof(x, x0, L, lf, bf, sf, sh)
   real, intent(in) :: sh      !< depth of shelf as fraction of full depth [nondim]
   real :: s ! A rescaled position [nondim]
 
-  s = max( 0., min( 1.,( x - x0 ) / L ) )
+  s = max( 0., min( 1., ( x - x0 ) / L ) )
   cstprof = sh * scurve(s-lf,0.,bf) + (1.-sh) * scurve(s - (1.-sf),0.,sf)
 end function cstprof
 
@@ -157,7 +157,7 @@ real function dist_line_fixed_x(x, y, x0, y0, y1)
   real :: dx, yr, dy ! Relative positions in arbitrary units [A]
 
   dx = x - x0
-  yr = min( max(y0,y1), max( min(y0,y1), y ) ) ! bound y by y0,y1
+  yr = min( max(y0, y1), max( min(y0, y1), y ) ) ! bound y by y0,y1
   dy = y - yr ! =0 within y0<y<y1, =y0-y for y<y0, =y-y1 for y>y1
   dist_line_fixed_x = sqrt( (dx*dx) + (dy*dy) )
 end function dist_line_fixed_x

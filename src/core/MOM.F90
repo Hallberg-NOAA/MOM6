@@ -900,7 +900,7 @@ subroutine step_MOM(forces_in, fluxes_in, sfc_state, Time_start, time_int_in, CS
         call MOM_error(FATAL, "MOM is not yet set up to have restarts that work "//&
           "with THERMO_SPANS_COUPLING and DIABATIC_FIRST.")
       else
-        dtdia = dt*min(ntstep,n_max-(n-1))
+        dtdia = dt * min(ntstep, n_max-(n-1))
       endif
 
       end_time_thermo = Time_local

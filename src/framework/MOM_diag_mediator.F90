@@ -1096,7 +1096,7 @@ subroutine define_axes_group(diag_cs, handles, axes, nz, vertical_coordinate_num
   n = size(handles)
   if (n<1 .or. n>3) call MOM_error(FATAL, "define_axes_group: wrong size for list of handles!")
   allocate( axes%handles(n) )
-  axes%id = ints_to_string(handles, max(n,3)) ! Identifying string
+  axes%id = ints_to_string(handles, max(n, 3)) ! Identifying string
   axes%rank = n
   axes%handles(:) = handles(:)
   axes%diag_cs => diag_cs ! A (circular) link back to the diag_cs structure
@@ -1210,7 +1210,7 @@ subroutine define_axes_group_dsamp(diag_cs, handles, axes, dl, nz, vertical_coor
   n = size(handles)
   if (n<1 .or. n>3) call MOM_error(FATAL, "define_axes_group: wrong size for list of handles!")
   allocate( axes%handles(n) )
-  axes%id = ints_to_string(handles, max(n,3)) ! Identifying string
+  axes%id = ints_to_string(handles, max(n, 3)) ! Identifying string
   axes%rank = n
   axes%handles(:) = handles(:)
   axes%diag_cs => diag_cs ! A (circular) link back to the diag_cs structure

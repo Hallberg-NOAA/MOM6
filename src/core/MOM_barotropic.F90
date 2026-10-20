@@ -895,15 +895,15 @@ subroutine btstep(U_in, V_in, eta_in, dt, bc_accel_u, bc_accel_v, forces, pbce, 
       enddo ; enddo
       if (CS%interior_OBC_PV .and. CS%BT_OBC%u_OBCs_on_PE) then
         !$OMP parallel do default(shared)
-        do j = max(js,CS%BT_OBC%js_u_W_obc), min(je,CS%BT_OBC%je_u_W_obc)
-          do I = max(is-1,CS%BT_OBC%Is_u_W_obc), min(ie,CS%BT_OBC%Ie_u_W_obc)
+        do j = max(js, CS%BT_OBC%js_u_W_obc), min(je, CS%BT_OBC%je_u_W_obc)
+          do I = max(is-1, CS%BT_OBC%Is_u_W_obc), min(ie, CS%BT_OBC%Ie_u_W_obc)
             if (CS%BT_OBC%u_OBC_type(I,j) < 0) & ! Western boundary condition
               DCor_u(I,j) = max(GV%Z_to_H*G%bathyT(i+1,j) + eta_in(i+1,j), 0.0)
           enddo
         enddo
         !$OMP parallel do default(shared)
-        do j = max(js,CS%BT_OBC%js_u_E_obc), min(je,CS%BT_OBC%je_u_E_obc)
-          do I = max(is-1,CS%BT_OBC%Is_u_E_obc), min(ie,CS%BT_OBC%Ie_u_E_obc)
+        do j = max(js, CS%BT_OBC%js_u_E_obc), min(je, CS%BT_OBC%je_u_E_obc)
+          do I = max(is-1, CS%BT_OBC%Is_u_E_obc), min(ie, CS%BT_OBC%Ie_u_E_obc)
             if (CS%BT_OBC%u_OBC_type(I,j) > 0) & ! Eastern boundary condition
               DCor_u(I,j) = max(GV%Z_to_H*G%bathyT(i,j) + eta_in(i,j), 0.0)
           enddo
@@ -917,15 +917,15 @@ subroutine btstep(U_in, V_in, eta_in, dt, bc_accel_u, bc_accel_v, forces, pbce, 
       enddo ; enddo
       if (CS%interior_OBC_PV .and. CS%BT_OBC%v_OBCs_on_PE) then
         !$OMP parallel do default(shared)
-        do j = max(js,CS%BT_OBC%js_v_S_obc), min(je,CS%BT_OBC%je_v_S_obc)
-          do I = max(is-1,CS%BT_OBC%Is_v_S_obc), min(ie,CS%BT_OBC%Ie_v_S_obc)
+        do j = max(js, CS%BT_OBC%js_v_S_obc), min(je, CS%BT_OBC%je_v_S_obc)
+          do I = max(is-1, CS%BT_OBC%Is_v_S_obc), min(ie, CS%BT_OBC%Ie_v_S_obc)
             if (CS%BT_OBC%v_OBC_type(i,J) < 0) & ! Southern boundary condition
               DCor_v(i,J) = max(GV%Z_to_H*G%bathyT(i,j+1) + eta_in(i,j+1), 0.0)
           enddo
         enddo
         !$OMP parallel do default(shared)
-        do j = max(js,CS%BT_OBC%js_v_N_obc), min(je,CS%BT_OBC%je_v_N_obc)
-          do I = max(is-1,CS%BT_OBC%Is_v_N_obc), min(ie,CS%BT_OBC%Ie_v_N_obc)
+        do j = max(js, CS%BT_OBC%js_v_N_obc), min(je, CS%BT_OBC%je_v_N_obc)
+          do I = max(is-1, CS%BT_OBC%Is_v_N_obc), min(ie, CS%BT_OBC%Ie_v_N_obc)
             if (CS%BT_OBC%v_OBC_type(i,J) > 0) & ! Northern boundary condition
               DCor_v(i,J) = max(GV%Z_to_H*G%bathyT(i,j) + eta_in(i,j), 0.0)
           enddo
@@ -947,14 +947,14 @@ subroutine btstep(U_in, V_in, eta_in, dt, bc_accel_u, bc_accel_v, forces, pbce, 
       enddo ; enddo
       if (CS%interior_OBC_PV .and. CS%BT_OBC%u_OBCs_on_PE) then
         !$OMP parallel do default(shared)
-        do j = max(js,CS%BT_OBC%js_u_W_obc), min(je,CS%BT_OBC%je_u_W_obc)
-          do I = max(is-1,CS%BT_OBC%Is_u_W_obc), min(ie,CS%BT_OBC%Ie_u_W_obc)
+        do j = max(js, CS%BT_OBC%js_u_W_obc), min(je, CS%BT_OBC%je_u_W_obc)
+          do I = max(is-1, CS%BT_OBC%Is_u_W_obc), min(ie, CS%BT_OBC%Ie_u_W_obc)
             if (CS%BT_OBC%u_OBC_type(I,j) < 0) DCor_u(I,j) = eta_in(i+1,j) ! Western boundary condition
           enddo
         enddo
         !$OMP parallel do default(shared)
-        do j = max(js,CS%BT_OBC%js_u_E_obc), min(je,CS%BT_OBC%je_u_E_obc)
-          do I = max(is-1,CS%BT_OBC%Is_u_E_obc), min(ie,CS%BT_OBC%Ie_u_E_obc)
+        do j = max(js, CS%BT_OBC%js_u_E_obc), min(je, CS%BT_OBC%je_u_E_obc)
+          do I = max(is-1, CS%BT_OBC%Is_u_E_obc), min(ie, CS%BT_OBC%Ie_u_E_obc)
             if (CS%BT_OBC%u_OBC_type(I,j) > 0) DCor_u(I,j) = eta_in(i,j)  ! Eastern boundary condition
           enddo
         enddo
@@ -966,14 +966,14 @@ subroutine btstep(U_in, V_in, eta_in, dt, bc_accel_u, bc_accel_v, forces, pbce, 
       enddo ; enddo
       if (CS%interior_OBC_PV .and. CS%BT_OBC%v_OBCs_on_PE) then
         !$OMP parallel do default(shared)
-        do j = max(js,CS%BT_OBC%js_v_S_obc), min(je,CS%BT_OBC%je_v_S_obc)
-          do I = max(is-1,CS%BT_OBC%Is_v_S_obc), min(ie,CS%BT_OBC%Ie_v_S_obc)
+        do j = max(js, CS%BT_OBC%js_v_S_obc), min(je, CS%BT_OBC%je_v_S_obc)
+          do I = max(is-1, CS%BT_OBC%Is_v_S_obc), min(ie, CS%BT_OBC%Ie_v_S_obc)
             if (CS%BT_OBC%v_OBC_type(i,J) < 0) DCor_v(i,J) = eta_in(i,j+1) ! Southern boundary condition
           enddo
         enddo
         !$OMP parallel do default(shared)
-        do j = max(js,CS%BT_OBC%js_v_N_obc), min(je,CS%BT_OBC%je_v_N_obc)
-          do I = max(is-1,CS%BT_OBC%Is_v_N_obc), min(ie,CS%BT_OBC%Ie_v_N_obc)
+        do j = max(js, CS%BT_OBC%js_v_N_obc), min(je, CS%BT_OBC%je_v_N_obc)
+          do I = max(is-1, CS%BT_OBC%Is_v_N_obc), min(ie, CS%BT_OBC%Ie_v_N_obc)
             if (CS%BT_OBC%v_OBC_type(i,J) > 0) DCor_v(i,J) = eta_in(i,j) ! Northern boundary condition
           enddo
         enddo
@@ -1654,7 +1654,7 @@ subroutine btstep(U_in, V_in, eta_in, dt, bc_accel_u, bc_accel_v, forces, pbce, 
         Htot = eta(i,j)
         if (GV%Boussinesq) Htot = CS%bathyT(i,j)*GV%Z_to_H + eta(i,j)
 
-        CS%eta_cor(i,j) = max(CS%eta_cor(i,j), -max(0.0,Htot))
+        CS%eta_cor(i,j) = max(CS%eta_cor(i,j), -max(0.0, Htot))
       endif
     endif ; enddo ; enddo
   else ; do j=js,je ; do i=is,ie
@@ -4669,7 +4669,7 @@ subroutine btcalc(h, G, GV, CS, h_u, h_v, may_use_default, OBC)
     if (CS%BT_OBC%u_OBCs_on_PE) then
       ! Reset velocity point thicknesses and their sums at OBC points
       if ((j >= CS%BT_OBC%js_u_E_obc) .and. (j <= CS%BT_OBC%je_u_E_obc)) then
-        do I = max(is-1,CS%BT_OBC%Is_u_E_obc), min(ie,CS%BT_OBC%Ie_u_E_obc)
+        do I = max(is-1, CS%BT_OBC%Is_u_E_obc), min(ie, CS%BT_OBC%Ie_u_E_obc)
           if (CS%BT_OBC%u_OBC_type(I,j) > 0) then ! Eastern boundary condition
             hatutot(I) = 0.0
             do k=1,nz
@@ -4680,7 +4680,7 @@ subroutine btcalc(h, G, GV, CS, h_u, h_v, may_use_default, OBC)
         enddo
       endif
       if ((j >= CS%BT_OBC%js_u_W_obc) .and. (j <= CS%BT_OBC%je_u_W_obc)) then
-        do I = max(is-1,CS%BT_OBC%Is_u_W_obc), min(ie,CS%BT_OBC%Ie_u_W_obc)
+        do I = max(is-1, CS%BT_OBC%Is_u_W_obc), min(ie, CS%BT_OBC%Ie_u_W_obc)
           if (CS%BT_OBC%u_OBC_type(I,j) < 0) then ! Western boundary condition
             hatutot(I) = 0.0
             do k=1,nz
@@ -4746,7 +4746,7 @@ subroutine btcalc(h, G, GV, CS, h_u, h_v, may_use_default, OBC)
     if (CS%BT_OBC%v_OBCs_on_PE) then
       ! Reset v-velocity point thicknesses and their sums at OBC points
       if ((J >= CS%BT_OBC%Js_v_N_obc) .and. (J <= CS%BT_OBC%Je_v_N_obc)) then
-        do i = max(is,CS%BT_OBC%is_v_N_obc), min(ie,CS%BT_OBC%ie_v_N_obc)
+        do i = max(is, CS%BT_OBC%is_v_N_obc), min(ie, CS%BT_OBC%ie_v_N_obc)
           if (CS%BT_OBC%v_OBC_type(i,J) > 0) then ! Northern boundary condition
             hatvtot(i) = 0.0
             do k=1,nz
@@ -4757,7 +4757,7 @@ subroutine btcalc(h, G, GV, CS, h_u, h_v, may_use_default, OBC)
         enddo
       endif
       if ((J >= CS%BT_OBC%Js_v_S_obc) .and. (J <= CS%BT_OBC%Je_v_S_obc)) then
-        do i = max(is,CS%BT_OBC%is_v_S_obc), min(ie,CS%BT_OBC%ie_v_S_obc)
+        do i = max(is, CS%BT_OBC%is_v_S_obc), min(ie, CS%BT_OBC%ie_v_S_obc)
           if (CS%BT_OBC%v_OBC_type(i,J) < 0) then ! Southern boundary condition
             hatvtot(i) = 0.0
             do k=1,nz
@@ -5088,7 +5088,7 @@ subroutine set_local_BT_cont_types(BT_cont, BTCL_u, BTCL_v, G, US, MS, BT_Domain
   integer :: i, j, is, ie, js, je, hs
 
   is = G%isc ; ie = G%iec ; js = G%jsc ; je = G%jec
-  hs = max(halo,0)
+  hs = max(halo, 0)
   dt = 1.0 ; if (present(dt_baroclinic)) dt = dt_baroclinic
 
   ! Copy the BT_cont arrays into symmetric, potentially wide haloed arrays.
@@ -5221,7 +5221,7 @@ subroutine adjust_local_BT_cont_types(ubt, uhbt, vbt, vhbt, BTCL_u, BTCL_v, &
   integer :: i, j, is, ie, js, je, hs
 
   is = G%isc ; ie = G%iec ; js = G%jsc ; je = G%jec
-  hs = max(halo,0)
+  hs = max(halo, 0)
   dt = 1.0 ; if (present(dt_baroclinic)) dt = dt_baroclinic
 
   !$OMP parallel do default(shared)
@@ -5305,7 +5305,7 @@ subroutine BT_cont_to_face_areas(BT_cont, Datu, Datv, G, US, MS, halo)
   ! Local variables
   integer :: i, j, is, ie, js, je, hs
   is = G%isc ; ie = G%iec ; js = G%jsc ; je = G%jec
-  hs = 1 ; if (present(halo)) hs = max(halo,0)
+  hs = 1 ; if (present(halo)) hs = max(halo, 0)
 
   do j=js-hs,je+hs ; do I=is-1-hs,ie+hs
     Datu(I,j) = max(BT_cont%FA_u_EE(I,j), BT_cont%FA_u_E0(I,j), &
@@ -5350,7 +5350,7 @@ subroutine find_face_areas(Datu, Datv, G, GV, US, CS, MS, halo, eta, add_max)
   real :: Z_to_H      ! A local conversion factor [H Z-1 ~> nondim or kg m-3]
   integer :: i, j, is, ie, js, je, hs
   is = G%isc ; ie = G%iec ; js = G%jsc ; je = G%jec
-  hs = max(halo,0)
+  hs = max(halo, 0)
 
   !$OMP parallel default(shared) private(H1,H2,Z_to_H)
   if (present(eta)) then
@@ -5884,7 +5884,7 @@ subroutine barotropic_init(u, v, h, Time, G, GV, US, param_file, diag, CS, &
                  "An estimate of how much higher SSH might get, for use "//&
                  "in calculating the safe external wave speed. The "//&
                  "default is the minimum of 10 m or 5% of MAXIMUM_DEPTH.", &
-                 units="m", default=min(10.0,0.05*G%max_depth*US%Z_to_m), scale=US%m_to_Z)
+                 units="m", default=min(10.0, 0.05*G%max_depth*US%Z_to_m), scale=US%m_to_Z)
 
   call get_param(param_file, mdl, "DEBUG", CS%debug, &
                  "If true, write out verbose debugging data.", &

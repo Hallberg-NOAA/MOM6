@@ -135,7 +135,7 @@ function diagnoseMaximumDepth(D, G)
   integer :: i, j
   diagnoseMaximumDepth = D(G%isc,G%jsc)
   do j=G%jsc, G%jec ; do i=G%isc, G%iec
-    diagnoseMaximumDepth = max(diagnoseMaximumDepth,D(i,j))
+    diagnoseMaximumDepth = max(diagnoseMaximumDepth, D(i,j))
   enddo ; enddo
   call max_across_PEs(diagnoseMaximumDepth)
 end function diagnoseMaximumDepth
@@ -466,12 +466,12 @@ subroutine limit_topography(D, G, param_file, max_depth, US)
     ! If min_depth<mask_depth (which happens when using positive depths and not changing
     ! MINIMUM_DEPTH) then the shallower is used to modify and determine values on land points.
     do j=G%jsd,G%jed ; do i=G%isd,G%ied
-      if (D(i,j) > min(min_depth,mask_depth)) then
+      if (D(i,j) > min(min_depth, mask_depth)) then
         D(i,j) = min( max( D(i,j), min_depth ), max_depth )
       else
         ! This statement is required for cases with masked-out PEs over the land,
         ! to remove the large initialized values (-9e30) from the halos.
-        D(i,j) = min(min_depth,mask_depth)
+        D(i,j) = min(min_depth, mask_depth)
       endif
     enddo ; enddo
   endif

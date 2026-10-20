@@ -138,8 +138,8 @@ subroutine write_u_accel(I, j, um, hin, ADp, CDp, dt, G, GV, US, CS, vel_rpt, st
 
   ! Determine which layers to write out accelerations for.
     do k=1,nz
-      if (((max(CS%u_av(I,j,k),um(I,j,k)) >= vel_rpt) .or. &
-           (min(CS%u_av(I,j,k),um(I,j,k)) <= -vel_rpt)) .and. &
+      if (((max(CS%u_av(I,j,k), um(I,j,k)) >= vel_rpt) .or. &
+           (min(CS%u_av(I,j,k), um(I,j,k)) <= -vel_rpt)) .and. &
           ((hin(i,j,k) + hin(i+1,j,k)) > 3.0*Angstrom)) exit
     enddo
     ks = k

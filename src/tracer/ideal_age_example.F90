@@ -250,7 +250,7 @@ subroutine initialize_ideal_age_tracer(restart, day, G, GV, US, h, diag, OBC, CS
 
   CS%Time => day
   CS%diag => diag
-  CS%nkbl = max(GV%nkml,1)
+  CS%nkbl = max(GV%nkml, 1)
 
   do m=1,CS%ntr
     call query_vardesc(CS%tr_desc(m), name=name, &
@@ -398,7 +398,7 @@ subroutine ideal_age_tracer_column_physics(h_old, h_new, ea, eb, fluxes, dt, G, 
             endif
           enddo
 
-          k = MIN(nk+1,nz)
+          k = MIN(nk+1, nz)
 
           if (G%mask2dT(i,j) > 0.0) then
             layer_frac = BL_layers(i,j)-nk
@@ -452,7 +452,7 @@ subroutine ideal_age_tracer_column_physics(h_old, h_new, ea, eb, fluxes, dt, G, 
             endif
           enddo
 
-          k = MIN(nk+1,nz)
+          k = MIN(nk+1, nz)
           if (G%mask2dT(i,j) > 0.0) then
             layer_frac = BL_layers(i,j)-nk
             CS%tr(i,j,k,m) = (1.-layer_frac) * (CS%tr(i,j,k,m) + G%mask2dT(i,j)*dt &

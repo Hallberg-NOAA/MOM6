@@ -1474,10 +1474,10 @@ subroutine int_spec_vol_dp_generic_pcm(T, S, p_t, p_b, alpha_ref, HI, EOS, US, d
   integer :: Isq, Ieq, Jsq, Jeq, ish, ieh, jsh, jeh, i, j, m, n, pos, halo
 
   Isq = HI%IscB ; Ieq = HI%IecB ; Jsq = HI%JscB ; Jeq = HI%JecB
-  halo = 0 ; if (present(halo_size)) halo = MAX(halo_size,0)
+  halo = 0 ; if (present(halo_size)) halo = MAX(halo_size, 0)
   ish = HI%isc-halo ; ieh = HI%iec+halo ; jsh = HI%jsc-halo ; jeh = HI%jec+halo
-  if (present(intx_dza)) then ; ish = MIN(Isq,ish) ; ieh = MAX(Ieq+1,ieh) ; endif
-  if (present(inty_dza)) then ; jsh = MIN(Jsq,jsh) ; jeh = MAX(Jeq+1,jeh) ; endif
+  if (present(intx_dza)) then ; ish = MIN(Isq, ish) ; ieh = MAX(Ieq+1, ieh) ; endif
+  if (present(inty_dza)) then ; jsh = MIN(Jsq, jsh) ; jeh = MAX(Jeq+1, jeh) ; endif
 
   do_massWeight = .false. ; massWeight_bug = .false. ; top_massWeight = .false.
   if (present(MassWghtInterp)) then
@@ -2279,7 +2279,7 @@ subroutine avg_specific_vol(T, S, p_t, dp, HI, EOS, SpV_avg, halo_size)
   integer, dimension(2) :: EOSdom ! The i-computational domain for the equation of state
   integer :: jsh, jeh, j, halo
 
-  halo = 0 ; if (present(halo_size)) halo = MAX(halo_size,0)
+  halo = 0 ; if (present(halo_size)) halo = MAX(halo_size, 0)
   jsh = HI%jsc-halo ; jeh = HI%jec+halo
 
   EOSdom(:) = EOS_domain(HI, halo_size)

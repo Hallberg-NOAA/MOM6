@@ -71,8 +71,8 @@ subroutine hybgen_plm_coefs(si, dpi, slope, nk, ns, thin, PCM_lay)
         ztop = 2.0*(si(k,  i)-si(k-1,i))
         zbot = 2.0*(si(k+1,i)-si(k,  i))
         zcen = qcen*(si(k+1,i)-si(k-1,i))
-        if     (ztop*zbot > 0.0) then !ztop,zbot are the same sign
-          slope(k,i) = sign(min(abs(zcen),abs(zbot),abs(ztop)), zbot)
+        if (ztop*zbot > 0.0) then !ztop,zbot are the same sign
+          slope(k,i) = sign(min(abs(zcen), abs(zbot), abs(ztop)), zbot)
         else
           slope(k,i) = 0.0  !local extrema, so no slope
         endif

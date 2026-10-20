@@ -548,7 +548,7 @@ subroutine apply_sponge(h, tv, dt, G, GV, US, ea, eb, CS, Rcv_ml)
 
       if (wb < 0) then
         do k=nkmb,1,-1
-          w = MIN((wb + (h(i,j,k) - GV%Angstrom_H)),0.0)
+          w = MIN((wb + (h(i,j,k) - GV%Angstrom_H)), 0.0)
           h(i,j,k)  = h(i,j,k)  + (wb - w)
           ea(i,j,k) = ea(i,j,k) - w
           wb = w

@@ -2051,7 +2051,7 @@ function find_neutral_pos_linear( CS, z0, T_ref, S_ref, dRdT_ref, dRdS_ref, &
     z = 1.
     return
   endif
-  if ( SIGN(1.,drho_min) == SIGN(1.,drho_max) ) then
+  if ( SIGN(1., drho_min) == SIGN(1., drho_max) ) then
     call MOM_error(FATAL, "drho_min is the same sign as dhro_max")
   endif
 
@@ -2153,7 +2153,7 @@ function find_neutral_pos_full( CS, z0, T_ref, S_ref, P_ref, P_top, P_bot, ppoly
     z = 1.
     return
   endif
-  if ( SIGN(1.,drho_b) == SIGN(1.,drho_c) ) then
+  if ( SIGN(1., drho_b) == SIGN(1., drho_c) ) then
     z = z0
     return
   endif

@@ -215,7 +215,7 @@ subroutine initialize_DOME_tracer(restart, day, G, GV, US, h, diag, OBC, CS, &
       enddo
 
 !    This sets a stripe of tracer across the basin.
-      do m=2,min(6,NTR) ; do j=js,je ; do i=is,ie
+      do m = 2, min(6, NTR) ; do j=js,je ; do i=is,ie
         tr_y = 0.0
         if ((G%geoLatT(i,j) > (CS%stripe_s_lat + CS%stripe_width*real(m-2))) .and. &
             (G%geoLatT(i,j) < (CS%stripe_s_lat + CS%stripe_width*real(m-1)))) &

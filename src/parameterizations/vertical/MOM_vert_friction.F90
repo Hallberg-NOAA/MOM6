@@ -272,7 +272,7 @@ subroutine vertFPmix(ui, vi, uold, vold, hbl_h, h, forces, dt, lpost, Cemp_NL, G
       taux_u(I,j)  = forces%taux(I,j) * Irho0
       if ( (G%mask2dCu(I,j) > 0.5) ) then
         ! h to u-pts
-        tmp_u  = MAX (1.0 ,(G%mask2dT(i,j) + G%mask2dT(i+1,j) ) )
+        tmp_u = MAX(1.0, (G%mask2dT(i,j) + G%mask2dT(i+1,j)))
         hbl_u(I,j) = ((G%mask2dT(i,j) * hbl_h(i,j)) + (G%mask2dT(i+1,j) * hbl_h(i+1,j))) / tmp_u
         depth   = 0.
         Gat1  = 0.
@@ -306,7 +306,7 @@ subroutine vertFPmix(ui, vi, uold, vold, hbl_h, h, forces, dt, lpost, Cemp_NL, G
       tauy_v(i,J)  = forces%tauy(i,J) * Irho0
       if ( (G%mask2dCv(i,J) > 0.5) ) then
         ! h to v-pts
-        tmp_v  = max( 1.0 ,(G%mask2dT(i,j) + G%mask2dT(i,j+1)))
+        tmp_v = max(1.0, (G%mask2dT(i,j) + G%mask2dT(i,j+1)))
         hbl_v(i,J) = (G%mask2dT(i,j) * hbl_h(i,J) + G%mask2dT(i,j+1) * hbl_h(i,j+1)) / tmp_v
         depth = 0.
         Gat1  = 0.
@@ -347,9 +347,9 @@ subroutine vertFPmix(ui, vi, uold, vold, hbl_h, h, forces, dt, lpost, Cemp_NL, G
       do i = is,ie
         if (G%mask2dT(i,j) > 0.5)  then
           ! u to h-pts
-          tmp_u  = max( 1.0 ,(G%mask2dCu(i,j) + G%mask2dCu(i-1,j)))
+          tmp_u = max(1.0, (G%mask2dCu(i,j) + G%mask2dCu(i-1,j)))
           ! v to h-pts
-          tmp_v  = max( 1.0 ,(G%mask2dCv(i,j) + G%mask2dCv(i,j-1)))
+          tmp_v = max(1.0, (G%mask2dCv(i,j) + G%mask2dCv(i,j-1)))
           do k = 1,nz
             uE_h(i,j,k)   = (G%mask2dCu(i,j) *   uE_u(i,j,k) + G%mask2dCu(i-1,j) *   uE_u(i-1,j,k)) / tmp_u
             uInc_h(i,j,k) = (G%mask2dCu(i,j) * uInc_u(i,j,k) + G%mask2dCu(i-1,j) * uInc_u(i-1,j,k)) / tmp_u

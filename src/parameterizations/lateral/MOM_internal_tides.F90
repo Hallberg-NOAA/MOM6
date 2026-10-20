@@ -851,8 +851,8 @@ subroutine propagate_int_tide(h, tv, Nb, Rho_bot, dt, G, GV, US, inttide_input_C
         ! Calculate wavenumber magnitude
         freq2 = CS%frequency(fr)**2
 
-        f2 = (0.25*(G%CoriolisBu(I,J) + G%CoriolisBu(max(I-1,1),max(J-1,1)) + &
-                    G%CoriolisBu(I,max(J-1,1)) + G%CoriolisBu(max(I-1,1),J)))**2
+        f2 = (0.25*(G%CoriolisBu(I,J) + G%CoriolisBu(max(I-1, 1),max(J-1, 1)) + &
+                    G%CoriolisBu(I,max(J-1, 1)) + G%CoriolisBu(max(I-1, 1),J)))**2
         Kmag2 = (freq2 - f2) / ((cn(i,j,m)**2) + (cn_subRO**2))
 
 
@@ -2034,9 +2034,9 @@ subroutine PPM_angular_advect(En2d, CFL_ang, Flux_En, NAngle, dt, halo_ang)
       Em = En2d(a-1)*I_Angle_size
       ! Calculate and bound edge values of energy density.
       aL = ( 5.*Ec + ( 2.*Em - Ep ) ) * oneSixth ! H3 estimate
-      aL = max( min(Ec,Em), aL) ; aL = min( max(Ec,Em), aL) ! Bound
+      aL = max( min(Ec, Em), aL) ; aL = min( max(Ec, Em), aL) ! Bound
       aR = ( 5.*Ec + ( 2.*Ep - Em ) ) * oneSixth ! H3 estimate
-      aR = max( min(Ec,Ep), aR) ; aR = min( max(Ec,Ep), aR) ! Bound
+      aR = max( min(Ec, Ep), aR) ; aR = min( max(Ec, Ep), aR) ! Bound
       dA = aR - aL
       if ((Ep-Ec)*(Ec-Em) <= 0.) then
         aL = Ec ; aR = Ec    ! use PCM for local extremum
@@ -2060,9 +2060,9 @@ subroutine PPM_angular_advect(En2d, CFL_ang, Flux_En, NAngle, dt, halo_ang)
       Em = En2d(a)  *I_Angle_size
       ! Calculate and bound edge values of energy density.
       aL = ( 5.*Ec + ( 2.*Em - Ep ) ) * oneSixth ! H3 estimate
-      aL = max( min(Ec,Em), aL) ; aL = min( max(Ec,Em), aL) ! Bound
+      aL = max( min(Ec, Em), aL) ; aL = min( max(Ec, Em), aL) ! Bound
       aR = ( 5.*Ec + ( 2.*Ep - Em ) ) * oneSixth ! H3 estimate
-      aR = max( min(Ec,Ep), aR) ; aR = min( max(Ec,Ep), aR) ! Bound
+      aR = max( min(Ec, Ep), aR) ; aR = min( max(Ec, Ep), aR) ! Bound
       dA = aR - aL
       if ((Ep-Ec)*(Ec-Em) <= 0.) then
         aL = Ec ; aR = Ec    ! use PCM for local extremum
@@ -2842,9 +2842,9 @@ subroutine teleport(En, NAngle, CS, G, LB)
               cos_normal = cos(angle_wall + 0.25*TwoPi)
               sin_normal = sin(angle_wall + 0.25*TwoPi)
               ! find preferred zonal offset based on shelf/ridge angle
-              ios = int(sign(1.,cos_normal))
+              ios = int(sign(1., cos_normal))
               ! find preferred meridional offset based on shelf/ridge angle
-              jos = int(sign(1.,sin_normal))
+              jos = int(sign(1., sin_normal))
               ! find receptive ocean cell in direction of offset
               if (.not. pref_cell(i+ios,j+jos)) then
                 En(i,j,a) = En(i,j,a) - En_tele
@@ -3018,13 +3018,13 @@ subroutine PPM_reconstruction_x(h_in, h_l, h_r, G, LB, simple_2nd, adv_limiter)
   if ((isl-stencil < G%isd) .or. (iel+stencil > G%ied)) then
     write(mesg,'("In MOM_internal_tides, PPM_reconstruction_x called with a ", &
                & "x-halo that needs to be increased by ",I0,".")') &
-               stencil + max(G%isd-isl,iel-G%ied)
+               stencil + max(G%isd-isl, iel-G%ied)
     call MOM_error(FATAL, mesg)
   endif
   if ((jsl < G%jsd) .or. (jel > G%jed)) then
     write(mesg,'("In MOM_internal_tides, PPM_reconstruction_x called with a ", &
                & "y-halo that needs to be increased by ",I0,".")') &
-               max(G%jsd-jsl,jel-G%jed)
+               max(G%jsd-jsl, jel-G%jed)
     call MOM_error(FATAL, mesg)
   endif
 
@@ -3045,7 +3045,7 @@ subroutine PPM_reconstruction_x(h_in, h_l, h_r, G, LB, simple_2nd, adv_limiter)
         ! Monotonic constraint, see Eq. B2 in Lin 1994, MWR (132)
         dMx = max(h_in(i+1,j), h_in(i-1,j), h_in(i,j)) - h_in(i,j)
         dMn = h_in(i,j) - min(h_in(i+1,j), h_in(i-1,j), h_in(i,j))
-        slp(i,j) = sign(1.,slp(i,j)) * min(abs(slp(i,j)), 2. * min(dMx, dMn))
+        slp(i,j) = sign(1., slp(i,j)) * min(abs(slp(i,j)), 2. * min(dMx, dMn))
                 ! * (G%mask2dT(i-1,j) * G%mask2dT(i,j) * G%mask2dT(i+1,j))
       endif
     enddo ; enddo
@@ -3105,13 +3105,13 @@ subroutine PPM_reconstruction_y(h_in, h_l, h_r, G, LB, simple_2nd, adv_limiter)
   if ((isl < G%isd) .or. (iel > G%ied)) then
     write(mesg,'("In MOM_internal_tides, PPM_reconstruction_y called with a ", &
                & "x-halo that needs to be increased by ",I0,".")') &
-               max(G%isd-isl,iel-G%ied)
+               max(G%isd-isl, iel-G%ied)
     call MOM_error(FATAL, mesg)
   endif
   if ((jsl-stencil < G%jsd) .or. (jel+stencil > G%jed)) then
     write(mesg,'("In MOM_internal_tides, PPM_reconstruction_y called with a ", &
                  & "y-halo that needs to be increased by ",I0,".")') &
-                 stencil + max(G%jsd-jsl,jel-G%jed)
+                 stencil + max(G%jsd-jsl, jel-G%jed)
     call MOM_error(FATAL, mesg)
   endif
 
@@ -3132,7 +3132,7 @@ subroutine PPM_reconstruction_y(h_in, h_l, h_r, G, LB, simple_2nd, adv_limiter)
         ! Monotonic constraint, see Eq. B2 in Lin 1994, MWR (132)
         dMx = max(h_in(i,j+1), h_in(i,j-1), h_in(i,j)) - h_in(i,j)
         dMn = h_in(i,j) - min(h_in(i,j+1), h_in(i,j-1), h_in(i,j))
-        slp(i,j) = sign(1.,slp(i,j)) * min(abs(slp(i,j)), 2. * min(dMx, dMn))
+        slp(i,j) = sign(1., slp(i,j)) * min(abs(slp(i,j)), 2. * min(dMx, dMn))
                 ! * (G%mask2dT(i,j-1) * G%mask2dT(i,j) * G%mask2dT(i,j+1))
       endif
     enddo ; enddo

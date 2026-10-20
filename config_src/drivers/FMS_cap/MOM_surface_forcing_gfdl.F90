@@ -390,13 +390,13 @@ subroutine convert_IOB_to_fluxes(IOB, fluxes, index_bounds, Time, valid_time, G,
         delta_sss = data_restore(i,j) - sfc_state%SSS(i,j)
         if (sfc_state%SSS(i,j) >= data_restore(i,j)*CS%min_ratio_srestore) then
           if (.not. CS%max_delta_srestore_file) then
-            delta_sss = sign(1.0,delta_sss) * min(abs(delta_sss), CS%max_delta_srestore)
+            delta_sss = sign(1.0, delta_sss) * min(abs(delta_sss), CS%max_delta_srestore)
           else
             if (abs(delta_sss) > abs(CS%max_delta_srestore_2d(i,j))) then
               if (CS%max_delta_srestore_2d(i,j) < 0.0) then
                 delta_sss = 0.0  !turn off restoring
               else !clip restoring
-                delta_sss = sign(1.0,delta_sss) * min(abs(delta_sss), CS%max_delta_srestore_2d(i,j))
+                delta_sss = sign(1.0, delta_sss) * min(abs(delta_sss), CS%max_delta_srestore_2d(i,j))
               endif
             endif
           endif !max_delta_srestore_file
@@ -424,13 +424,13 @@ subroutine convert_IOB_to_fluxes(IOB, fluxes, index_bounds, Time, valid_time, G,
           delta_sss = sfc_state%SSS(i,j) - data_restore(i,j)
           if (sfc_state%SSS(i,j) >= data_restore(i,j)*CS%min_ratio_srestore) then
             if (.not. CS%max_delta_srestore_file) then
-              delta_sss = sign(1.0,delta_sss) * min(abs(delta_sss), CS%max_delta_srestore)
+              delta_sss = sign(1.0, delta_sss) * min(abs(delta_sss), CS%max_delta_srestore)
             else
               if (abs(delta_sss) > abs(CS%max_delta_srestore_2d(i,j))) then
                 if (CS%max_delta_srestore_2d(i,j) < 0.0) then
                   delta_sss = 0.0  !turn off restoring
                 else !clip restoring
-                  delta_sss = sign(1.0,delta_sss) * min(abs(delta_sss), CS%max_delta_srestore_2d(i,j))
+                  delta_sss = sign(1.0, delta_sss) * min(abs(delta_sss), CS%max_delta_srestore_2d(i,j))
                 endif
               endif
             endif !max_delta_srestore_file
@@ -470,7 +470,7 @@ subroutine convert_IOB_to_fluxes(IOB, fluxes, index_bounds, Time, valid_time, G,
 
     do j=js,je ; do i=is,ie
       delta_sst = data_restore(i,j) - sfc_state%SST(i,j)
-      delta_sst = sign(1.0,delta_sst) * min(abs(delta_sst), CS%max_delta_trestore)
+      delta_sst = sign(1.0, delta_sst) * min(abs(delta_sst), CS%max_delta_trestore)
       fluxes%heat_added(i,j) = G%mask2dT(i,j) * CS%trestore_mask(i,j) * &
                                rhoXcp * delta_sst * CS%Flux_const_temp  ! [Q R Z T-1 ~> W m-2]
     enddo ; enddo
@@ -615,7 +615,7 @@ subroutine convert_IOB_to_fluxes(IOB, fluxes, index_bounds, Time, valid_time, G,
     if (CS%max_p_surf >= 0.0) then
       do j=js,je ; do i=is,ie
         fluxes%p_surf_full(i,j) = G%mask2dT(i,j) * US%Pa_to_RL2_T2*IOB%p(i-i0,j-j0)
-        fluxes%p_surf(i,j) = MIN(fluxes%p_surf_full(i,j),CS%max_p_surf)
+        fluxes%p_surf(i,j) = MIN(fluxes%p_surf_full(i,j), CS%max_p_surf)
         if (CS%check_no_land_fluxes) &
           call check_mask_val_consistency(IOB%p(i-i0,j-j0), G%mask2dT(i,j), i, j, 'p', G)
       enddo ; enddo
@@ -835,7 +835,7 @@ subroutine convert_IOB_to_forces(IOB, forces, index_bounds, Time, G, US, CS, dt_
     if (CS%max_p_surf >= 0.0) then
       do j=js,je ; do i=is,ie
         forces%p_surf_full(i,j) = G%mask2dT(i,j) * US%Pa_to_RL2_T2*IOB%p(i-i0,j-j0)
-        forces%p_surf(i,j) = MIN(forces%p_surf_full(i,j),CS%max_p_surf)
+        forces%p_surf(i,j) = MIN(forces%p_surf_full(i,j), CS%max_p_surf)
       enddo ; enddo
     else
       do j=js,je ; do i=is,ie
@@ -1052,7 +1052,7 @@ subroutine extract_IOB_stresses(IOB, index_bounds, Time, G, US, CS, taux, tauy, 
       endif
 
       if (G%symmetric) call fill_symmetric_edges(taux_in_B, tauy_in_B, G%Domain, stagger=BGRID_NE)
-      call pass_vector(taux_in_B, tauy_in_B, G%Domain, stagger=BGRID_NE, halo=max(1,halo))
+      call pass_vector(taux_in_B, tauy_in_B, G%Domain, stagger=BGRID_NE, halo=max(1, halo))
 
       if (present(taux).and.present(tauy)) then
         do j=jsh,jeh ; do I=Isqh,Ieqh
@@ -1080,7 +1080,7 @@ subroutine extract_IOB_stresses(IOB, index_bounds, Time, G, US, CS, taux, tauy, 
       if (halo == 0) then
         call pass_vector(taux_in_A, tauy_in_A, G%Domain, To_All+Omit_Corners, stagger=AGRID, halo=1)
       else
-        call pass_vector(taux_in_A, tauy_in_A, G%Domain, stagger=AGRID, halo=max(1,halo))
+        call pass_vector(taux_in_A, tauy_in_A, G%Domain, stagger=AGRID, halo=max(1, halo))
       endif
 
       if (present(taux)) then ; do j=jsh,jeh ; do I=Isqh,Ieqh
@@ -1107,7 +1107,7 @@ subroutine extract_IOB_stresses(IOB, index_bounds, Time, G, US, CS, taux, tauy, 
       endif
 
       if (G%symmetric) call fill_symmetric_edges(taux_in_C, tauy_in_C, G%Domain)
-      call pass_vector(taux_in_C, tauy_in_C, G%Domain, halo=max(1,halo))
+      call pass_vector(taux_in_C, tauy_in_C, G%Domain, halo=max(1, halo))
 
       if (present(taux).and.present(tauy)) then
         do j=jsh,jeh ; do I=Isqh,Ieqh

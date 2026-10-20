@@ -478,8 +478,8 @@ logical function isPointInCell(G, i, j, x, y)
   xSE = G%geoLonBu(i  ,j-1) ; ySE = G%geoLatBu(i  ,j-1)
   xSW = G%geoLonBu(i-1,j-1) ; ySW = G%geoLatBu(i-1,j-1)
   ! This is a crude calculation that assumes a geographic coordinate system
-  if (x<min(xNE,xNW,xSE,xSW) .or. x>max(xNE,xNW,xSE,xSW) .or. &
-      y<min(yNE,yNW,ySE,ySW) .or. y>max(yNE,yNW,ySE,ySW) ) then
+  if (x<min(xNE, xNW, xSE, xSW) .or. x>max(xNE, xNW, xSE, xSW) .or. &
+      y<min(yNE, yNW, ySE, ySW) .or. y>max(yNE, yNW, ySE, ySW) ) then
     return ! Avoid the more complicated calculation
   endif
   l0 = (x-xSW)*(ySE-ySW) - (y-ySW)*(xSE-xSW)

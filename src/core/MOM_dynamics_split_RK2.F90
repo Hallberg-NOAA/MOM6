@@ -492,16 +492,16 @@ subroutine step_MOM_dyn_split_RK2(u_inst, v_inst, h, tv, visc, Time_local, dt, f
   call cpu_clock_begin(id_clock_pass)
   call create_group_pass(CS%pass_eta, eta, G%Domain, halo=1)
   call create_group_pass(CS%pass_visc_rem, CS%visc_rem_u, CS%visc_rem_v, G%Domain, &
-                         To_All+SCALAR_PAIR, CGRID_NE, halo=max(1,cont_stencil))
-  call create_group_pass(CS%pass_uvp, up, vp, G%Domain, halo=max(1,cont_stencil))
-  call create_group_pass(CS%pass_uv, u_inst, v_inst, G%Domain, halo=max(2,cont_stencil))
+                         To_All+SCALAR_PAIR, CGRID_NE, halo=max(1, cont_stencil))
+  call create_group_pass(CS%pass_uvp, up, vp, G%Domain, halo=max(1, cont_stencil))
+  call create_group_pass(CS%pass_uv, u_inst, v_inst, G%Domain, halo=max(2, cont_stencil))
 
   call create_group_pass(CS%pass_hp_uv, hp, G%Domain, halo=cor_stencil)
-  call create_group_pass(CS%pass_hp_uv, u_av, v_av, G%Domain, halo=max(cor_stencil,vel_stencil))
-  call create_group_pass(CS%pass_hp_uv, uh(:,:,:), vh(:,:,:), G%Domain, halo=max(cor_stencil,vel_stencil))
-  call create_group_pass(CS%pass_h, h, g%domain, halo=max(cor_stencil,cont_stencil))
-  call create_group_pass(CS%pass_av_uvh, u_av, v_av, g%domain, halo=max(cor_stencil,vel_stencil))
-  call create_group_pass(CS%pass_av_uvh, uh(:,:,:), vh(:,:,:), G%Domain, halo=max(cor_stencil,vel_stencil))
+  call create_group_pass(CS%pass_hp_uv, u_av, v_av, G%Domain, halo=max(cor_stencil, vel_stencil))
+  call create_group_pass(CS%pass_hp_uv, uh(:,:,:), vh(:,:,:), G%Domain, halo=max(cor_stencil, vel_stencil))
+  call create_group_pass(CS%pass_h, h, g%domain, halo=max(cor_stencil, cont_stencil))
+  call create_group_pass(CS%pass_av_uvh, u_av, v_av, g%domain, halo=max(cor_stencil, vel_stencil))
+  call create_group_pass(CS%pass_av_uvh, uh(:,:,:), vh(:,:,:), G%Domain, halo=max(cor_stencil, vel_stencil))
 
   call cpu_clock_end(id_clock_pass)
   !--- end set up for group halo pass
@@ -810,7 +810,7 @@ subroutine step_MOM_dyn_split_RK2(u_inst, v_inst, h, tv, visc, Time_local, dt, f
 
     ! These should be done with a pass that excludes uh & vh.
 !   call do_group_pass(CS%pass_hp_uv, G%Domain, clock=id_clock_pass)
-    call pass_vector(u_av, v_av, G%Domain, halo=max(cor_stencil,vel_stencil), clock=id_clock_pass)
+    call pass_vector(u_av, v_av, G%Domain, halo=max(cor_stencil, vel_stencil), clock=id_clock_pass)
   endif
 
   ! h_av = (h + hp)/2

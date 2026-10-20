@@ -115,7 +115,7 @@ subroutine SCM_CVMix_tests_TS_init(T, S, h, G, GV, US, param_file, just_read)
       bottom = bottom - h(i,j,k)       ! Interface below layer [Z ~> m]
       zC = 0.5*( top + bottom )        ! Z of middle of layer [Z ~> m]
       DZ = min(0., zC + UpperLayerTempMLD)
-      T(i,j,k) = max(LowerLayerMinTemp,LowerLayerTemp + LowerLayerdTdZ * DZ)
+      T(i,j,k) = max(LowerLayerMinTemp, LowerLayerTemp + LowerLayerdTdZ * DZ)
       DZ = min(0., zC + UpperLayerSaltMLD)
       S(i,j,k) = LowerLayerSalt + LowerLayerdSdZ * DZ
       top = bottom

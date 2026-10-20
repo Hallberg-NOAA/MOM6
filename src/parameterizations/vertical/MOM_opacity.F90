@@ -211,7 +211,7 @@ subroutine set_opacity(optics, sw_total, sw_vis_dir, sw_vis_dif, sw_nir_dir, sw_
         !$OMP parallel do default(shared)
         do j=js,je ; do i=is,ie
           Pen_SW_tot(i,j) = 0.0
-          do n=1,min(optics%nbands,2)
+          do n = 1, min(optics%nbands, 2)
             Pen_SW_tot(i,j) = Pen_SW_tot(i,j) + optics%sw_pen_band(n,i,j)
           enddo
         enddo ; enddo
@@ -487,7 +487,7 @@ function opacity_morel(chl_data, CS)
 
   real :: Chl, Chl2 ! The log10 of chl_data (in mg m-3), and Chl^2 [nondim]
 
-  Chl = log10(min(max(chl_data,0.02),60.0)) ; Chl2 = Chl*Chl
+  Chl = log10(min(max(chl_data, 0.02), 60.0)) ; Chl2 = Chl*Chl
   ! All frequency bands currently use the same opacities.
   opacity_morel = 1.0 / ( (CS%opacity_coef(1,1) + CS%opacity_coef(2,1)*Chl) + Chl2 * &
                           ((CS%opacity_coef(3,1) + Chl*CS%opacity_coef(4,1)) + &
@@ -508,7 +508,7 @@ function SW_pen_frac_morel(chl_data, CS)
   ! three-dimensional chl-a values.
   real :: Chl, Chl2         ! The log10 of chl_data in mg m-3, and Chl^2 [nondim]
 
-  Chl = log10(min(max(chl_data,0.02),60.0)) ; Chl2 = Chl*Chl
+  Chl = log10(min(max(chl_data, 0.02), 60.0)) ; Chl2 = Chl*Chl
   SW_pen_frac_morel = 1.0 - ( (CS%SW_pen_frac_coef(1) + CS%SW_pen_frac_coef(2)*Chl) + Chl2 * &
                               ((CS%SW_pen_frac_coef(3) + Chl*CS%SW_pen_frac_coef(4)) + &
                                Chl2*(CS%SW_pen_frac_coef(5) + Chl*CS%SW_pen_frac_coef(6))) )
@@ -942,7 +942,7 @@ subroutine sumSWoverBands(G, GV, US, h, dz, nsw, optics, j, dt, &
   do i=is,ie ; h_heat(i) = 0.0 ; enddo
   do i=is,ie
     netPen(i,1) = 0.
-    do n=1,max(nsw,1)
+    do n = 1, max(nsw, 1)
       netPen(i,1) = netPen(i,1) + pen_SW_bnd(n,i)   ! Surface interface
     enddo
   enddo
@@ -1245,7 +1245,7 @@ subroutine opacity_init(Time, G, GV, US, param_file, diag, CS, optics)
   if (CS%opacity_scheme == MANIZZA_05) then
     allocate(CS%opacity_coef(2,optics%nbands))
     allocate(CS%chl_power(optics%nbands))
-    do n=1,min(3,optics%nbands)
+    do n = 1, min(3, optics%nbands)
       CS%opacity_coef(1,n) = opacity_coefs(2*n-1) ; CS%opacity_coef(2,n) = opacity_coefs(2*n)
       CS%chl_power(n) = opacity_powers(n)
     enddo
@@ -1409,7 +1409,7 @@ subroutine init_ohlmann_table(optics)
   do n=1,nval_lut
      log10chl_lut = optics%log10chl_min + (n-1)*optics%dlog10chl
      chl = 10.0**log10chl_lut
-     chl = max(chl_tab1a(1),min(chl,chl_tab1a(nval_tab1a)))
+     chl = max(chl_tab1a(1), min(chl, chl_tab1a(nval_tab1a)))
 
      ! find interval in Table 1a (m-1,m]
      do while (chl > chl_tab1a(m))
@@ -1473,7 +1473,7 @@ function lookup_ohlmann_opacity(chl,optics) result(B)
 
   ! Make sure we are in the table
   if (chl > optics%chl_min) then
-    log10chl = min(log10(chl),optics%log10chl_max)
+    log10chl = min(log10(chl), optics%log10chl_max)
   else
     log10chl = optics%log10chl_min
   endif

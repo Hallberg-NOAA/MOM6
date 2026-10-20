@@ -746,8 +746,8 @@ subroutine call_tracer_stocks(h, stock_values, G, GV, US, CS, stock_names, stock
   index = -1 ; if (present(stock_index)) index = stock_index
   ns_tot = 0
   max_ns = size(stock_values)
-  if (present(stock_names)) max_ns = min(max_ns,size(stock_names))
-  if (present(stock_units)) max_ns = min(max_ns,size(stock_units))
+  if (present(stock_names)) max_ns = min(max_ns, size(stock_names))
+  if (present(stock_units)) max_ns = min(max_ns, size(stock_units))
 
 !  Add other user-provided calls here.
   if (CS%use_USER_tracer_example) then

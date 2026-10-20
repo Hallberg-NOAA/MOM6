@@ -435,8 +435,8 @@ subroutine initialize_regridding(CS, G, GV, US, max_depth, param_file, mdl, &
     endif
     allocate(dz(ke))
     dz(:) = uniformResolution(ke, coord_mode, tmpReal, &
-                US%R_to_kg_m3*(GV%Rlay(1) + 0.5*(GV%Rlay(1)-GV%Rlay(min(2,ke)))), &
-                US%R_to_kg_m3*(GV%Rlay(ke) + 0.5*(GV%Rlay(ke)-GV%Rlay(max(ke-1,1)))) )
+                US%R_to_kg_m3*(GV%Rlay(1) + 0.5*(GV%Rlay(1) - GV%Rlay(min(2, ke)))), &
+                US%R_to_kg_m3*(GV%Rlay(ke) + 0.5*(GV%Rlay(ke) - GV%Rlay(max(ke-1, 1)))) )
     if (main_parameters) call log_param(param_file, mdl, "!"//coord_res_param, dz, &
                    trim(message), units=trim(coord_units))
   elseif (trim(string)=='PARAM') then
@@ -610,8 +610,8 @@ subroutine initialize_regridding(CS, G, GV, US, max_depth, param_file, mdl, &
       ! set nominal 1-d dz to UNIFORM
       allocate(dz(ke))
       dz(:) = uniformResolution(ke, coord_mode, maximum_depth, &
-                  US%R_to_kg_m3*(GV%Rlay(1) + 0.5*(GV%Rlay(1)-GV%Rlay(min(2,ke)))), &
-                  US%R_to_kg_m3*(GV%Rlay(ke) + 0.5*(GV%Rlay(ke)-GV%Rlay(max(ke-1,1)))) )
+                  US%R_to_kg_m3*(GV%Rlay(1) + 0.5*(GV%Rlay(1) - GV%Rlay(min(2, ke)))), &
+                  US%R_to_kg_m3*(GV%Rlay(ke) + 0.5*(GV%Rlay(ke) - GV%Rlay(max(ke-1, 1)))) )
     endif !dz
   elseif (index(trim(string),'HYBRID_MAP:')==1) then
     ke = GV%ke
@@ -637,7 +637,7 @@ subroutine initialize_regridding(CS, G, GV, US, max_depth, param_file, mdl, &
     !find maximum index
     np = 1
     do j=G%jsc, G%jec ; do i=G%isc, G%iec
-      np = max(np,ceiling(index_map(i,j)))
+      np = max(np, ceiling(index_map(i,j)))
     enddo ; enddo
     call max_across_PEs(np)
     write(string2,"(i3)") np
@@ -2051,7 +2051,7 @@ subroutine build_grid_HyCOM1( G, GV, US, h, nom_depth_H, tv, h_new, dzInterface,
         do k=1,GV%ke
           totalThickness = totalThickness + h(i,j,k)
         enddo
-        z_top_col = max(nominalDepth-totalThickness,0.0)
+        z_top_col = max(nominalDepth-totalThickness, 0.0)
       else
         z_top_col = 0.0
       endif
@@ -2175,7 +2175,7 @@ subroutine adjust_interface_motion( CS, nk, h_old, dz_int )
   eps = 1. ; eps = epsilon(eps)
 
   h_total = 0. ; h_err = 0.
-  do k = 1, min(CS%nk,nk)
+  do k = 1, min(CS%nk, nk)
     h_total = h_total + h_old(k)
     h_err = h_err + max( h_old(k), abs(dz_int(k)), abs(dz_int(k+1)) )*eps
     h_new = h_old(k) + ( dz_int(k) - dz_int(k+1) )
@@ -2200,7 +2200,7 @@ subroutine adjust_interface_motion( CS, nk, h_old, dz_int )
       endif
     enddo
   endif
-  do k = min(CS%nk,nk),2,-1
+  do k = min(CS%nk, nk), 2, -1
     h_new = h_old(k) + ( dz_int(k) - dz_int(k+1) )
     if (h_new<CS%min_thickness) &
         dz_int(k) = ( dz_int(k+1) - h_old(k) ) + CS%min_thickness ! Implies next h_new = min_thickness

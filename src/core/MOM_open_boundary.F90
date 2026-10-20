@@ -2984,7 +2984,7 @@ subroutine radiation_open_bdry_conds(OBC, u_new, u_old, v_new, v_old, G, GV, US,
           if (dhdt*dhdx < 0.0) dhdt = 0.0
           cff_new = max((dhdx*dhdx) + (dhdy*dhdy), eps)
           rx_new = min(dhdt*dhdx, cff_new*rx_max)
-          ry_new = min(cff_new,max(dhdt*dhdy,-cff_new))
+          ry_new = min(cff_new, max(dhdt*dhdy, -cff_new))
           if (gamma_u < 1.0) then
             rx_avg = (1.0-gamma_u)*segment%rx_norm_obl(I,j,k) + gamma_u*rx_new
             ry_avg = (1.0-gamma_u)*segment%ry_norm_obl(I,j,k) + gamma_u*ry_new
@@ -2998,8 +2998,8 @@ subroutine radiation_open_bdry_conds(OBC, u_new, u_old, v_new, v_old, G, GV, US,
           segment%ry_norm_obl(I,j,k) = ry_avg
           segment%cff_normal(I,j,k) = cff_avg
           segment%normal_vel(I,j,k) = ((cff_avg*u_new(I,j,k) + rx_avg*u_new(I-1,j,k)) - &
-                             (max(ry_avg,0.0)*segment%grad_normal(J-1,2,k) + &
-                              min(ry_avg,0.0)*segment%grad_normal(J,2,k))) / &
+                             (max(ry_avg, 0.0)*segment%grad_normal(J-1,2,k) + &
+                              min(ry_avg, 0.0)*segment%grad_normal(J,2,k))) / &
                            (cff_avg + rx_avg)
           if (gamma_u < 1.0) then
             ! Copy restart fields into 3-d arrays. This is an inefficient and temporary
@@ -3062,8 +3062,8 @@ subroutine radiation_open_bdry_conds(OBC, u_new, u_old, v_new, v_old, G, GV, US,
           enddo ; enddo
         endif
         if (segment%radiation_grad) then
-          Js_obc = max(segment%HI%JsdB,G%jsd+1)
-          Je_obc = min(segment%HI%JedB,G%jed-1)
+          Js_obc = max(segment%HI%JsdB, G%jsd+1)
+          Je_obc = min(segment%HI%JedB, G%jed-1)
           do k=1,nz ; do J=Js_obc,Je_obc
             rx_avg = rx_tang_rad(I,J,k)
             !           if (G%mask2dCu(I-1,j) > 0.0 .and. G%mask2dCu(I-1,j+1) > 0.0) then
@@ -3126,7 +3126,7 @@ subroutine radiation_open_bdry_conds(OBC, u_new, u_old, v_new, v_old, G, GV, US,
               if (dhdt*dhdx < 0.0) dhdt = 0.0
               cff_new = max((dhdx*dhdx) + (dhdy*dhdy), eps)
               rx_new = min(dhdt*dhdx, cff_new*rx_max)
-              ry_new = min(cff_new,max(dhdt*dhdy,-cff_new))
+              ry_new = min(cff_new, max(dhdt*dhdy, -cff_new))
               rx_tang_obl(I,J,k) = rx_new
               ry_tang_obl(I,J,k) = ry_new
               cff_tangential(I,J,k) = cff_new
@@ -3139,8 +3139,8 @@ subroutine radiation_open_bdry_conds(OBC, u_new, u_old, v_new, v_old, G, GV, US,
             ry_avg = ry_tang_obl(I,J,k)
             cff_avg = cff_tangential(I,J,k)
             segment%tangential_vel(I,J,k) = ((cff_avg*v_new(i,J,k) + rx_avg*v_new(i-1,J,k)) - &
-                                             (max(ry_avg,0.0)*segment%grad_tan(j,2,k) + &
-                                              min(ry_avg,0.0)*segment%grad_tan(j+1,2,k))) / &
+                                             (max(ry_avg, 0.0)*segment%grad_tan(j,2,k) + &
+                                              min(ry_avg, 0.0)*segment%grad_tan(j+1,2,k))) / &
                                             (cff_avg + rx_avg)
           enddo ; enddo
         endif
@@ -3158,8 +3158,8 @@ subroutine radiation_open_bdry_conds(OBC, u_new, u_old, v_new, v_old, G, GV, US,
           enddo ; enddo
         endif
         if (segment%oblique_grad) then
-          Js_obc = max(segment%HI%JsdB,G%jsd+1)
-          Je_obc = min(segment%HI%JedB,G%jed-1)
+          Js_obc = max(segment%HI%JsdB, G%jsd+1)
+          Je_obc = min(segment%HI%JedB, G%jed-1)
           do k=1,nz ;  do J=segment%HI%JsdB+1,segment%HI%JedB-1
             rx_avg = rx_tang_obl(I,J,k)
             ry_avg = ry_tang_obl(I,J,k)
@@ -3167,8 +3167,8 @@ subroutine radiation_open_bdry_conds(OBC, u_new, u_old, v_new, v_old, G, GV, US,
             segment%tangential_grad(I,J,k) =  &
                 ((cff_avg*(v_new(i,J,k)  - v_new(i-1,J,k))*G%IdxBu(I-1,J) + &
                   rx_avg*(v_new(i-1,J,k) - v_new(i-2,J,k))*G%IdxBu(I-2,J)) - &
-                 (max(ry_avg,0.0)*segment%grad_gradient(J,2,k) + &
-                  min(ry_avg,0.0)*segment%grad_gradient(J+1,2,k)) ) / &
+                 (max(ry_avg, 0.0)*segment%grad_gradient(J,2,k) + &
+                  min(ry_avg, 0.0)*segment%grad_gradient(J+1,2,k)) ) / &
                 (cff_avg + rx_avg)
           enddo ; enddo
         endif
@@ -3229,7 +3229,7 @@ subroutine radiation_open_bdry_conds(OBC, u_new, u_old, v_new, v_old, G, GV, US,
 
           cff_new = max((dhdx*dhdx) + (dhdy*dhdy), eps)
           rx_new = min(dhdt*dhdx, cff_new*rx_max)
-          ry_new = min(cff_new,max(dhdt*dhdy,-cff_new))
+          ry_new = min(cff_new, max(dhdt*dhdy, -cff_new))
           if (gamma_u < 1.0) then
             rx_avg = (1.0-gamma_u)*segment%rx_norm_obl(I,j,k) + gamma_u*rx_new
             ry_avg = (1.0-gamma_u)*segment%ry_norm_obl(I,j,k) + gamma_u*ry_new
@@ -3243,8 +3243,8 @@ subroutine radiation_open_bdry_conds(OBC, u_new, u_old, v_new, v_old, G, GV, US,
           segment%ry_norm_obl(I,j,k) = ry_avg
           segment%cff_normal(I,j,k) = cff_avg
           segment%normal_vel(I,j,k) = ((cff_avg*u_new(I,j,k) + rx_avg*u_new(I+1,j,k)) - &
-                                       (max(ry_avg,0.0)*segment%grad_normal(J-1,2,k) + &
-                                        min(ry_avg,0.0)*segment%grad_normal(J,2,k))) / &
+                                       (max(ry_avg, 0.0)*segment%grad_normal(J-1,2,k) + &
+                                        min(ry_avg, 0.0)*segment%grad_normal(J,2,k))) / &
                                       (cff_avg + rx_avg)
           if (gamma_u < 1.0) then
             ! Copy restart fields into 3-d arrays. This is an inefficient and temporary issues
@@ -3307,8 +3307,8 @@ subroutine radiation_open_bdry_conds(OBC, u_new, u_old, v_new, v_old, G, GV, US,
           enddo ; enddo
         endif
         if (segment%radiation_grad) then
-          Js_obc = max(segment%HI%JsdB,G%jsd+1)
-          Je_obc = min(segment%HI%JedB,G%jed-1)
+          Js_obc = max(segment%HI%JsdB, G%jsd+1)
+          Je_obc = min(segment%HI%JedB, G%jed-1)
           do k=1,nz ;  do J=Js_obc,Je_obc
             rx_avg = rx_tang_rad(I,J,k)
             !           if (G%mask2dCu(I+1,j) > 0.0 .and. G%mask2dCu(I+1,j+1) > 0.0) then
@@ -3371,7 +3371,7 @@ subroutine radiation_open_bdry_conds(OBC, u_new, u_old, v_new, v_old, G, GV, US,
               if (dhdt*dhdx < 0.0) dhdt = 0.0
               cff_new = max((dhdx*dhdx) + (dhdy*dhdy), eps)
               rx_new = min(dhdt*dhdx, cff_new*rx_max)
-              ry_new = min(cff_new,max(dhdt*dhdy,-cff_new))
+              ry_new = min(cff_new, max(dhdt*dhdy, -cff_new))
               rx_tang_obl(I,J,k) = rx_new
               ry_tang_obl(I,J,k) = ry_new
               cff_tangential(I,J,k) = cff_new
@@ -3384,8 +3384,8 @@ subroutine radiation_open_bdry_conds(OBC, u_new, u_old, v_new, v_old, G, GV, US,
             ry_avg = ry_tang_obl(I,J,k)
             cff_avg = cff_tangential(I,J,k)
             segment%tangential_vel(I,J,k) = ((cff_avg*v_new(i+1,J,k) + rx_avg*v_new(i+2,J,k)) - &
-                                             (max(ry_avg,0.0)*segment%grad_tan(j,2,k) + &
-                                              min(ry_avg,0.0)*segment%grad_tan(j+1,2,k))) / &
+                                             (max(ry_avg, 0.0)*segment%grad_tan(j,2,k) + &
+                                              min(ry_avg, 0.0)*segment%grad_tan(j+1,2,k))) / &
                                             (cff_avg + rx_avg)
           enddo ; enddo
         endif
@@ -3403,8 +3403,8 @@ subroutine radiation_open_bdry_conds(OBC, u_new, u_old, v_new, v_old, G, GV, US,
           enddo ; enddo
         endif
         if (segment%oblique_grad) then
-          Js_obc = max(segment%HI%JsdB,G%jsd+1)
-          Je_obc = min(segment%HI%JedB,G%jed-1)
+          Js_obc = max(segment%HI%JsdB, G%jsd+1)
+          Je_obc = min(segment%HI%JedB, G%jed-1)
           do k=1,nz ;  do J=segment%HI%JsdB+1,segment%HI%JedB-1
             rx_avg = rx_tang_obl(I,J,k)
             ry_avg = ry_tang_obl(I,J,k)
@@ -3412,8 +3412,8 @@ subroutine radiation_open_bdry_conds(OBC, u_new, u_old, v_new, v_old, G, GV, US,
             segment%tangential_grad(I,J,k) = &
                 ((cff_avg*(v_new(i+2,J,k) - v_new(i+1,J,k))*G%IdxBu(I+1,J) + &
                    rx_avg*(v_new(i+3,J,k) - v_new(i+2,J,k))*G%IdxBu(I+2,J)) - &
-                 (max(ry_avg,0.0)*segment%grad_gradient(J,2,k) + &
-                  min(ry_avg,0.0)*segment%grad_gradient(J+1,2,k))) / &
+                 (max(ry_avg, 0.0)*segment%grad_gradient(J,2,k) + &
+                  min(ry_avg, 0.0)*segment%grad_gradient(J+1,2,k))) / &
                 (cff_avg + rx_avg)
           enddo ; enddo
         endif
@@ -3473,7 +3473,7 @@ subroutine radiation_open_bdry_conds(OBC, u_new, u_old, v_new, v_old, G, GV, US,
           if (dhdt*dhdy < 0.0) dhdt = 0.0
           cff_new = max((dhdx*dhdx) + (dhdy*dhdy), eps)
           ry_new = min(dhdt*dhdy, cff_new*ry_max)
-          rx_new = min(cff_new,max(dhdt*dhdx,-cff_new))
+          rx_new = min(cff_new, max(dhdt*dhdx, -cff_new))
           if (gamma_u < 1.0) then
             rx_avg = (1.0-gamma_u)*segment%rx_norm_obl(I,j,k) + gamma_u*rx_new
             ry_avg = (1.0-gamma_u)*segment%ry_norm_obl(i,J,k) + gamma_u*ry_new
@@ -3487,8 +3487,8 @@ subroutine radiation_open_bdry_conds(OBC, u_new, u_old, v_new, v_old, G, GV, US,
           segment%ry_norm_obl(i,J,k) = ry_avg
           segment%cff_normal(i,J,k) = cff_avg
           segment%normal_vel(i,J,k) = ((cff_avg*v_new(i,J,k) + ry_avg*v_new(i,J-1,k)) - &
-                                       (max(rx_avg,0.0)*segment%grad_normal(I-1,2,k) +&
-                                        min(rx_avg,0.0)*segment%grad_normal(I,2,k))) / &
+                                       (max(rx_avg, 0.0)*segment%grad_normal(I-1,2,k) +&
+                                        min(rx_avg, 0.0)*segment%grad_normal(I,2,k))) / &
                                       (cff_avg + ry_avg)
           if (gamma_u < 1.0) then
             ! Copy restart fields into 3-d arrays. This is an inefficient and temporary issues
@@ -3551,8 +3551,8 @@ subroutine radiation_open_bdry_conds(OBC, u_new, u_old, v_new, v_old, G, GV, US,
           enddo ; enddo
         endif
         if (segment%radiation_grad) then
-          Is_obc = max(segment%HI%IsdB,G%isd+1)
-          Ie_obc = min(segment%HI%IedB,G%ied-1)
+          Is_obc = max(segment%HI%IsdB, G%isd+1)
+          Ie_obc = min(segment%HI%IedB, G%ied-1)
           do k=1,nz ;  do I=Is_obc,Ie_obc
             ry_avg = ry_tang_rad(I,J,k)
             !           if (G%mask2dCv(i,J-1) > 0.0 .and. G%mask2dCv(i+1,J-1) > 0.0) then
@@ -3615,7 +3615,7 @@ subroutine radiation_open_bdry_conds(OBC, u_new, u_old, v_new, v_old, G, GV, US,
               if (dhdt*dhdy < 0.0) dhdt = 0.0
               cff_new = max((dhdx*dhdx) + (dhdy*dhdy), eps)
               ry_new = min(dhdt*dhdy, cff_new*ry_max)
-              rx_new = min(cff_new,max(dhdt*dhdx,-cff_new))
+              rx_new = min(cff_new, max(dhdt*dhdx, -cff_new))
               rx_tang_obl(I,J,k) = rx_new
               ry_tang_obl(I,J,k) = ry_new
               cff_tangential(I,J,k) = cff_new
@@ -3628,8 +3628,8 @@ subroutine radiation_open_bdry_conds(OBC, u_new, u_old, v_new, v_old, G, GV, US,
             ry_avg = ry_tang_obl(I,J,k)
             cff_avg = cff_tangential(I,J,k)
             segment%tangential_vel(I,J,k) = ((cff_avg*u_new(I,j,k) + ry_avg*u_new(I,j-1,k)) - &
-                                             (max(rx_avg,0.0)*segment%grad_tan(i,2,k) + &
-                                              min(rx_avg,0.0)*segment%grad_tan(i+1,2,k))) / &
+                                             (max(rx_avg, 0.0)*segment%grad_tan(i,2,k) + &
+                                              min(rx_avg, 0.0)*segment%grad_tan(i+1,2,k))) / &
                                             (cff_avg + ry_avg)
           enddo ; enddo
         endif
@@ -3647,8 +3647,8 @@ subroutine radiation_open_bdry_conds(OBC, u_new, u_old, v_new, v_old, G, GV, US,
           enddo ; enddo
         endif
         if (segment%oblique_grad) then
-          Is_obc = max(segment%HI%IsdB,G%isd+1)
-          Ie_obc = min(segment%HI%IedB,G%ied-1)
+          Is_obc = max(segment%HI%IsdB, G%isd+1)
+          Ie_obc = min(segment%HI%IedB, G%ied-1)
           do k=1,nz ;  do I=segment%HI%IsdB+1,segment%HI%IedB-1
             rx_avg = rx_tang_obl(I,J,k)
             ry_avg = ry_tang_obl(I,J,k)
@@ -3656,8 +3656,8 @@ subroutine radiation_open_bdry_conds(OBC, u_new, u_old, v_new, v_old, G, GV, US,
             segment%tangential_grad(I,J,k) =  &
                 ((cff_avg*(u_new(I,j,k)   - u_new(I,j-1,k))*G%IdyBu(I,J-1) + &
                    ry_avg*(u_new(I,j-1,k) - u_new(I,j-2,k))*G%IdyBu(I,J-2)) - &
-                                 (max(rx_avg,0.0)*segment%grad_gradient(I,2,k) + &
-                                  min(rx_avg,0.0)*segment%grad_gradient(I+1,2,k))) / &
+                                 (max(rx_avg, 0.0)*segment%grad_gradient(I,2,k) + &
+                                  min(rx_avg, 0.0)*segment%grad_gradient(I+1,2,k))) / &
                                 (cff_avg + ry_avg)
           enddo ; enddo
         endif
@@ -3718,7 +3718,7 @@ subroutine radiation_open_bdry_conds(OBC, u_new, u_old, v_new, v_old, G, GV, US,
 
           cff_new = max((dhdx*dhdx) + (dhdy*dhdy), eps)
           ry_new = min(dhdt*dhdy, cff_new*ry_max)
-          rx_new = min(cff_new,max(dhdt*dhdx,-cff_new))
+          rx_new = min(cff_new, max(dhdt*dhdx, -cff_new))
           if (gamma_u < 1.0) then
             rx_avg = (1.0-gamma_u)*segment%rx_norm_obl(i,J,k) + gamma_u*rx_new
             ry_avg = (1.0-gamma_u)*segment%ry_norm_obl(i,J,k) + gamma_u*ry_new
@@ -3732,8 +3732,8 @@ subroutine radiation_open_bdry_conds(OBC, u_new, u_old, v_new, v_old, G, GV, US,
           segment%ry_norm_obl(i,J,k) = ry_avg
           segment%cff_normal(i,J,k) = cff_avg
           segment%normal_vel(i,J,k) = ((cff_avg*v_new(i,J,k) + ry_avg*v_new(i,J+1,k)) - &
-                                       (max(rx_avg,0.0)*segment%grad_normal(I-1,2,k) + &
-                                        min(rx_avg,0.0)*segment%grad_normal(I,2,k))) / &
+                                       (max(rx_avg, 0.0)*segment%grad_normal(I-1,2,k) + &
+                                        min(rx_avg, 0.0)*segment%grad_normal(I,2,k))) / &
                                       (cff_avg + ry_avg)
           if (gamma_u < 1.0) then
             ! Copy restart fields into 3-d arrays. This is an inefficient and temporary issues
@@ -3796,8 +3796,8 @@ subroutine radiation_open_bdry_conds(OBC, u_new, u_old, v_new, v_old, G, GV, US,
           enddo ; enddo
         endif
         if (segment%radiation_grad) then
-          Is_obc = max(segment%HI%IsdB,G%isd+1)
-          Ie_obc = min(segment%HI%IedB,G%ied-1)
+          Is_obc = max(segment%HI%IsdB, G%isd+1)
+          Ie_obc = min(segment%HI%IedB, G%ied-1)
           do k=1,nz ;  do I=Is_obc,Ie_obc
             ry_avg = ry_tang_rad(I,J,k)
             !           if (G%mask2dCv(i,J+1) > 0.0 .and. G%mask2dCv(i+1,J+1) > 0.0) then
@@ -3860,7 +3860,7 @@ subroutine radiation_open_bdry_conds(OBC, u_new, u_old, v_new, v_old, G, GV, US,
               if (dhdt*dhdy < 0.0) dhdt = 0.0
               cff_new = max((dhdx*dhdx) + (dhdy*dhdy), eps)
               ry_new = min(dhdt*dhdy, cff_new*ry_max)
-              rx_new = min(cff_new,max(dhdt*dhdx,-cff_new))
+              rx_new = min(cff_new, max(dhdt*dhdx, -cff_new))
               rx_tang_obl(I,J,k) = rx_new
               ry_tang_obl(I,J,k) = ry_new
               cff_tangential(I,J,k) = cff_new
@@ -3873,8 +3873,8 @@ subroutine radiation_open_bdry_conds(OBC, u_new, u_old, v_new, v_old, G, GV, US,
             ry_avg = ry_tang_obl(I,J,k)
             cff_avg = cff_tangential(I,J,k)
             segment%tangential_vel(I,J,k) = ((cff_avg*u_new(I,j+1,k) + ry_avg*u_new(I,j+2,k)) - &
-                                             (max(rx_avg,0.0)*segment%grad_tan(i,2,k) + &
-                                              min(rx_avg,0.0)*segment%grad_tan(i+1,2,k)) ) / &
+                                             (max(rx_avg, 0.0)*segment%grad_tan(i,2,k) + &
+                                              min(rx_avg, 0.0)*segment%grad_tan(i+1,2,k)) ) / &
                                             (cff_avg + ry_avg)
           enddo ; enddo
         endif
@@ -3892,8 +3892,8 @@ subroutine radiation_open_bdry_conds(OBC, u_new, u_old, v_new, v_old, G, GV, US,
           enddo ; enddo
         endif
         if (segment%oblique_grad) then
-          Is_obc = max(segment%HI%IsdB,G%isd+1)
-          Ie_obc = min(segment%HI%IedB,G%ied-1)
+          Is_obc = max(segment%HI%IsdB, G%isd+1)
+          Ie_obc = min(segment%HI%IedB, G%ied-1)
           do k=1,nz ;  do I=segment%HI%IsdB+1,segment%HI%IedB-1
             rx_avg = rx_tang_obl(I,J,k)
             ry_avg = ry_tang_obl(I,J,k)
@@ -3901,8 +3901,8 @@ subroutine radiation_open_bdry_conds(OBC, u_new, u_old, v_new, v_old, G, GV, US,
             segment%tangential_grad(I,J,k) = &
                 ((cff_avg*(u_new(I,j+2,k) - u_new(I,j+1,k))*G%IdyBu(I,J+1) + &
                    ry_avg*(u_new(I,j+3,k) - u_new(I,j+2,k))*G%IdyBu(I,J+2)) - &
-                                 (max(rx_avg,0.0)*segment%grad_gradient(i,2,k) + &
-                                  min(rx_avg,0.0)*segment%grad_gradient(i+1,2,k))) / &
+                                 (max(rx_avg, 0.0)*segment%grad_gradient(i,2,k) + &
+                                  min(rx_avg, 0.0)*segment%grad_gradient(i+1,2,k))) / &
                                 (cff_avg + ry_avg)
           enddo ; enddo
         endif

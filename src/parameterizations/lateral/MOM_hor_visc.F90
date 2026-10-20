@@ -789,7 +789,7 @@ subroutine horizontal_viscosity_block(u, v, h, uh, vh, diffu, diffv, MEKE, VarMi
       J = OBC%segment(n)%HI%JsdB ; I = OBC%segment(n)%HI%IsdB
       if (apply_OBC_strain) then
         if (OBC%segment(n)%is_N_or_S .and. (J >= Js_vort) .and. (J <= Je_vort)) then
-          do kk=1,kke ; do I=max(OBC%segment(n)%HI%IsdB,Is_vort),min(OBC%segment(n)%HI%IedB,Ie_vort)
+          do kk=1,kke ; do I = max(OBC%segment(n)%HI%IsdB, Is_vort), min(OBC%segment(n)%HI%IedB, Ie_vort)
             k = ksb + kk - 1
 
             select case (OBC%strain_config)
@@ -818,7 +818,7 @@ subroutine horizontal_viscosity_block(u, v, h, uh, vh, diffu, diffv, MEKE, VarMi
             endif
           enddo ; enddo
         elseif (OBC%segment(n)%is_E_or_W .and. (I >= is_vort) .and. (I <= ie_vort)) then
-          do kk=1,kke ; do J=max(OBC%segment(n)%HI%JsdB,js_vort),min(OBC%segment(n)%HI%JedB,je_vort)
+          do kk=1,kke ; do J = max(OBC%segment(n)%HI%JsdB, js_vort), min(OBC%segment(n)%HI%JedB, je_vort)
             k = ksb + kk - 1
 
             select case (OBC%strain_config)
@@ -855,28 +855,28 @@ subroutine horizontal_viscosity_block(u, v, h, uh, vh, diffu, diffv, MEKE, VarMi
         ! are always zeroed out at OBC points, in which case the i-loop below
         ! becomes do i=is-1,ie+1. -RWH
         if ((J >= js-2) .and. (J <= Jeq+1)) then
-          do kk=1,kke ; do i=max(is-2,OBC%segment(n)%HI%isd),min(ie+2,OBC%segment(n)%HI%ied)
+          do kk=1,kke ; do i = max(is-2, OBC%segment(n)%HI%isd), min(ie+2, OBC%segment(n)%HI%ied)
             k = ksb + kk - 1
             h_v(i,J,kk) = h(i,j,k)
           enddo ; enddo
         endif
       elseif (OBC%segment(n)%direction == OBC_DIRECTION_S) then
         if ((J >= js-2) .and. (J <= Jeq+1)) then
-          do kk=1,kke ; do i=max(is-2,OBC%segment(n)%HI%isd),min(ie+2,OBC%segment(n)%HI%ied)
+          do kk=1,kke ; do i = max(is-2, OBC%segment(n)%HI%isd), min(ie+2, OBC%segment(n)%HI%ied)
             k = ksb + kk - 1
             h_v(i,J,kk) = h(i,j+1,k)
           enddo ; enddo
         endif
       elseif (OBC%segment(n)%direction == OBC_DIRECTION_E) then
         if ((I >= is-2) .and. (I <= Ieq+1)) then
-          do kk=1,kke ; do j=max(js-2,OBC%segment(n)%HI%jsd),min(je+2,OBC%segment(n)%HI%jed)
+          do kk=1,kke ; do j = max(js-2, OBC%segment(n)%HI%jsd), min(je+2, OBC%segment(n)%HI%jed)
             k = ksb + kk - 1
             h_u(I,j,kk) = h(i,j,k)
           enddo ; enddo
         endif
       elseif (OBC%segment(n)%direction == OBC_DIRECTION_W) then
         if ((I >= is-2) .and. (I <= Ieq+1)) then
-          do kk=1,kke ; do j=max(js-2,OBC%segment(n)%HI%jsd),min(je+2,OBC%segment(n)%HI%jed)
+          do kk=1,kke ; do j = max(js-2, OBC%segment(n)%HI%jsd), min(je+2, OBC%segment(n)%HI%jed)
             k = ksb + kk - 1
             h_u(I,j,kk) = h(i+1,j,k)
           enddo ; enddo
@@ -888,25 +888,25 @@ subroutine horizontal_viscosity_block(u, v, h, uh, vh, diffu, diffv, MEKE, VarMi
       J = OBC%segment(n)%HI%JsdB ; I = OBC%segment(n)%HI%IsdB
       if (OBC%segment(n)%direction == OBC_DIRECTION_N) then
         if ((J >= js-2) .and. (J <= je)) then
-          do kk=1,kke ; do I=max(is-2,OBC%segment(n)%HI%IsdB),min(Ieq+1,OBC%segment(n)%HI%IedB)
+          do kk=1,kke ; do I = max(is-2, OBC%segment(n)%HI%IsdB), min(Ieq+1, OBC%segment(n)%HI%IedB)
             h_u(I,j+1,kk) = h_u(I,j,kk)
           enddo ; enddo
         endif
       elseif (OBC%segment(n)%direction == OBC_DIRECTION_S) then
         if ((J >= js-1) .and. (J <= je+1)) then
-          do kk=1,kke ; do I=max(is-2,OBC%segment(n)%HI%isd),min(Ieq+1,OBC%segment(n)%HI%ied)
+          do kk=1,kke ; do I = max(is-2, OBC%segment(n)%HI%isd), min(Ieq+1, OBC%segment(n)%HI%ied)
             h_u(I,j,kk) = h_u(I,j+1,kk)
           enddo ; enddo
         endif
       elseif (OBC%segment(n)%direction == OBC_DIRECTION_E) then
         if ((I >= is-2) .and. (I <= ie)) then
-          do kk=1,kke ; do J=max(js-2,OBC%segment(n)%HI%jsd),min(Jeq+1,OBC%segment(n)%HI%jed)
+          do kk=1,kke ; do J = max(js-2, OBC%segment(n)%HI%jsd), min(Jeq+1, OBC%segment(n)%HI%jed)
             h_v(i+1,J,kk) = h_v(i,J,kk)
           enddo ; enddo
         endif
       elseif (OBC%segment(n)%direction == OBC_DIRECTION_W) then
         if ((I >= is-1) .and. (I <= ie+1)) then
-          do kk=1,kke ; do J=max(js-2,OBC%segment(n)%HI%jsd),min(Jeq+1,OBC%segment(n)%HI%jed)
+          do kk=1,kke ; do J = max(js-2, OBC%segment(n)%HI%jsd), min(Jeq+1, OBC%segment(n)%HI%jed)
             h_v(i,J,kk) = h_v(i+1,J,kk)
           enddo ; enddo
         endif
@@ -2582,7 +2582,7 @@ subroutine hor_visc_Leithy_Ah(G, GV, CS, nkk, ksb, kke, is_Kh, ie_Kh, &
     Del2vort_h = 0.25 * ((Del2vort_q(I,J,kk) + Del2vort_q(I-1,J-1,kk)) + &
                          (Del2vort_q(I-1,J,kk) + Del2vort_q(I,J-1,kk)))
     AhLthy = CS%Biharm6_const_xx(i,j) * inv_PI6 * &
-            sqrt(max(0.,Del2vort_h**2 - m_leithy(i,j,kk)*vert_vort_mag_smooth(i,j,kk)**2))
+            sqrt(max(0., Del2vort_h**2 - m_leithy(i,j,kk)*vert_vort_mag_smooth(i,j,kk)**2))
     Ah(i,j,kk) = max(CS%Ah_bg_xx(i,j), AhLthy)
   enddo ; enddo ; enddo
   if (CS%smooth_Ah) then
@@ -3459,9 +3459,9 @@ subroutine hor_visc_init(Time, G, GV, US, param_file, diag, CS, ADp)
         CS%biharm6_const_xx(i,j) = Leith_bi_const * (grid_sp_h3 * grid_sp_h3)
       endif
       if (CS%use_Leithy) then
-        CS%biharm6_const_xx(i,j) = Leith_bi_const * max(G%dxT(i,j),G%dyT(i,j))**6
-        CS%m_const_leithy(i,j) = 0.5 * sqrt(CS%c_K) * max(G%dxT(i,j),G%dyT(i,j))
-        CS%m_leithy_max(i,j) = (4. / max(G%dxT(i,j),G%dyT(i,j))**2) * &
+        CS%biharm6_const_xx(i,j) = Leith_bi_const * max(G%dxT(i,j), G%dyT(i,j))**6
+        CS%m_const_leithy(i,j) = 0.5 * sqrt(CS%c_K) * max(G%dxT(i,j), G%dyT(i,j))
+        CS%m_leithy_max(i,j) = (4. / max(G%dxT(i,j), G%dyT(i,j))**2) * &
                                G%mask2dBu(i,j  ) * G%mask2dBu(i-1,j  ) * &
                                G%mask2dBu(i,j-1) * G%mask2dBu(i-1,j-1)
       endif

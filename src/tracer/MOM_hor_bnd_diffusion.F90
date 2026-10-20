@@ -605,12 +605,12 @@ subroutine flux_limiter(F_layer, area_L, area_R, phi_L, phi_R, h_L, h_R)
   !
   F_max = -0.2 * ((area_R*(phi_R*h_R))-(area_L*(phi_L*h_L)))
 
-  if ( SIGN(1.,F_layer) == SIGN(1., F_max)) then
+  if ( SIGN(1., F_layer) == SIGN(1., F_max)) then
     ! Apply flux limiter calculated above
     if (F_max >= 0.) then
-      F_layer = MIN(F_layer,F_max)
+      F_layer = MIN(F_layer, F_max)
     else
-      F_layer = MAX(F_layer,F_max)
+      F_layer = MAX(F_layer, F_max)
     endif
   else
     F_layer = 0.0

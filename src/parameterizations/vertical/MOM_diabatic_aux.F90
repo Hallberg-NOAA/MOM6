@@ -1039,10 +1039,10 @@ subroutine applyBoundaryFluxesInOut(CS, G, GV, US, dt, fluxes, optics, nsw, h, t
           if (.not. associated(fluxes%heat_content_evap)) then
             if (associated(fluxes%heat_content_massin)) &
               fluxes%heat_content_massin(i,j) = fluxes%heat_content_massin(i,j) + &
-                           T2d(i,k) * max(0.,dThickness) * GV%H_to_RZ * tv%C_p * Idt
+                           T2d(i,k) * max(0., dThickness) * GV%H_to_RZ * tv%C_p * Idt
             if (associated(fluxes%heat_content_massout)) &
               fluxes%heat_content_massout(i,j) = fluxes%heat_content_massout(i,j) + &
-                           T2d(i,k) * min(0.,dThickness) * GV%H_to_RZ * tv%C_p * Idt
+                           T2d(i,k) * min(0., dThickness) * GV%H_to_RZ * tv%C_p * Idt
             if (associated(tv%TempxPmE)) tv%TempxPmE(i,j) = tv%TempxPmE(i,j) + &
                            T2d(i,k) * dThickness * GV%H_to_RZ
           endif
@@ -1125,10 +1125,10 @@ subroutine applyBoundaryFluxesInOut(CS, G, GV, US, dt, fluxes, optics, nsw, h, t
           if (.not. associated(fluxes%heat_content_evap)) then
             if (associated(fluxes%heat_content_massin)) &
               fluxes%heat_content_massin(i,j) = fluxes%heat_content_massin(i,j) + &
-                           T2d(i,k) * max(0.,dThickness) * GV%H_to_RZ * tv%C_p * Idt
+                           T2d(i,k) * max(0., dThickness) * GV%H_to_RZ * tv%C_p * Idt
             if (associated(fluxes%heat_content_massout)) &
               fluxes%heat_content_massout(i,j) = fluxes%heat_content_massout(i,j) + &
-                           T2d(i,k) * min(0.,dThickness) * GV%H_to_RZ * tv%C_p * Idt
+                           T2d(i,k) * min(0., dThickness) * GV%H_to_RZ * tv%C_p * Idt
             if (associated(tv%TempxPmE)) tv%TempxPmE(i,j) = tv%TempxPmE(i,j) + &
                            T2d(i,k) * dThickness * GV%H_to_RZ
           endif

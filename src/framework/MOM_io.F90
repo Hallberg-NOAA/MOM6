@@ -901,7 +901,7 @@ subroutine read_var_sizes(filename, varname, ndims, sizes, match_case, caller, d
     deallocate(dimids) ; return
   endif
 
-  do n = 1, min(ndims,size(sizes))
+  do n = 1, min(ndims, size(sizes))
     status = NF90_Inquire_Dimension(ncid, dimids(n), name=dimname, len=sizes(n))
     if (status /= NF90_NOERR) call MOM_error(WARNING, trim(hdr) // trim(NF90_STRERROR(status)) //&
         " Getting dimension length for "//trim(varname)//" in "//trim(filename))
@@ -1886,7 +1886,7 @@ subroutine modify_vardesc(vd, name, units, longname, hor_grid, z_grid, t_grid, &
   if (present(conversion)) vd%conversion = conversion
 
   if (present(dim_names)) then
-    do n=1,min(5,size(dim_names)) ; if (len_trim(dim_names(n)) > 0) then
+    do n = 1, min(5, size(dim_names)) ; if (len_trim(dim_names(n)) > 0) then
       call safe_string_copy(dim_names(n), vd%dim_names(n), "vd%dim_names of "//trim(vd%name), cllr)
     endif ; enddo
   endif
@@ -2097,7 +2097,7 @@ subroutine query_vardesc(vd, name, units, longname, hor_grid, z_grid, t_grid, &
     if (position == -1) position = position_from_horgrid(vd%hor_grid)
   endif
   if (present(dim_names)) then
-    do n=1,min(5,size(dim_names))
+    do n = 1, min(5, size(dim_names))
       call safe_string_copy(vd%dim_names(n), dim_names(n), "vd%dim_names of "//trim(vd%name), cllr)
     enddo
   endif

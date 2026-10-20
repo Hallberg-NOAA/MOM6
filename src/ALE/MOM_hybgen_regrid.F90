@@ -462,7 +462,7 @@ subroutine hybgen_regrid(G, GV, US, dp, nom_depth_H, tv, CS, dzInterface, PCM_ce
 
     if (CS%nk >= nk_in) then
       ! Simply copy over the common layers.  This is the usual case.
-      do k=1,min(CS%nk,GV%ke)
+      do k = 1, min(CS%nk, GV%ke)
         h_col(k) = dp_in(k)
         Rcv(k) = Rcv_in(k)
       enddo
@@ -773,7 +773,7 @@ subroutine hybgen_column_regrid(CS, nk, thkbot, Rcv_tgt, &
 
   ! Maintain prescribed thickness in layer k <= fixlay
   ! There may be massless layers at the bottom, so work upwards.
-  do k=min(nk-1,fixlay),1,-1
+  do k = min(nk-1, fixlay), 1, -1
     p_new = min(dp0cum(k+1), p_int(nk+1) - (nk-k)*h_min) ! This could be positive or negative.
     dh_cor = p_new - p_int(K+1)
     if (k<fixlay) dh_cor = min(dh_cor, h_col(k+1) - h_min)
@@ -949,7 +949,7 @@ subroutine hybgen_column_regrid(CS, nk, thkbot, Rcv_tgt, &
           ! If layer k+1, or layer k+2, does not touch the bottom, maintain minimum
           ! thicknesses of layers k and k+1 as much as possible. otherwise, permit
           ! layers to collapse to zero thickness at the bottom.
-          if (p_int(min(k+3,nk+1)) < p_int(nk+1)) then
+          if (p_int(min(k+3, nk+1)) < p_int(nk+1)) then
             if (p_int(nk+1) - p_int(k) > dp0ij(k) + dp0ij(k+1)) then
               h_hat = h_col(k+1) - cushn(h_col(k+1) - h_hat, dp0ij(k+1))
             endif

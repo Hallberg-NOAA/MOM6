@@ -109,7 +109,7 @@ function register_boundary_impulse_tracer(HI, GV, US, param_file, CS, tr_Reg, re
   CS%ntr = NTR_MAX
   allocate(CS%tr(isd:ied,jsd:jed,nz,CS%ntr), source=0.0)
 
-  CS%nkml = max(GV%nkml,1)
+  CS%nkml = max(GV%nkml, 1)
 
   do m=1,CS%ntr
     ! This is needed to force the compiler not to do a copy in the registration

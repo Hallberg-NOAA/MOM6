@@ -554,11 +554,11 @@ subroutine set_grid_metrics_spherical(G, param_file, US)
   ! arrays G%gridLatB and G%gridLonB.
   do j=G%jsg-1,G%jeg
     latitude = G%south_lat + dLat*(REAL(J-(G%jsg-1)))
-    G%gridLatB(J) = MIN(MAX(latitude,-90.),90.)
+    G%gridLatB(J) = MIN(MAX(latitude, -90.), 90.)
   enddo
   do j=G%jsg,G%jeg
     latitude = G%south_lat + dLat*(REAL(j-G%jsg)+0.5)
-    G%gridLatT(j) = MIN(MAX(latitude,-90.),90.)
+    G%gridLatT(j) = MIN(MAX(latitude, -90.), 90.)
   enddo
   do i=G%isg-1,G%ieg
     G%gridLonB(I) = G%west_lon + dLon*(REAL(I-(G%isg-1)))
@@ -569,11 +569,11 @@ subroutine set_grid_metrics_spherical(G, param_file, US)
 
   do J=JsdB,JedB
     latitude = G%south_lat + dLat* REAL(J+J_offset-(G%jsg-1))
-    grid_LatB(J) = MIN(MAX(latitude,-90.),90.)
+    grid_LatB(J) = MIN(MAX(latitude, -90.), 90.)
   enddo
   do j=jsd,jed
     latitude = G%south_lat + dLat*(REAL(j+J_offset-G%jsg)+0.5)
-    grid_LatT(j) = MIN(MAX(latitude,-90.),90.)
+    grid_LatT(j) = MIN(MAX(latitude, -90.), 90.)
   enddo
   do I=IsdB,IedB
     grid_LonB(I) = G%west_lon + dLon*REAL(I+I_offset-(G%isg-1))

@@ -3186,7 +3186,7 @@ subroutine find_interfaces(rho, zin, nk_data, Rb, Z_bot, zi, G, GV, US, nlevs, n
     if (nkml > 0) then ; do K=2,nkml+1
       zi_(K) = max(hml*((1.0-real(K))/real(nkml)), Z_bot(i,j))
     enddo ; endif
-    do K=nz,max(nkml+2,2),-1
+    do K = nz, max(nkml+2, 2), -1
       if (zi_(K) < zi_(K+1) + eps_Z) zi_(K) = zi_(K+1) + eps_Z
       if (zi_(K) > -1.0*hml)  zi_(K) = max(-1.0*hml, Z_bot(i,j))
     enddo

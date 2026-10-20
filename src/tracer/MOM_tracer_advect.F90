@@ -169,7 +169,7 @@ subroutine advect_tracer(h_end, uhtr, vhtr, OBC, dt, G, GV, US, CS, Reg, x_first
      stencil = max(stencil, stencil_local)
   enddo
 
-  if (min(is-isd,ied-ie,js-jsd,jed-je) < stencil) then
+  if (min(is-isd, ied-ie, js-jsd, jed-je) < stencil) then
     call MOM_error(FATAL, "MOM_tracer_advect: "//&
       "stencil is wider than the halo.")
   endif
@@ -616,9 +616,9 @@ subroutine advect_x(Tr, hprev, uhr, uh_neglect, OBC, domore_u, ntr, Idt, &
 
             if (advect_schemes(m) == ADVECT_PPMH3) then
               aL = ( 5.*Tc + ( 2.*Tm - Tp ) )/6. ! H3 estimate
-              aL = max( min(Tc,Tm), aL) ; aL = min( max(Tc,Tm), aL) ! Bound
+              aL = max( min(Tc, Tm), aL) ; aL = min( max(Tc, Tm), aL) ! Bound
               aR = ( 5.*Tc + ( 2.*Tp - Tm ) )/6. ! H3 estimate
-              aR = max( min(Tc,Tp), aR) ; aR = min( max(Tc,Tp), aR) ! Bound
+              aR = max( min(Tc, Tp), aR) ; aR = min( max(Tc, Tp), aR) ! Bound
             else
               aL = 0.5 * ((Tm + Tc) + (slope_x(i_up-1,m) - slope_x(i_up,m)) / 3.)
               aR = 0.5 * ((Tc + Tp) + (slope_x(i_up,m) - slope_x(i_up+1,m)) / 3.)
@@ -1046,9 +1046,9 @@ subroutine advect_y(Tr, hprev, vhr, vh_neglect, OBC, domore_v, ntr, Idt, &
 
             if (advect_schemes(m) == ADVECT_PPMH3) then
               aL = ( 5.*Tc + ( 2.*Tm - Tp ) )/6. ! H3 estimate
-              aL = max( min(Tc,Tm), aL) ; aL = min( max(Tc,Tm), aL) ! Bound
+              aL = max( min(Tc, Tm), aL) ; aL = min( max(Tc, Tm), aL) ! Bound
               aR = ( 5.*Tc + ( 2.*Tp - Tm ) )/6. ! H3 estimate
-              aR = max( min(Tc,Tp), aR) ; aR = min( max(Tc,Tp), aR) ! Bound
+              aR = max( min(Tc, Tp), aR) ; aR = min( max(Tc, Tp), aR) ! Bound
             else
               aL = 0.5 * ((Tm + Tc) + (slope_y(i,m,j_up-1) - slope_y(i,m,j_up)) / 3.)
               aR = 0.5 * ((Tc + Tp) + (slope_y(i,m,j_up) - slope_y(i,m,j_up+1)) / 3.)

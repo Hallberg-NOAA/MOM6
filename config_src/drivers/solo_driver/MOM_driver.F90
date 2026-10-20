@@ -348,7 +348,7 @@ program MOM6
                    units="s", scale=US%s_to_T, fail_if_missing=.true.)
     dt = dt_forcing
   endif
-  ntstep = MAX(1,ceiling(dt_forcing/dt - 0.001))
+  ntstep = MAX(1, ceiling(dt_forcing/dt - 0.001))
 
   Time_step_ocean = real_to_time(dt_forcing, unscale=US%T_to_s)
   elapsed_time_master = (abs(dt_forcing - time_to_real(Time_step_ocean, scale=US%s_to_T)) > 1.0e-12*dt_forcing)
@@ -495,14 +495,14 @@ program MOM6
       n_max = 1 ; if (dt_forcing > dt) n_max = ceiling(dt_forcing/dt - 0.001)
       dt_dyn = dt_forcing / real(n_max)
 
-      nts = MAX(1,MIN(n_max,floor(dt_therm/dt_dyn + 0.001)))
+      nts = MAX(1, MIN(n_max, floor(dt_therm/dt_dyn + 0.001)))
       n_last_thermo = 0
 
       Time2 = Time1 ; t_elapsed_seg = 0.0
       do n=1,n_max
         if (diabatic_first) then
           if (modulo(n-1,nts)==0) then
-            dtdia = dt_dyn*min(ntstep,n_max-(n-1))
+            dtdia = dt_dyn * min(ntstep, n_max-(n-1))
             call step_MOM(forces, fluxes, sfc_state, Time2, dtdia, MOM_CSp, &
                           do_dynamics=.false., do_thermodynamics=.true., &
                           start_cycle=(n==1), end_cycle=.false., cycle_length=dt_forcing)

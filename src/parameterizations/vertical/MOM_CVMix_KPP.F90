@@ -882,7 +882,7 @@ subroutine KPP_calculate(CS, G, GV, US, h, tv, uStar, buoyFlux, Kt, Ks, Kv, &
             !Kdiffusivity(k,2) = Kdiffusivity(k,2) * LangEnhK
             !Kviscosity(k)     = Kviscosity(k)   * LangEnhK
           elseif (CS%LT_K_SHAPE == LT_K_SCALED) then
-            sigma = min(1.0,-iFaceHeight(k)/CS%OBLdepth(i,j))
+            sigma = min(1.0, -iFaceHeight(k)/CS%OBLdepth(i,j))
             SigmaRatio = sigma * (1. - sigma)**2 / 0.148148037
             if (CS%id_EnhK > 0) CS%EnhK(i,j,k) = (1.0 + (LangEnhK - 1.)*sigmaRatio)
             !Kdiffusivity(k,1) = Kdiffusivity(k,1) * ( 1. + &
@@ -961,26 +961,26 @@ subroutine KPP_calculate(CS, G, GV, US, h, tv, uStar, buoyFlux, Kt, Ks, Kv, &
       if (surfBuoyFlux < 0.0) then
         if (CS%NLT_shape == NLT_SHAPE_CUBIC) then
           do k = 2, GV%ke
-            sigma = min(1.0,-iFaceHeight(k)/CS%OBLdepth(i,j))
+            sigma = min(1.0, -iFaceHeight(k)/CS%OBLdepth(i,j))
             nonLocalTrans(k,1) = (1.0 - sigma)**2 * (1.0 + 2.0*sigma) !*
             nonLocalTrans(k,2) = nonLocalTrans(k,1)
           enddo
         elseif (CS%NLT_shape == NLT_SHAPE_PARABOLIC) then
           do k = 2, GV%ke
-            sigma = min(1.0,-iFaceHeight(k)/CS%OBLdepth(i,j))
+            sigma = min(1.0, -iFaceHeight(k)/CS%OBLdepth(i,j))
             nonLocalTrans(k,1) = (1.0 - sigma)**2 !*CS%CS2
             nonLocalTrans(k,2) = nonLocalTrans(k,1)
           enddo
         elseif (CS%NLT_shape == NLT_SHAPE_LINEAR) then
           do k = 2, GV%ke
-            sigma = min(1.0,-iFaceHeight(k)/CS%OBLdepth(i,j))
+            sigma = min(1.0, -iFaceHeight(k)/CS%OBLdepth(i,j))
             nonLocalTrans(k,1) = (1.0 - sigma)!*CS%CS2
             nonLocalTrans(k,2) = nonLocalTrans(k,1)
           enddo
         elseif (CS%NLT_shape == NLT_SHAPE_CUBIC_LMD) then
           ! Sanity check (should agree with CVMix result using simple matching)
           do k = 2, GV%ke
-            sigma = min(1.0,-iFaceHeight(k)/CS%OBLdepth(i,j))
+            sigma = min(1.0, -iFaceHeight(k)/CS%OBLdepth(i,j))
             nonLocalTrans(k,1) = CS%CS2 * sigma*(1.0 -sigma)**2
             nonLocalTrans(k,2) = nonLocalTrans(k,1)
           enddo
@@ -1247,7 +1247,7 @@ subroutine KPP_compute_BLD(CS, G, GV, US, h, Temp, Salt, u, v, tv, uStar, buoyFl
         iFaceHeight(k+1) = iFaceHeight(k) - dh
 
         ! find ksfc for cell where "surface layer" sits
-        SLdepth_0d = CS%surf_layer_ext*max( max(-cellHeight(k),-iFaceHeight(2) ), CS%minOBLdepth )
+        SLdepth_0d = CS%surf_layer_ext*max( max(-cellHeight(k), -iFaceHeight(2) ), CS%minOBLdepth )
         ksfc = k
         do ktmp = 1,k
           if (-1.0*iFaceHeight(ktmp+1) >= SLdepth_0d) then
@@ -1260,7 +1260,7 @@ subroutine KPP_compute_BLD(CS, G, GV, US, h, Temp, Salt, u, v, tv, uStar, buoyFl
           ! if k=1, want buoyFlux(i,j,1) - buoyFlux(i,j,2), otherwise
           ! subtract average of buoyFlux(i,j,k) and buoyFlux(i,j,k+1)
           surfBuoyFlux   = buoy_scale * &
-                          (buoyFlux(i,j,1) - 0.5*(buoyFlux(i,j,max(2,k))+buoyFlux(i,j,k+1)) )
+                          (buoyFlux(i,j,1) - 0.5*(buoyFlux(i,j,max(2, k))+buoyFlux(i,j,k+1)) )
           surfBuoyFlux2(k) = surfBuoyFlux
 
           call Compute_StokesDrift(i,j, iFaceHeight(k),iFaceHeight(k+1), &
@@ -1451,9 +1451,9 @@ subroutine KPP_compute_BLD(CS, G, GV, US, h, Temp, Salt, u, v, tv, uStar, buoyFl
 
       ! Use CS%deepOBLoffset (<-0.1*iFaceHeight(GV%ke+1)) to avoid vanishingly small layers near the bottom.
       if (CS%OBL_depth_bounds_bug) then
-        zBottomMinusOffset = iFaceHeight(GV%ke) + min( max(CS%deepOBLoffset,0.0), -0.1*iFaceHeight(GV%ke+1))
+        zBottomMinusOffset = iFaceHeight(GV%ke) + min( max(CS%deepOBLoffset, 0.0), -0.1*iFaceHeight(GV%ke+1))
       else
-        zBottomMinusOffset = iFaceHeight(GV%ke+1) + min( max(CS%deepOBLoffset,0.0), -0.1*iFaceHeight(GV%ke+1))
+        zBottomMinusOffset = iFaceHeight(GV%ke+1) + min( max(CS%deepOBLoffset, 0.0), -0.1*iFaceHeight(GV%ke+1))
         zBottomMinusOffset = min(zBottomMinusOffset, iFaceHeight(2)) ! no shallower than top layer
       endif
 

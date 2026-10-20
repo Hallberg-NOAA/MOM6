@@ -339,7 +339,7 @@ subroutine regularize_surface(h, tv, dt, ea, eb, G, GV, US, CS)
         if (.not.cols_left) exit
       enddo
 
-      ks = min(k-1,nz-1)
+      ks = min(k-1, nz-1)
       do k=ks,nkmb,-1 ; do i=is,ie ; if (ent_i(i)) then
         d_eb(i,k) = d_eb(i,k) + d_eb(i,k+1)
       endif ; enddo ; enddo
@@ -481,7 +481,7 @@ subroutine regularize_surface(h, tv, dt, ea, eb, G, GV, US, CS)
         int_Tflux(k) = 0.0 ; int_Sflux(k) = 0.0
       enddo
       do k=1,2*nkmb
-        int_bot = max(e_2d(i,k1+1),e_filt(i,k2+1))
+        int_bot = max(e_2d(i,k1+1), e_filt(i,k2+1))
         h_add = int_top - int_bot
 
         if (k2 > k1) then
@@ -566,7 +566,7 @@ subroutine regularize_surface(h, tv, dt, ea, eb, G, GV, US, CS)
           h_predicted = h_2d_init(i,k) + ((d_ea(i,k) - d_eb(i,k-1)) + &
                                           (d_eb(i,k) - d_ea(i,k+1)))
         endif
-        if (abs(h(i,j,k) - h_predicted) > MAX(1e-9*abs(h_predicted),GV%Angstrom_H)) &
+        if (abs(h(i,j,k) - h_predicted) > MAX(1e-9*abs(h_predicted), GV%Angstrom_H)) &
           call MOM_error(FATAL, "regularize_surface: d_ea mismatch.")
       endif ; enddo ; enddo
       do i=is,ie ; if (do_i(i)) then

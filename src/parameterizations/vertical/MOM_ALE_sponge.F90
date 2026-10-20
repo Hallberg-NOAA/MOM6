@@ -1093,7 +1093,7 @@ subroutine apply_ALE_sponge(h, tv, dt, G, GV, US, CS, Time)
 
       allocate(mask_u(G%isdB:G%iedB,G%jsd:G%jed,1:nz_data))
       do j=G%jsc,G%jec ; do I=G%iscB,G%iecB
-        mask_u(I,j,1:nz_data) = min(mask_z(i,j,1:nz_data),mask_z(i+1,j,1:nz_data))
+        mask_u(I,j,1:nz_data) = min(mask_z(i,j,1:nz_data), mask_z(i+1,j,1:nz_data))
       enddo ; enddo
 
       allocate( dz_src(nz_data) )
@@ -1140,7 +1140,7 @@ subroutine apply_ALE_sponge(h, tv, dt, G, GV, US, CS, Time)
 
       allocate(mask_v(G%isd:G%ied,G%jsdB:G%jedB,1:nz_data))
       do J=G%jscB,G%jecB ; do i=G%isc,G%iec
-        mask_v(i,J,1:nz_data) = min(mask_z(i,j,1:nz_data),mask_z(i,j+1,1:nz_data))
+        mask_v(i,J,1:nz_data) = min(mask_z(i,j,1:nz_data), mask_z(i,j+1,1:nz_data))
       enddo ; enddo
 
       allocate( dz_src(nz_data) )

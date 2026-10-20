@@ -410,7 +410,7 @@ subroutine mixedlayer_restrat_OM4(h, uhtr, vhtr, tv, forces, dt, h_MLD, VarMix, 
       keep_going = .true.
       do k=1,nz
         do i=is-1,ie+1
-          h_avail(i,j,k) = max(I4dt*G%areaT(i,j)*(h(i,j,k)-GV%Angstrom_H),0.0)
+          h_avail(i,j,k) = max(I4dt*G%areaT(i,j)*(h(i,j,k)-GV%Angstrom_H), 0.0)
         enddo
         if (keep_going) then
           if (CS%use_Stanley_ML) then
@@ -453,7 +453,7 @@ subroutine mixedlayer_restrat_OM4(h, uhtr, vhtr, tv, forces, dt, h_MLD, VarMix, 
       keep_going = .true.
       do k=1,nz
         do i=is-1,ie+1
-          h_avail(i,j,k) = max(I4dt*G%areaT(i,j)*(h(i,j,k)-GV%Angstrom_H),0.0)
+          h_avail(i,j,k) = max(I4dt*G%areaT(i,j)*(h(i,j,k)-GV%Angstrom_H), 0.0)
         enddo
         if (keep_going) then
           ! if (CS%use_Stanley_ML) then  ! This is not implemented yet in the EoS code.
@@ -1055,7 +1055,7 @@ subroutine mixedlayer_restrat_Bodner(CS, G, GV, US, h, uhtr, vhtr, tv, forces, d
     keep_going = .true.
     do k=1,nz
       do i=is-1,ie+1
-        vol_dt_avail(i,j,k) = max(I4dt*G%areaT(i,j)*(h(i,j,k)-GV%Angstrom_H),0.0)
+        vol_dt_avail(i,j,k) = max(I4dt*G%areaT(i,j)*(h(i,j,k)-GV%Angstrom_H), 0.0)
       enddo
       if (keep_going) then
         if (GV%Boussinesq .or. GV%semi_Boussinesq) then
@@ -1375,7 +1375,7 @@ subroutine mixedlayer_restrat_BML(h, uhtr, vhtr, tv, forces, dt, G, GV, US, CS)
         do i=is-1,ie+1
           rho_int(i) = rho_int(i) + h(i,j,k)*Rho_ml(i)
           htot(i,j) = htot(i,j) + h(i,j,k)
-          h_avail(i,j,k) = max(I4dt*G%areaT(i,j)*(h(i,j,k)-GV%Angstrom_H),0.0)
+          h_avail(i,j,k) = max(I4dt*G%areaT(i,j)*(h(i,j,k)-GV%Angstrom_H), 0.0)
         enddo
       enddo
 
@@ -1394,7 +1394,7 @@ subroutine mixedlayer_restrat_BML(h, uhtr, vhtr, tv, forces, dt, G, GV, US, CS)
         do i=is-1,ie+1
           SpV_int(i) = SpV_int(i) + h(i,j,k)*SpV_ml(i)  ! [H R-1 ~> m4 kg-1 or m]
           htot(i,j) = htot(i,j) + h(i,j,k)
-          h_avail(i,j,k) = max(I4dt*G%areaT(i,j)*(h(i,j,k)-GV%Angstrom_H),0.0)
+          h_avail(i,j,k) = max(I4dt*G%areaT(i,j)*(h(i,j,k)-GV%Angstrom_H), 0.0)
         enddo
       enddo
 
