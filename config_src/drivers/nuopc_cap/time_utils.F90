@@ -98,7 +98,7 @@ function esmf2fms_time_t(time)
 
   call ESMF_TimeGet(time, yy=yy, mm=mm, dd=dd, h=h, m=m, s=s, &
       calkindflag=calkind, rc=rc)
-  if (ChkErr(rc,__LINE__,u_FILE_u)) return
+  if (ChkErr(rc, __LINE__, u_FILE_u)) return
 
   esmf2fms_time_t = set_date(yy, mm, dd, h, m, s)
 
@@ -116,7 +116,7 @@ function esmf2fms_timestep(timestep)
   integer                            :: rc
 
   call ESMF_TimeIntervalGet(timestep, s=s, calkindflag=calkind, rc=rc)
-  if (ChkErr(rc,__LINE__,u_FILE_u)) return
+  if (ChkErr(rc, __LINE__, u_FILE_u)) return
 
   esmf2fms_timestep = set_time(s, 0)
 
@@ -144,7 +144,7 @@ function fms2esmf_time(time, calkind)
 
   call ESMF_TimeSet(fms2esmf_time, yy=yy, mm=mm, d=d, h=h, m=m, s=s, &
       calkindflag=l_calkind, rc=rc)
-  if (ChkErr(rc,__LINE__,u_FILE_u)) return
+  if (ChkErr(rc, __LINE__, u_FILE_u)) return
 
 end function fms2esmf_time
 

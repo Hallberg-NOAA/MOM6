@@ -54,7 +54,7 @@ subroutine mom_inline_init(gcomp, model_clock, model_mesh, mytask, rc)
   rc = ESMF_SUCCESS
 
   call NUOPC_CompAttributeGet(gcomp, name="streamfilename", value=value, isPresent=isPresent, isSet=isSet, rc=rc)
-  if (ChkErr(rc,__LINE__,u_FILE_u)) return
+  if (ChkErr(rc, __LINE__, u_FILE_u)) return
   if (isPresent .and. isSet) then
     streamfilename = value
   else
@@ -72,13 +72,13 @@ subroutine mom_inline_init(gcomp, model_clock, model_mesh, mytask, rc)
 
   ! CMEPS Init PIO
   call dshr_pio_init(gcomp, sdatconfig, logunit, rc=rc)
-  if (chkerr(rc,__LINE__,u_FILE_u)) return
+  if (chkerr(rc, __LINE__, u_FILE_u)) return
 
   ! read the available stream definitions, each data stream is one or more data_files
   ! which have the same spatial and temporal coordinates
   call shr_stream_init_from_esmfconfig(trim(streamfilename), sdatconfig%stream, logunit, &
        sdatconfig%pio_subsystem, sdatconfig%io_type, sdatconfig%io_format, rc=rc)
-  if (chkerr(rc,__LINE__,u_FILE_u)) return
+  if (chkerr(rc, __LINE__, u_FILE_u)) return
 #else
   !TODO: CESM logunit, configuration via xml etc
   !call shr_stream_init_from_xml(trim(streamfilename) ....
@@ -134,7 +134,7 @@ subroutine mom_inline_init(gcomp, model_clock, model_mesh, mytask, rc)
          stream_src_mask     = sdatconfig%stream(ns)%src_mask_val,      &
          stream_dst_mask     = sdatconfig%stream(ns)%dst_mask_val,      &
          rc                  = rc)
-    if (chkerr(rc,__LINE__,u_FILE_u)) return
+    if (chkerr(rc, __LINE__, u_FILE_u)) return
 
     deallocate(filelist)
     deallocate(filevars)
@@ -177,9 +177,9 @@ subroutine mom_inline_run(clock, ocean_public, ocean_grid, ice_ocean_boundary, d
 
   ! Current model date
   call ESMF_ClockGet( clock, currTime=date, rc=rc )
-  if (chkerr(rc,__LINE__,u_FILE_u)) return
+  if (chkerr(rc, __LINE__, u_FILE_u)) return
   call ESMF_TimeGet(date, yy=year, mm=mon, dd=day, s=sec, rc=rc)
-  if (chkerr(rc,__LINE__,u_FILE_u)) return
+  if (chkerr(rc, __LINE__, u_FILE_u)) return
   mcdate = year*10000 + mon*100 + day
 
   nstreams = size(sdat)
@@ -187,7 +187,7 @@ subroutine mom_inline_run(clock, ocean_public, ocean_grid, ice_ocean_boundary, d
   do ns = 1,nstreams
     write(stream_name,fmt='(a,i2.2)') 'stream_', ns
     call shr_strdata_advance(sdat(ns), ymd=mcdate, tod=sec, logunit=logunit, istr=trim(stream_name),rc=rc)
-    if (chkerr(rc,__LINE__,u_FILE_u)) return
+    if (chkerr(rc, __LINE__, u_FILE_u)) return
 
     nflds = size(sdat(ns)%pstrm(1)%fldlist_model)
     do nf = 1,nflds
@@ -196,7 +196,7 @@ subroutine mom_inline_run(clock, ocean_public, ocean_grid, ice_ocean_boundary, d
       if (fldname == 'lrunoff') then
         ! Get pointer for stream data that is time and spatially interpolated to model time and grid
         call dshr_fldbun_getFldPtr(sdat(ns)%pstrm(1)%fldbun_model, trim(fldname), dataPtr1d, rc=rc)
-        if (chkerr(rc,__LINE__,u_FILE_u)) return
+        if (chkerr(rc, __LINE__, u_FILE_u)) return
 
         n = 0
         do j = jsc,jec
@@ -209,7 +209,7 @@ subroutine mom_inline_run(clock, ocean_public, ocean_grid, ice_ocean_boundary, d
 
       if (dbug > 1) then
         call dshr_fldbun_Field_diagnose(sdat(ns)%pstrm(1)%fldbun_model, trim(fldname), 'inline_run ', rc=rc)
-        if (chkerr(rc,__LINE__,u_FILE_u)) return
+        if (chkerr(rc, __LINE__, u_FILE_u)) return
       endif
     enddo !nf
   enddo !ns
