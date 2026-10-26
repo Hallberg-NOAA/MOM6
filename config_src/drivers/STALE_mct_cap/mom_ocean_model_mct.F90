@@ -815,15 +815,15 @@ subroutine initialize_ocean_public_type(input_domain, Ocean_sfc, diag, maskmap, 
   endif
   call mpp_get_compute_domain(Ocean_sfc%Domain, isc, iec, jsc, jec)
 
-  allocate (Ocean_sfc%t_surf (isc:iec,jsc:jec), &
-            Ocean_sfc%s_surf (isc:iec,jsc:jec), &
-            Ocean_sfc%u_surf (isc:iec,jsc:jec), &
-            Ocean_sfc%v_surf (isc:iec,jsc:jec), &
-            Ocean_sfc%sea_lev(isc:iec,jsc:jec), &
-            Ocean_sfc%area   (isc:iec,jsc:jec), &
-            Ocean_sfc%OBLD   (isc:iec,jsc:jec), &
-            Ocean_sfc%melt_potential(isc:iec,jsc:jec), &
-            Ocean_sfc%frazil (isc:iec,jsc:jec))
+  allocate(Ocean_sfc%t_surf(isc:iec,jsc:jec), &
+           Ocean_sfc%s_surf(isc:iec,jsc:jec), &
+           Ocean_sfc%u_surf(isc:iec,jsc:jec), &
+           Ocean_sfc%v_surf(isc:iec,jsc:jec), &
+           Ocean_sfc%sea_lev(isc:iec,jsc:jec), &
+           Ocean_sfc%area(isc:iec,jsc:jec), &
+           Ocean_sfc%OBLD(isc:iec,jsc:jec), &
+           Ocean_sfc%melt_potential(isc:iec,jsc:jec), &
+           Ocean_sfc%frazil(isc:iec,jsc:jec))
 
   Ocean_sfc%t_surf  = 0.0  ! time averaged sst (Kelvin) passed to atmosphere/ice model
   Ocean_sfc%s_surf  = 0.0  ! time averaged sss (psu) passed to atmosphere/ice models

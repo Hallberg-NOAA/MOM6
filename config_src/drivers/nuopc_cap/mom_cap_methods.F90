@@ -152,8 +152,8 @@ subroutine mom_import(ocean_public, ocean_grid, importState, ice_ocean_boundary,
   !----
   ! zonal and meridional surface stress
   !----
-  allocate (taux(isc:iec,jsc:jec))
-  allocate (tauy(isc:iec,jsc:jec))
+  allocate(taux(isc:iec,jsc:jec))
+  allocate(tauy(isc:iec,jsc:jec))
 
   call state_getimport(importState, 'Foxx_taux', isc, iec, jsc, jec, taux, &
        areacor=med2mod_areacor, rc=rc)
@@ -211,20 +211,20 @@ subroutine mom_import(ocean_public, ocean_grid, importState, ice_ocean_boundary,
   ! and preset value will be used
 
   ! liquid runoff
-  ice_ocean_boundary%lrunoff (:,:) = 0._ESMF_KIND_R8
+  ice_ocean_boundary%lrunoff(:,:) = 0._ESMF_KIND_R8
   call state_getimport(importState, 'Foxx_rofl',  &
        isc, iec, jsc, jec, ice_ocean_boundary%lrunoff, areacor=med2mod_areacor, rc=rc)
   if (ChkErr(rc, __LINE__, u_FILE_u)) return
 
   ! ice runoff
-  ice_ocean_boundary%frunoff (:,:) = 0._ESMF_KIND_R8
+  ice_ocean_boundary%frunoff(:,:) = 0._ESMF_KIND_R8
   call state_getimport(importState, 'Foxx_rofi',  &
        isc, iec, jsc, jec, ice_ocean_boundary%frunoff, areacor=med2mod_areacor, rc=rc)
   if (ChkErr(rc, __LINE__, u_FILE_u)) return
 
   ! liquid glc runoff
   if ( associated(ice_ocean_boundary%lrunoff_glc) ) then
-    ice_ocean_boundary%lrunoff_glc (:,:) = 0._ESMF_KIND_R8
+    ice_ocean_boundary%lrunoff_glc(:,:) = 0._ESMF_KIND_R8
     call state_getimport(importState, 'Forr_rofl_glc',  &
          isc, iec, jsc, jec, ice_ocean_boundary%lrunoff_glc, areacor=med2mod_areacor, rc=rc)
     if (ChkErr(rc, __LINE__, u_FILE_u)) return
@@ -232,7 +232,7 @@ subroutine mom_import(ocean_public, ocean_grid, importState, ice_ocean_boundary,
 
   ! frozen glc runoff
   if ( associated(ice_ocean_boundary%frunoff_glc) ) then
-    ice_ocean_boundary%frunoff_glc (:,:) = 0._ESMF_KIND_R8
+    ice_ocean_boundary%frunoff_glc(:,:) = 0._ESMF_KIND_R8
     call state_getimport(importState, 'Forr_rofi_glc',  &
          isc, iec, jsc, jec, ice_ocean_boundary%frunoff_glc, areacor=med2mod_areacor, rc=rc)
     if (ChkErr(rc, __LINE__, u_FILE_u)) return
@@ -520,7 +520,7 @@ subroutine mom_import(ocean_public, ocean_grid, importState, ice_ocean_boundary,
   ! Langmuir enhancement factor
   !----
   if ( associated(ice_ocean_boundary%lamult) ) then
-    ice_ocean_boundary%lamult (:,:) = 0._ESMF_KIND_R8
+    ice_ocean_boundary%lamult(:,:) = 0._ESMF_KIND_R8
     call state_getimport(importState, 'Sw_lamult', isc, iec, jsc, jec, &
          ice_ocean_boundary%lamult, rc=rc)
     if (ChkErr(rc, __LINE__, u_FILE_u)) return

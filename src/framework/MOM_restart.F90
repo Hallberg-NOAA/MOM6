@@ -1621,7 +1621,7 @@ subroutine save_restart(directory, time, G, CS, time_stamped, filename, GV, num_
 
   turns = CS%turns
 
-  allocate (extra_axes(nmax_extradims))
+  allocate(extra_axes(nmax_extradims))
 
   if (.not.CS%initialized) call MOM_error(FATAL, "MOM_restart " // &
       "save_restart: Module must be initialized before it is used.")
@@ -1957,7 +1957,7 @@ subroutine restore_state(filename, directory, day, G, CS)
           endif
 
           if (is_root_pe() .and. is_there_a_checksum .and. (checksum_file /= checksum_data)) then
-             write (mesg,'(a,Z16,a,Z16,a)') "Checksum of input field "// trim(varname)//" ",checksum_data,&
+             write(mesg,'(a,Z16,a,Z16,a)') "Checksum of input field "// trim(varname)//" ", checksum_data, &
                                           " does not match value ", checksum_file, &
                                           " stored in "//trim(unit_path(n)//"." )
              call MOM_error(FATAL, "MOM_restart(restore_state): "//trim(mesg) )

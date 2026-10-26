@@ -1502,7 +1502,7 @@ subroutine post_data_2d_low(diag, field, diag_cs, is_static, mask)
   elseif ( size(field,1) == cszi + 1 ) then
     isv = 1 ; iev = cszi+1                  ! Symmetric computational domain
   else
-    write (mesg,*) " peculiar size ",size(field,1)," in i-direction\n"//&
+    write(mesg,*) " peculiar size ",size(field,1)," in i-direction\n"//&
        "does not match one of ", cszi, cszi+1, dszi, dszi+1
     call MOM_error(FATAL, "post_data_2d_low: "//trim(diag%debug_str)//trim(mesg))
   endif
@@ -1516,7 +1516,7 @@ subroutine post_data_2d_low(diag, field, diag_cs, is_static, mask)
   elseif ( size(field,2) == cszj+1 ) then
     jsv = 1 ; jev = cszj+1                  ! Symmetric computational domain
   else
-    write (mesg,*) " peculiar size ",size(field,2)," in j-direction\n"//&
+    write(mesg,*) " peculiar size ",size(field,2)," in j-direction\n"//&
        "does not match one of ", cszj, cszj+1, dszj, dszj+1
     call MOM_error(FATAL, "post_data_2d_low: "//trim(diag%debug_str)//trim(mesg))
   endif
@@ -1826,7 +1826,7 @@ subroutine post_data_3d_low(diag, field, diag_cs, is_static, mask)
   elseif ( size(field,1) == cszi + 1 ) then
     isv = 1 ; iev = cszi+1                  ! Symmetric computational domain
   else
-    write (mesg,*) " peculiar size ",size(field,1)," in i-direction\n"//&
+    write(mesg,*) " peculiar size ",size(field,1)," in i-direction\n"//&
        "does not match one of ", cszi, cszi+1, dszi, dszi+1
     call MOM_error(FATAL, "post_data_3d_low: "//trim(diag%debug_str)//trim(mesg))
   endif
@@ -1840,7 +1840,7 @@ subroutine post_data_3d_low(diag, field, diag_cs, is_static, mask)
   elseif ( size(field,2) == cszj+1 ) then
     jsv = 1 ; jev = cszj+1                  ! Symmetric computational domain
   else
-    write (mesg,*) " peculiar size ",size(field,2)," in j-direction\n"//&
+    write(mesg,*) " peculiar size ",size(field,2)," in j-direction\n"//&
        "does not match one of ", cszj, cszj+1, dszj, dszj+1
     call MOM_error(FATAL, "post_data_3d_low: "//trim(diag%debug_str)//trim(mesg))
   endif
@@ -4436,7 +4436,7 @@ subroutine downsample_diag_indices_get(fo1, fo2, dl, diag_cs, isv, iev, jsv, jev
   if (first_check) then
     if (mod(diag_cs%ie-diag_cs%is+1, dlfac) /= 0 .OR. &
         mod(diag_cs%je-diag_cs%js+1, dlfac) /= 0) then
-      write (mesg,*) "Non-commensurate downsampled domain is not supported. "//&
+      write(mesg,*) "Non-commensurate downsampled domain is not supported. "//&
              "Please choose a layout such that NIGLOBAL/Layout_X and NJGLOBAL/Layout_Y are both divisible by dL=", &
              dlfac,&
              " Current domain extents: ", diag_cs%is,diag_cs%ie, diag_cs%js,diag_cs%je
@@ -4468,7 +4468,7 @@ subroutine downsample_diag_indices_get(fo1, fo2, dl, diag_cs, isv, iev, jsv, jev
   elseif ( f1 == cszi + 1 ) then
     isv = 1 ; iev = (diag_cs%dsamp(dl)%iec-diag_cs%dsamp(dl)%isc) +2  ! Symmetric computational domain
   else
-    write (mesg,*) " dl =",dl,",dL =",dlfac,",fo1 =",fo1," f1 =",f1," peculiar size for diag field in i-direction\n"//&
+    write(mesg,*) " dl =",dl,",dL =",dlfac,",fo1 =",fo1," f1 =",f1," peculiar size for diag field in i-direction\n"//&
           "does not match one of ", cszi, cszi+1, dszi, dszi+1
     call MOM_error(FATAL, "downsample_diag_indices_get: "//trim(mesg))
   endif
@@ -4481,7 +4481,7 @@ subroutine downsample_diag_indices_get(fo1, fo2, dl, diag_cs, isv, iev, jsv, jev
   elseif ( f2 == cszj + 1 ) then
     jsv = 1 ; jev = (diag_cs%dsamp(dl)%jec-diag_cs%dsamp(dl)%jsc) +2  ! Symmetric computational domain
   else
-    write (mesg,*) " dl =",dl,",dL =",dlfac,",fo2 =",fo2," f2 =",f2," peculiar size for diag field in j-direction\n"//&
+    write(mesg,*) " dl =",dl,",dL =",dlfac,",fo2 =",fo2," f2 =",f2," peculiar size for diag field in j-direction\n"//&
           "does not match one of ", cszj, cszj+1, dszj, dszj+1
     call MOM_error(FATAL, "downsample_diag_indices_get: "//trim(mesg))
   endif
@@ -4758,7 +4758,7 @@ subroutine downsample_field_3d(field_in, field_out, dL, method, mask, diag_cs, d
                          (sum_1d(wt_1d(1:dL), dL) + eps_face)  ! Eps_face avoids division by 0.
     enddo ; enddo ; enddo
   else
-    write (mesg,*) " unknown sampling method: ",method
+    write(mesg,*) " unknown sampling method: ",method
     call MOM_error(FATAL, "downsample_field_3d: "//trim(mesg)//" "//trim(diag%debug_str))
   endif
 
@@ -4890,7 +4890,7 @@ subroutine downsample_field_2d(field_in, field_out, dl, method, mask, diag_cs, d
                       (sum_1d(wt_1d(1:dL), dL) + Eps_len)  ! Eps_len avoids division by 0.
     enddo ; enddo
   else
-    write (mesg,*) " unknown sampling method: ",method
+    write(mesg,*) " unknown sampling method: ",method
     call MOM_error(FATAL, "downsample_field_2d: "//trim(mesg)//" "//trim(diag%debug_str))
   endif
 

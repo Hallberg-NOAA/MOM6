@@ -134,9 +134,9 @@ end type fld_list_type
 
 integer, parameter   :: fldsMax = 100
 integer              :: fldsToOcn_num = 0
-type (fld_list_type) :: fldsToOcn(fldsMax)
+type(fld_list_type)  :: fldsToOcn(fldsMax)
 integer              :: fldsFrOcn_num = 0
-type (fld_list_type) :: fldsFrOcn(fldsMax)
+type(fld_list_type)  :: fldsFrOcn(fldsMax)
 
 integer              :: dbug = 0
 integer              :: import_slice = 1
@@ -460,8 +460,8 @@ subroutine InitializeAdvertise(gcomp, importState, exportState, clock, rc)
   type(ESMF_VM)                          :: vm
   type(ESMF_Time)                        :: MyTime
   type(ESMF_TimeInterval)                :: TINT
-  type (ocean_public_type),      pointer :: ocean_public => NULL()
-  type (ocean_state_type),       pointer :: ocean_state => NULL()
+  type(ocean_public_type),       pointer :: ocean_public => NULL()
+  type(ocean_state_type),        pointer :: ocean_state => NULL()
   type(ice_ocean_boundary_type), pointer :: Ice_ocean_boundary => NULL()
   type(ocean_internalstate_wrapper)      :: ocean_internalstate
   type(ocean_grid_type),         pointer :: ocean_grid => NULL()
@@ -529,7 +529,7 @@ subroutine InitializeAdvertise(gcomp, importState, exportState, clock, rc)
   call ESMF_ClockGet(CLOCK, currTIME=MyTime, TimeStep=TINT,  RC=rc)
   if (ChkErr(rc, __LINE__, u_FILE_u)) return
 
-  call ESMF_TimeGet (MyTime, YY=YEAR, MM=MONTH, DD=DAY, H=HOUR, M=MINUTE, S=SECOND, RC=rc )
+  call ESMF_TimeGet(MyTime, YY=YEAR, MM=MONTH, DD=DAY, H=HOUR, M=MINUTE, S=SECOND, RC=rc)
   if (ChkErr(rc, __LINE__, u_FILE_u)) return
 
   CALL ESMF_TimeIntervalGet(TINT, S=DT_OCEAN, RC=rc)
@@ -602,24 +602,24 @@ subroutine InitializeAdvertise(gcomp, importState, exportState, clock, rc)
       read(cvalue,*) calendar
       select case (trim(calendar))
         case ("NO_LEAP")
-          call set_calendar_type (NOLEAP)
+          call set_calendar_type(NOLEAP)
         case ("GREGORIAN")
-          call set_calendar_type (GREGORIAN)
+          call set_calendar_type(GREGORIAN)
         case default
           call ESMF_LogSetError(ESMF_RC_ARG_BAD, &
              msg=subname//": Calendar not supported in MOM6: "//trim(calendar), &
              line=__LINE__, file=__FILE__, rcToReturn=rc)
       end select
     else
-      call set_calendar_type (NOLEAP)
+      call set_calendar_type(NOLEAP)
     endif
 
   else
-    call set_calendar_type (JULIAN)
+    call set_calendar_type(JULIAN)
   endif
 
   ! this ocean connector will be driven at set interval
-  DT = set_time (DT_OCEAN, 0)
+  DT = set_time(DT_OCEAN, 0)
   ! get current time
   time_start = set_date(YEAR, MONTH, DAY, HOUR, MINUTE, SECOND)
 
@@ -631,7 +631,7 @@ subroutine InitializeAdvertise(gcomp, importState, exportState, clock, rc)
   call ESMF_ClockGet(CLOCK, refTime=MyTime, RC=rc)
   if (ChkErr(rc, __LINE__, u_FILE_u)) return
 
-  call ESMF_TimeGet (MyTime, YY=YEAR, MM=MONTH, DD=DAY, H=HOUR, M=MINUTE, S=SECOND, RC=rc )
+  call ESMF_TimeGet(MyTime, YY=YEAR, MM=MONTH, DD=DAY, H=HOUR, M=MINUTE, S=SECOND, RC=rc)
   if (ChkErr(rc, __LINE__, u_FILE_u)) return
 
   time0 = set_date(YEAR, MONTH, DAY, HOUR, MINUTE, SECOND)
@@ -766,59 +766,59 @@ subroutine InitializeAdvertise(gcomp, importState, exportState, clock, rc)
 
   call query_ocean_state(ocean_state, use_waves=use_waves, wave_method=wave_method, use_MARBL=use_MARBL)
 
-  allocate(Ice_ocean_boundary% u_flux (isc:iec,jsc:jec),          &
-           Ice_ocean_boundary% v_flux (isc:iec,jsc:jec),          &
-           Ice_ocean_boundary% t_flux (isc:iec,jsc:jec),          &
-           Ice_ocean_boundary% q_flux (isc:iec,jsc:jec),          &
-           Ice_ocean_boundary% salt_flux (isc:iec,jsc:jec),       &
-           Ice_ocean_boundary% lw_flux (isc:iec,jsc:jec),         &
-           Ice_ocean_boundary% sw_flux_vis_dir (isc:iec,jsc:jec), &
-           Ice_ocean_boundary% sw_flux_vis_dif (isc:iec,jsc:jec), &
-           Ice_ocean_boundary% sw_flux_nir_dir (isc:iec,jsc:jec), &
-           Ice_ocean_boundary% sw_flux_nir_dif (isc:iec,jsc:jec), &
-           Ice_ocean_boundary% lprec (isc:iec,jsc:jec),           &
-           Ice_ocean_boundary% fprec (isc:iec,jsc:jec),           &
-           Ice_ocean_boundary% seaice_melt_heat (isc:iec,jsc:jec),&
-           Ice_ocean_boundary% seaice_melt (isc:iec,jsc:jec),     &
-           Ice_ocean_boundary% mi (isc:iec,jsc:jec),              &
-           Ice_ocean_boundary% ice_fraction (isc:iec,jsc:jec),    &
-           Ice_ocean_boundary% u10_sqr (isc:iec,jsc:jec),         &
-           Ice_ocean_boundary% p (isc:iec,jsc:jec),               &
-           Ice_ocean_boundary% lrunoff (isc:iec,jsc:jec),         &
-           Ice_ocean_boundary% frunoff (isc:iec,jsc:jec),         &
+  allocate(Ice_ocean_boundary%u_flux(isc:iec,jsc:jec),          &
+           Ice_ocean_boundary%v_flux(isc:iec,jsc:jec),          &
+           Ice_ocean_boundary%t_flux(isc:iec,jsc:jec),          &
+           Ice_ocean_boundary%q_flux(isc:iec,jsc:jec),          &
+           Ice_ocean_boundary%salt_flux(isc:iec,jsc:jec),       &
+           Ice_ocean_boundary%lw_flux(isc:iec,jsc:jec),         &
+           Ice_ocean_boundary%sw_flux_vis_dir(isc:iec,jsc:jec), &
+           Ice_ocean_boundary%sw_flux_vis_dif(isc:iec,jsc:jec), &
+           Ice_ocean_boundary%sw_flux_nir_dir(isc:iec,jsc:jec), &
+           Ice_ocean_boundary%sw_flux_nir_dif(isc:iec,jsc:jec), &
+           Ice_ocean_boundary%lprec(isc:iec,jsc:jec),           &
+           Ice_ocean_boundary%fprec(isc:iec,jsc:jec),           &
+           Ice_ocean_boundary%seaice_melt_heat(isc:iec,jsc:jec),&
+           Ice_ocean_boundary%seaice_melt(isc:iec,jsc:jec),     &
+           Ice_ocean_boundary%mi(isc:iec,jsc:jec),              &
+           Ice_ocean_boundary%ice_fraction(isc:iec,jsc:jec),    &
+           Ice_ocean_boundary%u10_sqr(isc:iec,jsc:jec),         &
+           Ice_ocean_boundary%p(isc:iec,jsc:jec),               &
+           Ice_ocean_boundary%lrunoff(isc:iec,jsc:jec),         &
+           Ice_ocean_boundary%frunoff(isc:iec,jsc:jec),         &
            source=0.0)
 
   ! Allocate memory for fields coming from multiple ice categories
   if (Ice_ocean_boundary%ice_ncat > 0) &
-    allocate(Ice_ocean_boundary% afracr(isc:iec,jsc:jec),       &
-             Ice_ocean_boundary% swnet_afracr(isc:iec,jsc:jec), &
-             Ice_ocean_boundary% swpen_ifrac_n(isc:iec,jsc:jec,1:Ice_ocean_boundary%ice_ncat), &
-             Ice_ocean_boundary% ifrac_n(isc:iec,jsc:jec,1:Ice_ocean_boundary%ice_ncat), &
+    allocate(Ice_ocean_boundary%afracr(isc:iec,jsc:jec),       &
+             Ice_ocean_boundary%swnet_afracr(isc:iec,jsc:jec), &
+             Ice_ocean_boundary%swpen_ifrac_n(isc:iec,jsc:jec,1:Ice_ocean_boundary%ice_ncat), &
+             Ice_ocean_boundary%ifrac_n(isc:iec,jsc:jec,1:Ice_ocean_boundary%ice_ncat), &
              source=0.0)
 
   if (cesm_coupled) then
-    allocate(Ice_ocean_boundary% hrain (isc:iec,jsc:jec),           &
-             Ice_ocean_boundary% hsnow (isc:iec,jsc:jec),           &
-             Ice_ocean_boundary% hrofl (isc:iec,jsc:jec),           &
-             Ice_ocean_boundary% hrofi (isc:iec,jsc:jec),           &
-             Ice_ocean_boundary% hevap (isc:iec,jsc:jec),           &
-             Ice_ocean_boundary% hcond (isc:iec,jsc:jec),           &
-             Ice_ocean_boundary% lrunoff_glc (isc:iec,jsc:jec),     &
-             Ice_ocean_boundary% frunoff_glc (isc:iec,jsc:jec),     &
-             Ice_ocean_boundary% hrofl_glc (isc:iec,jsc:jec),       &
-             Ice_ocean_boundary% hrofi_glc (isc:iec,jsc:jec),       &
+    allocate(Ice_ocean_boundary%hrain(isc:iec,jsc:jec),           &
+             Ice_ocean_boundary%hsnow(isc:iec,jsc:jec),           &
+             Ice_ocean_boundary%hrofl(isc:iec,jsc:jec),           &
+             Ice_ocean_boundary%hrofi(isc:iec,jsc:jec),           &
+             Ice_ocean_boundary%hevap(isc:iec,jsc:jec),           &
+             Ice_ocean_boundary%hcond(isc:iec,jsc:jec),           &
+             Ice_ocean_boundary%lrunoff_glc(isc:iec,jsc:jec),     &
+             Ice_ocean_boundary%frunoff_glc(isc:iec,jsc:jec),     &
+             Ice_ocean_boundary%hrofl_glc(isc:iec,jsc:jec),       &
+             Ice_ocean_boundary%hrofi_glc(isc:iec,jsc:jec),       &
              source=0.0)
 
     if (use_MARBL) then
-      allocate(Ice_ocean_boundary% nhx_dep (isc:iec,jsc:jec),         &
-              Ice_ocean_boundary% noy_dep (isc:iec,jsc:jec),         &
-              Ice_ocean_boundary% atm_fine_dust_flux (isc:iec,jsc:jec),  &
-              Ice_ocean_boundary% atm_coarse_dust_flux (isc:iec,jsc:jec),&
-              Ice_ocean_boundary% seaice_dust_flux (isc:iec,jsc:jec),    &
-              Ice_ocean_boundary% atm_bc_flux (isc:iec,jsc:jec),         &
-              Ice_ocean_boundary% seaice_bc_flux (isc:iec,jsc:jec),      &
-              Ice_ocean_boundary% atm_co2_prog (isc:iec,jsc:jec),    &
-              Ice_ocean_boundary% atm_co2_diag (isc:iec,jsc:jec),    &
+      allocate(Ice_ocean_boundary%nhx_dep(isc:iec,jsc:jec),         &
+              Ice_ocean_boundary%noy_dep(isc:iec,jsc:jec),         &
+              Ice_ocean_boundary%atm_fine_dust_flux(isc:iec,jsc:jec),  &
+              Ice_ocean_boundary%atm_coarse_dust_flux(isc:iec,jsc:jec),&
+              Ice_ocean_boundary%seaice_dust_flux(isc:iec,jsc:jec),    &
+              Ice_ocean_boundary%atm_bc_flux(isc:iec,jsc:jec),         &
+              Ice_ocean_boundary%seaice_bc_flux(isc:iec,jsc:jec),      &
+              Ice_ocean_boundary%atm_co2_prog(isc:iec,jsc:jec),    &
+              Ice_ocean_boundary%atm_co2_diag(isc:iec,jsc:jec),    &
               source=0.0)
     endif
   endif
@@ -977,8 +977,8 @@ subroutine InitializeRealize(gcomp, importState, exportState, clock, rc)
   type(ESMF_Distgrid)                        :: Distgrid
   type(ESMF_DistGridConnection), allocatable :: connectionList(:)
   type(ESMF_StateItem_Flag)                  :: itemFlag
-  type (ocean_public_type),      pointer     :: ocean_public   => NULL()
-  type (ocean_state_type),       pointer     :: ocean_state => NULL()
+  type(ocean_public_type),       pointer     :: ocean_public   => NULL()
+  type(ocean_state_type),        pointer     :: ocean_state => NULL()
   type(ice_ocean_boundary_type), pointer     :: Ice_ocean_boundary => NULL()
   type(ocean_grid_type)        , pointer     :: ocean_grid
   type(ocean_internalstate_wrapper)          :: ocean_internalstate
@@ -1048,7 +1048,7 @@ subroutine InitializeRealize(gcomp, importState, exportState, clock, rc)
 
   if (write_runtimelog) timeirls = MPI_Wtime()
 
-  call shr_log_setLogUnit (stdout)
+  call shr_log_setLogUnit(stdout)
 
   !----------------------------------------------------------------------------
   ! Get pointers to ocean internal state
@@ -1654,8 +1654,8 @@ subroutine DataInitialize(gcomp, rc)
   type(ESMF_Time)                        :: currTime
   type(ESMF_TimeInterval)                :: timeStep
   type(ESMF_StateItem_Flag)              :: itemType
-  type (ocean_public_type),      pointer :: ocean_public       => NULL()
-  type (ocean_state_type),       pointer :: ocean_state        => NULL()
+  type(ocean_public_type),       pointer :: ocean_public       => NULL()
+  type(ocean_state_type),        pointer :: ocean_state        => NULL()
   type(ice_ocean_boundary_type), pointer :: Ice_ocean_boundary => NULL()
   type(ocean_internalstate_wrapper)      :: ocean_internalstate
   type(ocean_grid_type), pointer         :: ocean_grid
@@ -1761,8 +1761,8 @@ subroutine ModelAdvance(gcomp, rc)
   integer(ESMF_KIND_I8)                  :: n_interval, time_elapsed_sec
   type(ESMF_Field)                       :: lfield
   type(ESMF_StateItem_Flag)              :: itemType
-  type (ocean_public_type),      pointer :: ocean_public       => NULL()
-  type (ocean_state_type),       pointer :: ocean_state        => NULL()
+  type(ocean_public_type),       pointer :: ocean_public       => NULL()
+  type(ocean_state_type),        pointer :: ocean_state        => NULL()
   type(ice_ocean_boundary_type), pointer :: Ice_ocean_boundary => NULL()
   type(ocean_internalstate_wrapper)      :: ocean_internalstate
   type(ocean_grid_type)        , pointer :: ocean_grid
@@ -1801,7 +1801,7 @@ subroutine ModelAdvance(gcomp, rc)
     if (timere>0. .and. is_root_pe()) write(stdout,*) 'In ',trim(subname),' time since last time step ',timers-timere
   endif
 
-  call shr_log_setLogUnit (stdout)
+  call shr_log_setLogUnit(stdout)
 
   ! query the Component for its clock, importState and exportState
   call ESMF_GridCompGet(gcomp, clock=clock, importState=importState, &
@@ -1980,7 +1980,7 @@ subroutine ModelAdvance(gcomp, rc)
       ! determine restart filename
       call ESMF_ClockGetNextTime(clock, MyTime, rc=rc)
       if (ChkErr(rc, __LINE__, u_FILE_u)) return
-      call ESMF_TimeGet (MyTime, yy=year, mm=month, dd=day, h=hour, m=minute, s=seconds, rc=rc )
+      call ESMF_TimeGet(MyTime, yy=year, mm=month, dd=day, h=hour, m=minute, s=seconds, rc=rc)
       if (ChkErr(rc, __LINE__, u_FILE_u)) return
 
       if (cesm_coupled) then
@@ -2301,8 +2301,8 @@ subroutine ocean_model_finalize(gcomp, rc)
   integer, intent(out) :: rc    !< return code
 
   ! local variables
-  type (ocean_public_type),      pointer :: ocean_public
-  type (ocean_state_type),       pointer :: ocean_state
+  type(ocean_public_type),       pointer :: ocean_public
+  type(ocean_state_type),        pointer :: ocean_state
   type(ocean_internalstate_wrapper)      :: ocean_internalstate
   type(TIME_TYPE)                        :: Time
   type(ESMF_Clock)                       :: clock

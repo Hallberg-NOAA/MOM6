@@ -81,7 +81,7 @@ end subroutine seamount_initialize_topography
 
 !> Initialization of thicknesses.
 !! This subroutine initializes the layer thicknesses to be uniform.
-subroutine seamount_initialize_thickness (h, depth_tot, G, GV, US, param_file, just_read)
+subroutine seamount_initialize_thickness(h, depth_tot, G, GV, US, param_file, just_read)
   type(ocean_grid_type),   intent(in)  :: G           !< The ocean's grid structure.
   type(verticalGrid_type), intent(in)  :: GV          !< The ocean's vertical grid structure.
   type(unit_scale_type),   intent(in)  :: US          !< A dimensional unit scaling type

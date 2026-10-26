@@ -458,9 +458,9 @@ function ints_to_string(a, n) result(i2s)
   i2s = ''
   do i=1,min(size(a), n_max)
     if (a(i) < 0) then
-      write (i2s_temp, '(I5.4)') a(i)
+      write(i2s_temp, '(I5.4)') a(i)
     else
-      write (i2s_temp, '(I4.4)') a(i)
+      write(i2s_temp, '(I4.4)') a(i)
     endif
     i2s = trim(i2s) //'_'// trim(i2s_temp)
   enddo

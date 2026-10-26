@@ -423,7 +423,7 @@ subroutine MOM_initialize_state(u, v, h, tv, Time, G, GV, US, PF, dirs, &
                                     tv%S, dz, G, GV, US, PF, just_read=just_read)
         case ("rossby_front")
           if (convert .and. .not.just_read) call dz_to_thickness(dz, tv, h, G, GV, US)
-          call Rossby_front_initialize_temperature_salinity ( tv%T, tv%S, h, &
+          call Rossby_front_initialize_temperature_salinity( tv%T, tv%S, h, &
                                         G, GV, US, PF, just_read=just_read)
         case ("SCM_CVMix_tests"); call SCM_CVMix_tests_TS_init(tv%T, tv%S, dz, &
                                            G, GV, US, PF, just_read=just_read)
@@ -431,7 +431,7 @@ subroutine MOM_initialize_state(u, v, h, tv, Time, G, GV, US, PF, dirs, &
                                  dz, just_read=just_read)
         case ("USER"); call user_init_temperature_salinity(tv%T, tv%S, G, GV, PF, &
                                 just_read=just_read)
-        case default ; call MOM_error(FATAL,  "MOM_initialize_state: "//&
+        case default ; call MOM_error(FATAL, "MOM_initialize_state: "//&
                "Unrecognized Temp & salt configuration "//trim(config))
       end select
     endif
@@ -2046,10 +2046,10 @@ subroutine initialize_sponges_file(G, GV, US, use_temperature, tv, u, v, depth_t
   real, allocatable, dimension(:,:,:) :: eta ! The target interface heights [Z ~> m].
   real, allocatable, dimension(:,:,:) :: dz  ! The target interface thicknesses in height units [Z ~> m]
 
-  real, dimension (SZI_(G),SZJ_(G),SZK_(GV)) :: &
+  real, dimension(SZI_(G),SZJ_(G),SZK_(GV)) :: &
     tmp, &    ! A temporary array for temperatures [C ~> degC] or other tracers.
     tmp2      ! A temporary array for salinities [S ~> ppt]
-  real, dimension (SZI_(G),SZJ_(G)) :: &
+  real, dimension(SZI_(G),SZJ_(G)) :: &
     tmp_2d    ! A temporary array for mixed layer densities [R ~> kg m-3]
   real, allocatable, dimension(:,:,:) :: tmp_T ! A temporary array for reading sponge target temperatures
                                     ! on the vertical grid of the input file  [C ~> degC]

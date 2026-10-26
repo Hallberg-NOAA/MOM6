@@ -455,7 +455,7 @@ subroutine MOM_diag_field_add_attribute_i1d(diag_field_id, att_name, att_value)
 end subroutine MOM_diag_field_add_attribute_i1d
 
 !> Needed for backwards compatibility, does nothing
-subroutine diag_send_complete_infra ()
+subroutine diag_send_complete_infra()
 end subroutine diag_send_complete_infra
 
 !> Needed for backwards compatibility, does nothing

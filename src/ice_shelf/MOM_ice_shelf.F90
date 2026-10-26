@@ -2799,7 +2799,7 @@ subroutine solo_step_ice_shelf(CS, time_interval, nsteps, Time, min_time_step_in
     min_time_step = 1000.0*US%s_to_T ! At 1 km resolution this would imply ice is moving at ~1 meter per second
   endif
 
-  write (mesg,*) "TIME in ice shelf call, yrs: ", time_to_real(Time)/(365. * 86400.)
+  write(mesg,*) "TIME in ice shelf call, yrs: ", time_to_real(Time)/(365. * 86400.)
   call MOM_mesg("solo_step_ice_shelf: "//mesg, 5)
 
   ISS%dhdt_shelf(:,:) = ISS%h_shelf(:,:)
@@ -2819,7 +2819,7 @@ subroutine solo_step_ice_shelf(CS, time_interval, nsteps, Time, min_time_step_in
     ! If time_interval is not too long, this is unnecessary.
     time_step = min(ice_time_step_CFL(CS%dCS, ISS, G), remaining_time)
 
-    write (mesg,*) "Ice model timestep = ", US%T_to_s*time_step, " seconds"
+    write(mesg,*) "Ice model timestep = ", US%T_to_s*time_step, " seconds"
     if ((time_step < min_time_step) .and. (time_step < remaining_time))  then
       call MOM_error(FATAL, "MOM_ice_shelf:solo_step_ice_shelf: abnormally small timestep "//mesg)
     else

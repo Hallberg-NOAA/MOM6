@@ -333,7 +333,7 @@ function slope_limiter(num, denom)
 end function slope_limiter
 
 !> Calculate area of quadrilateral.
-function quad_area (X, Y)
+function quad_area(X, Y)
   real, dimension(4), intent(in) :: X !< The x-positions of the vertices of the quadrilateral [L ~> m].
   real, dimension(4), intent(in) :: Y !< The y-positions of the vertices of the quadrilateral [L ~> m].
   real :: quad_area ! Computed area [L2 ~> m2]
@@ -4787,7 +4787,7 @@ end subroutine change_in_draft
 !> This subroutine calculates the gradients of bilinear basis elements that
 !! that are centered at the vertices of the cell.  Values are calculated at
 !! points of gaussian quadrature.
-subroutine bilinear_shape_functions (X, Y, Phi, area)
+subroutine bilinear_shape_functions(X, Y, Phi, area)
   real, dimension(4),   intent(in)    :: X   !< The x-positions of the vertices of the quadrilateral [L ~> m].
   real, dimension(4),   intent(in)    :: Y   !< The y-positions of the vertices of the quadrilateral [L ~> m].
   real, dimension(8,4), intent(inout) :: Phi !< The gradients of bilinear basis elements at Gaussian
@@ -5013,15 +5013,15 @@ subroutine bilinear_shape_functions_subgrid(Phisub, nsub)
   fracx = 1.0/real(nsub)
 
   do i=1,nsub ; do qx=1,2
-    a_left (qx,i) = (real(nsub-i) + xquad(3-qx)) * fracx
+    a_left(qx,i)  = (real(nsub-i) + xquad(3-qx)) * fracx
     a_right(qx,i) = (real(i-1)    + xquad(qx))   * fracx
   enddo ; enddo
 
   do j=1,nsub ; do i=1,nsub
     do qy=1,2 ; do qx=1,2
-      Phisub(qx,qy,i,j,1,1) = a_left (qx,i) * a_left (qy,j)
-      Phisub(qx,qy,i,j,1,2) = a_left (qx,i) * a_right(qy,j)
-      Phisub(qx,qy,i,j,2,1) = a_right(qx,i) * a_left (qy,j)
+      Phisub(qx,qy,i,j,1,1) = a_left(qx,i)  * a_left(qy,j)
+      Phisub(qx,qy,i,j,1,2) = a_left(qx,i)  * a_right(qy,j)
+      Phisub(qx,qy,i,j,2,1) = a_right(qx,i) * a_left(qy,j)
       Phisub(qx,qy,i,j,2,2) = a_right(qx,i) * a_right(qy,j)
     enddo ; enddo
   enddo ; enddo
@@ -5643,7 +5643,7 @@ subroutine ice_shelf_advect_temp_y(CS, G, time_step, hmask, h_after_uflux, h_aft
                                             ! thickness bdry condition, and the stencil contains it
                   flux_diff = flux_diff + ABS(v_face) * G%dxCv(i,J) * time_step * stencil(1) / G%areaT(i,j)
                 elseif (hmask(i,j+1) * hmask(i,j+2) == 1) then  ! h(j+2) and h(j+1) are valid
-                  phi = slope_limiter (stencil(1)-stencil(2), stencil(0)-stencil(1))
+                  phi = slope_limiter(stencil(1)-stencil(2), stencil(0)-stencil(1))
                   flux_diff = flux_diff + ((ABS(v_face) * G%dxCv(i,J) * time_step / G%areaT(i,j)) * &
                       (stencil(1) - (phi * (stencil(1)-stencil(0))/2)))
                 else     ! h(j+1) is valid
@@ -5655,7 +5655,7 @@ subroutine ice_shelf_advect_temp_y(CS, G, time_step, hmask, h_after_uflux, h_aft
               elseif (v_face > 0) then !flux is out of cell - we need info from h(j-1), h(j+1) if available
 
                 if (hmask(i,j-1) * hmask(i,j+1) == 1) then         ! h(j-1) and h(j+1) are both valid
-                  phi = slope_limiter (stencil(0)-stencil(-1), stencil(1)-stencil(0))
+                  phi = slope_limiter(stencil(0)-stencil(-1), stencil(1)-stencil(0))
                   flux_diff = flux_diff - ((ABS(v_face) * G%dxCv(i,J) * time_step / G%areaT(i,j)) * &
                       (stencil(0) - (phi * (stencil(0)-stencil(1))/2)))
                 else   ! h(j+1) is valid

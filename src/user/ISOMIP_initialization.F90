@@ -140,7 +140,7 @@ subroutine ISOMIP_initialize_topography(D, G, param_file, max_depth, US)
 end subroutine ISOMIP_initialize_topography
 
 !> Initialization of thicknesses
-subroutine ISOMIP_initialize_thickness ( h, depth_tot, G, GV, US, param_file, tv, just_read)
+subroutine ISOMIP_initialize_thickness(h, depth_tot, G, GV, US, param_file, tv, just_read)
   type(ocean_grid_type),   intent(in)  :: G           !< The ocean's grid structure.
   type(verticalGrid_type), intent(in)  :: GV          !< The ocean's vertical grid structure.
   type(unit_scale_type),   intent(in)  :: US          !< A dimensional unit scaling type
@@ -263,8 +263,8 @@ subroutine ISOMIP_initialize_thickness ( h, depth_tot, G, GV, US, param_file, tv
 end subroutine ISOMIP_initialize_thickness
 
 !> Initial values for temperature and salinity
-subroutine ISOMIP_initialize_temperature_salinity ( T, S, h, depth_tot, G, GV, US, param_file, &
-                                                    eqn_of_state, just_read)
+subroutine ISOMIP_initialize_temperature_salinity(T, S, h, depth_tot, G, GV, US, param_file, &
+                                                  eqn_of_state, just_read)
   type(ocean_grid_type),                     intent(in)  :: G  !< Ocean grid structure
   type(verticalGrid_type),                   intent(in)  :: GV !< Vertical grid structure
   type(unit_scale_type),                     intent(in)  :: US !< A dimensional unit scaling type
@@ -547,13 +547,13 @@ subroutine ISOMIP_initialize_sponges(G, GV, US, tv, depth_tot, PF, use_ALE, CSp,
 
   ! Compute min/max density using T_SUR/S_SUR and T_BOT/S_BOT
   call calculate_density(T_sur, S_sur, 0.0, rho_sur, tv%eqn_of_state)
-  !write (mesg,*) 'Surface density in sponge:', rho_sur
+  !write(mesg,*) 'Surface density in sponge:', rho_sur
   ! call MOM_mesg(mesg,5)
   call calculate_density(T_bot, S_bot, 0.0, rho_bot, tv%eqn_of_state)
-  !write (mesg,*) 'Bottom density in sponge:', rho_bot
+  !write(mesg,*) 'Bottom density in sponge:', rho_bot
   ! call MOM_mesg(mesg,5)
   rho_range = rho_bot - rho_sur
-  !write (mesg,*) 'Density range in sponge:', rho_range
+  !write(mesg,*) 'Density range in sponge:', rho_range
   ! call MOM_mesg(mesg,5)
 
   if (use_ALE) then

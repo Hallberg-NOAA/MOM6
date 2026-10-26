@@ -314,7 +314,7 @@ subroutine TimeInit( Time, ymd, cal, tod, desc, logunit, rc)
     return
   endif
 
-  call date2ymd (ymd, yr, mon, day)
+  call date2ymd(ymd, yr, mon, day)
 
   call ESMF_TimeSet( Time, yy=yr, mm=mon, dd=day, s=ltod, calendar=cal, rc=rc )
   if (ChkErr(rc, __LINE__, u_FILE_u)) return
@@ -322,9 +322,9 @@ subroutine TimeInit( Time, ymd, cal, tod, desc, logunit, rc)
 end subroutine TimeInit
 
 !> Converts a coded-date (yyyymmdd) into calendar year,month,day.
-subroutine date2ymd (date, year, month, day)
+subroutine date2ymd(date, year, month, day)
   integer, intent(in)  :: date             !< coded-date (yyyymmdd)
-  integer,  intent(out) :: year, month, day !< calendar year, month, day
+  integer, intent(out) :: year, month, day !< calendar year, month, day
 
   ! local variables
   integer :: tdate   ! temporary date

@@ -457,11 +457,11 @@ subroutine MOM_diag_field_add_attribute_i1d(diag_field_id, att_name, att_value)
 end subroutine MOM_diag_field_add_attribute_i1d
 
 !> Finishes the diag manager reduction methods as needed for the time_step
-subroutine diag_send_complete_infra ()
+subroutine diag_send_complete_infra()
   !! The time_step in the diag_send_complete call is a dummy argument, needed for backwards compatibility
   !! It won't be used at all when diag_manager_nml::use_modern_diag=.true.
   !! It won't have any impact when diag_manager_nml::use_modern_diag=.false.
-  call diag_send_complete (set_time(0))
+  call diag_send_complete(set_time(0))
 end subroutine diag_send_complete_infra
 
 !> Sets the time that the simulation ends in the diag manager

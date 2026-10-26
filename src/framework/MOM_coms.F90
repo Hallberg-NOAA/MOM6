@@ -101,9 +101,9 @@ type, public :: EFP_type ; private
 end type EFP_type
 
 !> Add two extended-fixed-point numbers
-interface operator (+) ; module procedure EFP_plus  ; end interface
+interface operator(+) ; module procedure EFP_plus  ; end interface
 !> Subtract one extended-fixed-point number from another
-interface operator (-) ; module procedure EFP_minus ; end interface
+interface operator(-) ; module procedure EFP_minus ; end interface
 !> Copy the value of one extended-fixed-point number into another
 interface assignment(=); module procedure EFP_assign ; end interface
 
@@ -1010,7 +1010,7 @@ subroutine EFP_list_sum_across_PEs(EFPs, nval, errors)
     do n=1,efp_digits ; EFPs(i)%v(n) = ints(n,i) ; enddo
     if (present(errors)) errors(i) = overflow_error
     if (overflow_error) then
-      write (mesg,'("EFP_list_sum_across_PEs error at ",i0," val was ",ES12.6, ", prec_error = ",ES12.6)') &
+      write(mesg,'("EFP_list_sum_across_PEs error at ",i0," val was ",ES12.6, ", prec_error = ",ES12.6)') &
              i, EFP_to_real(EFPs(i)), real(prec_error)
       call MOM_error(WARNING, mesg)
     endif
@@ -1058,7 +1058,7 @@ subroutine EFP_val_sum_across_PEs(EFP, error)
   do n=1,efp_digits ; EFP%v(n) = ints(n) ; enddo
   if (present(error)) error = overflow_error
   if (overflow_error) then
-    write (mesg,'("EFP_val_sum_across_PEs error val was ",ES12.6, ", prec_error = ",ES12.6)') &
+    write(mesg,'("EFP_val_sum_across_PEs error val was ",ES12.6, ", prec_error = ",ES12.6)') &
            EFP_to_real(EFP), real(prec_error)
     call MOM_error(WARNING, mesg)
   endif

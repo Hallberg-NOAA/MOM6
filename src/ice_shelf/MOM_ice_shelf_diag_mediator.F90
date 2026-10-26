@@ -457,7 +457,7 @@ subroutine post_data_2d_low(diag, field, diag_cs, is_static, mask)
   elseif ( size(field,1) == cszi + 1 ) then
     isv = 1 ; iev = cszi+1 ; i_data = .false. ! Symmetric computational domain
   else
-    write (mesg,*) " peculiar size ",size(field,1)," in i-direction\n"//&
+    write(mesg,*) " peculiar size ",size(field,1)," in i-direction\n"//&
        "does not match one of ", cszi, cszi+1, dszi, dszi+1
     call MOM_error(FATAL, "post_IS_data_2d_low: "//trim(diag%debug_str)//trim(mesg))
   endif
@@ -472,7 +472,7 @@ subroutine post_data_2d_low(diag, field, diag_cs, is_static, mask)
   elseif ( size(field,2) == cszj + 1 ) then
     jsv = 1 ; jev = cszj+1 ; j_data = .false. ! Symmetric computational domain
   else
-    write (mesg,*) " peculiar size ",size(field,2)," in j-direction\n"//&
+    write(mesg,*) " peculiar size ",size(field,2)," in j-direction\n"//&
        "does not match one of ", cszj, cszj+1, dszj, dszj+1
     call MOM_error(FATAL, "post_IS_data_2d_low: "//trim(diag%debug_str)//trim(mesg))
   endif

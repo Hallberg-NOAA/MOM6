@@ -145,8 +145,8 @@ subroutine ocn_init_mct( EClock, cdata_o, x2o_o, o2x_o, NLFilename )
 
   ! time management
   integer                   :: ocn_cpl_dt   !< one ocn coupling interval in seconds. (to be received from cesm)
-  real (kind=8)             :: mom_cpl_dt   !< one ocn coupling interval in seconds. (internal)
-  real (kind=8), parameter  ::        &
+  real(kind=8)              :: mom_cpl_dt   !< one ocn coupling interval in seconds. (internal)
+  real(kind=8), parameter   ::        &
       seconds_in_minute =    60.0d0, &
       seconds_in_hour   =  3600.0d0, &
       seconds_in_day    = 86400.0d0, &
@@ -190,7 +190,7 @@ subroutine ocn_init_mct( EClock, cdata_o, x2o_o, o2x_o, NLFilename )
   if (is_root_pe()) then
 
     ! get original log file properties
-    call shr_file_getLogUnit (shrlogunit)
+    call shr_file_getLogUnit(shrlogunit)
     call shr_file_getLogLevel(shrloglev)
 
     stdout = shr_file_getUnit() ! get an unused unit number
@@ -410,7 +410,7 @@ subroutine ocn_init_mct( EClock, cdata_o, x2o_o, o2x_o, NLFilename )
 
   ! Reset shr logging to original values
   if (is_root_pe()) then
-    call shr_file_setLogUnit (shrlogunit)
+    call shr_file_setLogUnit(shrlogunit)
     call shr_file_setLogLevel(shrloglev)
   endif
 
@@ -857,30 +857,30 @@ subroutine IOB_allocate(IOB, isc, iec, jsc, jec)
   type(ice_ocean_boundary_type), intent(inout)    :: IOB    !< An ice-ocean boundary type with fluxes to drive
   integer, intent(in) :: isc, iec, jsc, jec                 !< The ocean's local grid size
 
-  allocate ( IOB% rofl_flux (isc:iec,jsc:jec),       &
-             IOB% rofi_flux (isc:iec,jsc:jec),       &
-             IOB% u_flux (isc:iec,jsc:jec),          &
-             IOB% v_flux (isc:iec,jsc:jec),          &
-             IOB% t_flux (isc:iec,jsc:jec),          &
-             IOB% seaice_melt_heat (isc:iec,jsc:jec),&
-             IOB% seaice_melt (isc:iec,jsc:jec),     &
-             IOB% q_flux (isc:iec,jsc:jec),          &
-             IOB% salt_flux (isc:iec,jsc:jec),       &
-             IOB% lw_flux (isc:iec,jsc:jec),         &
-             IOB% sw_flux_vis_dir (isc:iec,jsc:jec), &
-             IOB% sw_flux_vis_dif (isc:iec,jsc:jec), &
-             IOB% sw_flux_nir_dir (isc:iec,jsc:jec), &
-             IOB% sw_flux_nir_dif (isc:iec,jsc:jec), &
-             IOB% lprec (isc:iec,jsc:jec),           &
-             IOB% fprec (isc:iec,jsc:jec),           &
-             IOB% ustar_berg (isc:iec,jsc:jec),      &
-             IOB% area_berg (isc:iec,jsc:jec),       &
-             IOB% mass_berg (isc:iec,jsc:jec),       &
-             IOB% calving (isc:iec,jsc:jec),         &
-             IOB% runoff_hflx (isc:iec,jsc:jec),     &
-             IOB% calving_hflx (isc:iec,jsc:jec),    &
-             IOB% mi (isc:iec,jsc:jec),              &
-             IOB% p (isc:iec,jsc:jec))
+  allocate(IOB%rofl_flux(isc:iec,jsc:jec),       &
+           IOB%rofi_flux(isc:iec,jsc:jec),       &
+           IOB%u_flux(isc:iec,jsc:jec),          &
+           IOB%v_flux(isc:iec,jsc:jec),          &
+           IOB%t_flux(isc:iec,jsc:jec),          &
+           IOB%seaice_melt_heat(isc:iec,jsc:jec),&
+           IOB%seaice_melt(isc:iec,jsc:jec),     &
+           IOB%q_flux(isc:iec,jsc:jec),          &
+           IOB%salt_flux(isc:iec,jsc:jec),       &
+           IOB%lw_flux(isc:iec,jsc:jec),         &
+           IOB%sw_flux_vis_dir(isc:iec,jsc:jec), &
+           IOB%sw_flux_vis_dif(isc:iec,jsc:jec), &
+           IOB%sw_flux_nir_dir(isc:iec,jsc:jec), &
+           IOB%sw_flux_nir_dif(isc:iec,jsc:jec), &
+           IOB%lprec(isc:iec,jsc:jec),           &
+           IOB%fprec(isc:iec,jsc:jec),           &
+           IOB%ustar_berg(isc:iec,jsc:jec),      &
+           IOB%area_berg(isc:iec,jsc:jec),       &
+           IOB%mass_berg(isc:iec,jsc:jec),       &
+           IOB%calving(isc:iec,jsc:jec),         &
+           IOB%runoff_hflx(isc:iec,jsc:jec),     &
+           IOB%calving_hflx(isc:iec,jsc:jec),    &
+           IOB%mi(isc:iec,jsc:jec),              &
+           IOB%p(isc:iec,jsc:jec))
 
   IOB%rofl_flux        = 0.0
   IOB%rofi_flux        = 0.0

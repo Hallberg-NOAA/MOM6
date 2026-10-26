@@ -257,16 +257,16 @@ subroutine initialize_ice_thickness_channel(h_shelf, area_shelf_h, hmask, G, US,
         if (G%geoLonCu(i-1,j) >= edge_pos) then
         ! Everything past the edge is open ocean.
           area_shelf_h(i,j) = 0.0
-          hmask (i,j) = 0.0
-          h_shelf (i,j) = 0.0
+          hmask(i,j) = 0.0
+          h_shelf(i,j) = 0.0
         else
           if (G%geoLonCu(i,j) > edge_pos) then
             area_shelf_h(i,j) = G%areaT(i,j) * (edge_pos - G%geoLonCu(i-1,j)) / &
                                 (G%geoLonCu(i,j) - G%geoLonCu(i-1,j))
-            hmask (i,j) = 2.0
+            hmask(i,j) = 2.0
           else
             area_shelf_h(i,j) = G%areaT(i,j)
-            hmask (i,j) = 1.0
+            hmask(i,j) = 1.0
           endif
 
           if (G%geoLonT(i,j) > slope_pos) then

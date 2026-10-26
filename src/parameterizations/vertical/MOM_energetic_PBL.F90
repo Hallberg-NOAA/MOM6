@@ -4446,13 +4446,13 @@ subroutine energetic_PBL_end(CS)
   if (report_avg_its) then
     call EFP_sum_across_PEs(CS%sum_its, 2)
     avg_its = EFP_to_real(CS%sum_its(1)) / EFP_to_real(CS%sum_its(2))
-    write (mesg,*) "Average ePBL iterations = ", avg_its
+    write(mesg,*) "Average ePBL iterations = ", avg_its
     call MOM_mesg(mesg)
 
     if ((CS%ePBL_BBL_effic > 0.0) .or. (CS%ePBL_tidal_effic > 0.0) .or. CS%ePBL_BBL_use_mstar) then
       call EFP_sum_across_PEs(CS%sum_its_BBL, 2)
       avg_its = EFP_to_real(CS%sum_its_BBL(1)) / EFP_to_real(CS%sum_its_BBL(2))
-      write (mesg,*) "Average ePBL BBL iterations = ", avg_its
+      write(mesg,*) "Average ePBL BBL iterations = ", avg_its
       call MOM_mesg(mesg)
     endif
   endif

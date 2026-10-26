@@ -493,7 +493,7 @@ subroutine create_MOM_file(IO_handle, filename, vars, novars, fields, &
                           longname=extra_axes(m)%longname, cartesian=extra_axes(m)%cartesian)
     else
       ! FMS requires that non-time axes have variables that label their values, even if they are trivial.
-      allocate (axis_val(extra_axes(m)%ax_size))
+      allocate(axis_val(extra_axes(m)%ax_size))
       do k=1,extra_axes(m)%ax_size ; axis_val(k) = real(k) ; enddo
       more_axes(m) = IO_handle%register_axis(extra_axes(m)%name, units=extra_axes(m)%units, &
                           longname=extra_axes(m)%longname, cartesian=extra_axes(m)%cartesian, &
@@ -726,15 +726,15 @@ subroutine reopen_MOM_file(IO_handle, filename, vars, novars, fields, &
     call IO_handle%get_file_info(nvar=nvar)
 
     if (nvar == -1) then
-      write (mesg,*) "Reopening file ",trim(filename)," apparently had ",nvar,&
-                     " variables. Clobbering and creating file with ",novars," instead."
+      write(mesg,*) "Reopening file ",trim(filename)," apparently had ",nvar,&
+                    " variables. Clobbering and creating file with ",novars," instead."
       call MOM_error(WARNING, "MOM_io: "//mesg)
       call create_MOM_file(IO_handle, filename, vars, novars, fields, &
           threading, timeunit, G=G, dG=dG, GV=GV, extra_axes=extra_axes, &
           global_atts=global_atts)
     elseif (nvar /= novars) then
-      write (mesg,*) "Reopening file ",trim(filename)," with ",novars,&
-                     " variables instead of ",nvar,"."
+      write(mesg,*) "Reopening file ",trim(filename)," with ",novars,&
+                    " variables instead of ",nvar,"."
       call MOM_error(FATAL, "MOM_io: "//mesg)
     endif
 
@@ -1704,7 +1704,7 @@ subroutine verify_variable_units(filename, varname, expected_units, msg, ierr, a
   character(len=*), optional, intent(in)    :: alt_units !< Alterate acceptable units of variable
 
   ! Local variables
-  character (len=200) :: units
+  character(len=200) :: units
   logical :: units_correct, success
   integer :: i, ncid, status, vid
 

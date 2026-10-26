@@ -95,7 +95,7 @@ subroutine DOME2d_initialize_topography( D, G, param_file, max_depth )
 end subroutine DOME2d_initialize_topography
 
 !> Initialize thicknesses according to coordinate mode
-subroutine DOME2d_initialize_thickness ( h, depth_tot, G, GV, US, param_file, just_read )
+subroutine DOME2d_initialize_thickness(h, depth_tot, G, GV, US, param_file, just_read)
   type(ocean_grid_type),   intent(in)  :: G  !< Ocean grid structure
   type(verticalGrid_type), intent(in)  :: GV !< Vertical grid structure
   type(unit_scale_type),   intent(in)  :: US !< A dimensional unit scaling type
@@ -226,7 +226,7 @@ end subroutine DOME2d_initialize_thickness
 
 
 !> Initialize temperature and salinity in the 2d DOME configuration
-subroutine DOME2d_initialize_temperature_salinity ( T, S, h, G, GV, US, param_file, just_read)
+subroutine DOME2d_initialize_temperature_salinity(T, S, h, G, GV, US, param_file, just_read)
   type(ocean_grid_type),                     intent(in)  :: G  !< Ocean grid structure
   type(verticalGrid_type),                   intent(in)  :: GV !< The ocean's vertical grid structure.
   real, dimension(SZI_(G),SZJ_(G),SZK_(GV)), intent(out) :: T  !< Potential temperature [C ~> degC]
@@ -326,7 +326,7 @@ subroutine DOME2d_initialize_temperature_salinity ( T, S, h, G, GV, US, param_fi
 
   ! Modify salinity and temperature when z coordinates are used
   if ( coordinateMode(verticalCoordinate) == REGRIDDING_ZSTAR ) then
-    index_bay_z = Nint ( dome2d_depth_bay * GV%ke )
+    index_bay_z = Nint(dome2d_depth_bay * GV%ke)
     do j = G%jsc,G%jec ; do i = G%isc,G%iec
       x = ( G%geoLonT(i,j) - G%west_lon ) / G%len_lon
       if ( x <= dome2d_width_bay ) then

@@ -540,7 +540,7 @@ subroutine get_file_fields(IO_handle, fields)
     if (fields(i)%valid_chksum) then
       call get_variable_attribute(IO_handle%fileobj, var_names(i), 'checksum', checksum_char)
       ! If there are problems, there might need to be code added to handle commas.
-      read (checksum_char(1:16), '(Z16)') fields(i)%chksum_read
+      read(checksum_char(1:16), '(Z16)') fields(i)%chksum_read
     endif
   enddo
 end subroutine get_file_fields
@@ -2025,7 +2025,7 @@ subroutine write_metadata_field(IO_handle, field, axes, name, units, longname, &
     call register_variable_attribute(IO_handle%fileobj, trim(name), 'standard_name', &
                                      trim(standard_name), len_trim(standard_name))
   if (present(checksum)) then
-    write (checksum_string,'(Z16)') checksum(1) ! Z16 is the hexadecimal format code
+    write(checksum_string,'(Z16)') checksum(1) ! Z16 is the hexadecimal format code
     call register_variable_attribute(IO_handle%fileobj, trim(name), "checksum", &
                                      trim(checksum_string), len_trim(checksum_string))
   endif

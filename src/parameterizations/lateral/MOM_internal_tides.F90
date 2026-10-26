@@ -2620,7 +2620,7 @@ subroutine reflect(En, NAngle, CS, G, LB)
   ! Check to make sure no energy gets onto land (only run for debugging)
   ! do a=1,NAngle ; do j=jsc,jec ; do i=isc,iec
   !   if (En(i,j,a) > 0.001 .and. G%mask2dT(i,j) == 0) then
-  !     write (mesg,*) 'En=', HZ2_T2_to_J_m2*En(i,j,a), 'a=', a, 'ig_g=',i+G%idg_offset, 'jg_g=',j+G%jdg_offset
+  !     write(mesg,*) 'En=', HZ2_T2_to_J_m2*En(i,j,a), 'a=', a, 'ig_g=', i+G%idg_offset, 'jg_g=', j+G%jdg_offset
   !     call MOM_error(FATAL, "reflect: Energy detected out of bounds: "//trim(mesg), .true.)
   !   endif
   ! enddo ; enddo ; enddo
@@ -3290,8 +3290,8 @@ subroutine register_int_tide_restarts(G, GV, US, param_file, CS, restart_CS)
   units = "J m-2"
   if (Boussinesq) units = "m3 s-2"
 
-  allocate (angles(num_angle))
-  allocate (freqs(num_freq))
+  allocate(angles(num_angle))
+  allocate(freqs(num_freq))
 
   do a=1,num_angle ; angles(a) = a ; enddo
   do fr=1,num_freq ; freqs(fr) = fr ; enddo

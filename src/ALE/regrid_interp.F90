@@ -321,8 +321,8 @@ subroutine interpolate_grid( n0, h0, x0, ppoly0_E, ppoly0_coefs, &
   ! Find coordinates for interior target values
   do k = 2,n1
     t = target_values(k)
-    x1(k) = get_polynomial_coordinate ( n0, h0, x0, ppoly0_E, ppoly0_coefs, t, degree, &
-                                        answer_date=answer_date )
+    x1(k) = get_polynomial_coordinate(n0, h0, x0, ppoly0_E, ppoly0_coefs, t, degree, &
+                                      answer_date=answer_date)
     h1(k-1) = x1(k) - x1(k-1)
   enddo
   h1(n1) = x1(n1+1) - x1(n1)

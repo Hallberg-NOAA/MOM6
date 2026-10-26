@@ -1609,16 +1609,16 @@ subroutine MARBL_forcing_from_data_override(fluxes, day, G, US, CS)
 
   ! Allocate memory for pointers
   isc = G%isc ; iec = G%iec ; jsc = G%jsc ; jec = G%jec
-  allocate ( atm_co2_prog   (isc:iec,jsc:jec),       &
-             atm_co2_diag   (isc:iec,jsc:jec),       &
-             atm_fine_dust_flux (isc:iec,jsc:jec),   &
-             atm_coarse_dust_flux (isc:iec,jsc:jec), &
-             seaice_dust_flux (isc:iec,jsc:jec),     &
-             atm_bc_flux (isc:iec,jsc:jec),          &
-             seaice_bc_flux (isc:iec,jsc:jec),       &
-             nhx_dep (isc:iec,jsc:jec),              &
-             noy_dep (isc:iec,jsc:jec),              &
-             source=0.0)
+  allocate(atm_co2_prog(isc:iec,jsc:jec), &
+           atm_co2_diag(isc:iec,jsc:jec), &
+           atm_fine_dust_flux(isc:iec,jsc:jec), &
+           atm_coarse_dust_flux(isc:iec,jsc:jec), &
+           seaice_dust_flux(isc:iec,jsc:jec), &
+           atm_bc_flux(isc:iec,jsc:jec), &
+           seaice_bc_flux(isc:iec,jsc:jec), &
+           nhx_dep(isc:iec,jsc:jec), &
+           noy_dep(isc:iec,jsc:jec), &
+           source=0.0)
 
 
   ! fluxes used directly as MARBL inputs
@@ -1645,15 +1645,15 @@ subroutine MARBL_forcing_from_data_override(fluxes, day, G, US, CS)
                                          afracr, swnet_afracr, ifrac_n, swpen_ifrac_n, &
                                          day, G, US, 0, 0, fluxes, CS%marbl_forcing_CSp)
 
-  deallocate ( atm_co2_prog,         &
-               atm_co2_diag,         &
-               atm_fine_dust_flux,   &
-               atm_coarse_dust_flux, &
-               seaice_dust_flux,     &
-               atm_bc_flux,          &
-               seaice_bc_flux,       &
-               nhx_dep,              &
-               noy_dep)
+  deallocate(atm_co2_prog,         &
+             atm_co2_diag,         &
+             atm_fine_dust_flux,   &
+             atm_coarse_dust_flux, &
+             seaice_dust_flux,     &
+             atm_bc_flux,          &
+             seaice_bc_flux,       &
+             nhx_dep,              &
+             noy_dep)
 
   call callTree_leave("MARBL_forcing_from_data_override")
 

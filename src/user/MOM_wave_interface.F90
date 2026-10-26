@@ -1594,7 +1594,7 @@ subroutine DHH85_mid(GV, US, CS, zpt, UStokes)
   UStokes = 0.0
   omega = CS%omega_min + 0.5*domega
   do oi = 1,nomega-1
-    Dnn = exp ( -0.5 * (omega-omega_peak)**2 / (Snn**2 * omega_peak**2) )
+    Dnn = exp( -0.5 * (omega-omega_peak)**2 / (Snn**2 * omega_peak**2) )
     ! wavespec units [L Z T ~> m2 s]
     wavespec = US%Z_to_L * (Ann * CS%g_Earth**2 / (omega_peak*omega**4 ) ) * &
                exp(-bnn*(omega_peak/omega)**4)*Cnn**Dnn

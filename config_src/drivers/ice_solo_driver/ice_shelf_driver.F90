@@ -339,7 +339,7 @@ program Shelf_main
     Time_end = daymax
   endif
 
-  call diag_manager_set_time_end_infra (Time_end)
+  call diag_manager_set_time_end_infra(Time_end)
 
   if (Time >= Time_end) call MOM_error(FATAL, &
     "Shelf_driver: The run has been started at or after the end time of the run.")

@@ -283,8 +283,8 @@ subroutine close_param_file(CS, quiet_close, component)
       CS%filename(i) = ''
       CS%NetCDF_file(i) = .false.
       do n=1,CS%param_data(i)%num_lines ; deallocate(CS%param_data(i)%fln(n)%line) ; enddo
-      deallocate (CS%param_data(i)%fln)
-      deallocate (CS%param_data(i)%line_used)
+      deallocate(CS%param_data(i)%fln)
+      deallocate(CS%param_data(i)%line_used)
     enddo
     CS%log_open = .false.
     call doc_end(CS%doc)
@@ -352,8 +352,8 @@ subroutine close_param_file(CS, quiet_close, component)
     CS%filename(i) = ''
     CS%NetCDF_file(i) = .false.
     do n=1,CS%param_data(i)%num_lines ; deallocate(CS%param_data(i)%fln(n)%line) ; enddo
-    deallocate (CS%param_data(i)%fln)
-    deallocate (CS%param_data(i)%line_used)
+    deallocate(CS%param_data(i)%fln)
+    deallocate(CS%param_data(i)%line_used)
   enddo
   deallocate(CS%blockName)
 
@@ -422,8 +422,8 @@ subroutine populate_param_data(iounit, filename, param_data)
 
   ! Set up the space for storing the actual lines.
   param_data%num_lines = num_lines
-  allocate (line_len(num_lines), source=0)
-  allocate (char_buf(total_chars), source=" ")
+  allocate(line_len(num_lines), source=0)
+  allocate(char_buf(total_chars), source=" ")
 
   ! Read the actual lines.
   if (is_root_pe()) then
@@ -1715,20 +1715,20 @@ function convert_date_to_string(date) result(date_string)
   integer :: yrs, mons, days, hours, mins, secs, ticks, ticks_per_sec
 
   call get_date(date, yrs, mons, days, hours, mins, secs, ticks)
-  write (date_string, '(i8.4)') yrs
-  write (sub_string, '("-", i2.2, "-", I2.2, " ", i2.2, ":", i2.2, ":")') &
-         mons, days, hours, mins
+  write(date_string, '(i8.4)') yrs
+  write(sub_string, '("-", i2.2, "-", I2.2, " ", i2.2, ":", i2.2, ":")') &
+        mons, days, hours, mins
   date_string = trim(adjustl(date_string)) // trim(sub_string)
   if (ticks > 0) then
     ticks_per_sec = get_ticks_per_second()
     real_secs = secs + ticks/ticks_per_sec
     if (ticks_per_sec <= 100) then
-      write (sub_string, '(F7.3)') real_secs
+      write(sub_string, '(F7.3)') real_secs
     else
-      write (sub_string, '(F10.6)') real_secs
+      write(sub_string, '(F10.6)') real_secs
     endif
   else
-    write (sub_string, '(i2.2)') secs
+    write(sub_string, '(i2.2)') secs
   endif
   date_string = trim(date_string) // trim(adjustl(sub_string))
 

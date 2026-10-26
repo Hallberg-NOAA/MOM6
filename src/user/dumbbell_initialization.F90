@@ -94,7 +94,7 @@ subroutine dumbbell_initialize_topography( D, G, param_file, max_depth )
 end subroutine dumbbell_initialize_topography
 
 !> Initializes the layer thicknesses to be uniform in the dumbbell test case
-subroutine dumbbell_initialize_thickness ( h, depth_tot, G, GV, US, param_file, just_read)
+subroutine dumbbell_initialize_thickness(h, depth_tot, G, GV, US, param_file, just_read)
   type(ocean_grid_type),   intent(in)  :: G           !< The ocean's grid structure.
   type(verticalGrid_type), intent(in)  :: GV          !< The ocean's vertical grid structure.
   type(unit_scale_type),   intent(in)  :: US          !< A dimensional unit scaling type
@@ -246,7 +246,7 @@ end select
 end subroutine dumbbell_initialize_thickness
 
 !> Initial values for temperature and salinity for the dumbbell test case
-subroutine dumbbell_initialize_temperature_salinity ( T, S, h, G, GV, US, param_file, just_read)
+subroutine dumbbell_initialize_temperature_salinity(T, S, h, G, GV, US, param_file, just_read)
   type(ocean_grid_type),                     intent(in)  :: G !< Ocean grid structure
   type(verticalGrid_type),                   intent(in)  :: GV !< Vertical grid structure
   real, dimension(SZI_(G),SZJ_(G),SZK_(GV)), intent(out) :: T !< Potential temperature [C ~> degC]

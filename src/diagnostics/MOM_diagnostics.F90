@@ -889,8 +889,8 @@ subroutine find_weights(Rlist, R_in, k, nz, wt, wt_p)
 
 !   Uncomment this as a code check
 !    if ((R_in < Rlist(k_lower)) .or. (R_in >= Rlist(k_upper)) .or. (k_upper-k_lower /= 1)) &
-!      write (*,*) "Error: ",R_in," is not between R(",k_lower,") = ", &
-!        Rlist(k_lower)," and R(",k_upper,") = ",Rlist(k_upper),"."
+!      write(*,*) "Error: ",R_in," is not between R(",k_lower,") = ", &
+!          Rlist(k_lower)," and R(",k_upper,") = ",Rlist(k_upper),"."
     k = k_lower
     wt = (Rlist(k_upper) - R_in) / (Rlist(k_upper) - Rlist(k_lower))
     wt_p = 1.0 - wt
